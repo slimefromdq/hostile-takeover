@@ -331,7 +331,7 @@ func update_visual() -> void:
 		if length > 0.1:
 			var dir := span / length
 			var tilt := Basis(Quaternion(Vector3.UP, dir)) if absf(dir.y) < 0.999 else (Basis.IDENTITY if dir.y > 0 else Basis(Vector3.RIGHT, PI))
-			rope.global_transform = Transform3D(tilt.scaled(Vector3(1, length, 1)), hand + span * 0.5)
+			rope.global_transform = Transform3D(tilt * Basis.from_scale(Vector3(1, length, 1)), hand + span * 0.5)
 			rope.visible = true
 		else:
 			rope.visible = false

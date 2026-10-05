@@ -54,6 +54,7 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		Visuals.add_outline(mat, Visuals.team_color(team).lightened(0.4), 0.03)
 	mesh.material_override = mat
 	add_child(mesh)
+	build_model()
 	if collision_layer != 0:
 		var shape := CollisionShape3D.new()
 		var b := BoxShape3D.new()
@@ -68,6 +69,83 @@ func configure(g: Node3D, data: Dictionary) -> void:
 	display.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	display.no_depth_test = false
 	add_child(display)
+
+var chevrons: Array[StandardMaterial3D] = []
+var barrel: Node3D
+
+func _process(_dt: float) -> void:
+	var t := Time.get_ticks_msec() / 1000.0
+	for i in range(chevrons.size()):
+		chevrons[i].emission_energy_multiplier = 0.6 + 2.4 * maxf(0.0, sin(t * 6.0 - i * 1.2))
+
+# Compound stand-ins for the old single boxes. The box mesh stays only to size the collider.
+# An authored model at assets/models/deployables/<kind>.glb replaces these.
+func build_model() -> void:
+	if kind == "double":
+		return
+	var model := Node3D.new()
+	model.name = "Model"
+	add_child(model)
+	mesh.visible = false
+	var authored := AssetLibrary.model("deployables", kind)
+	if authored != null:
+		model.add_child(authored)
+		return
+	var team_col: Color = game.team_color(team)
+	var dark := Color("28323f")
+	match kind:
+		"turret":
+			var base := CharacterRig.cylinder(model, Vector3(0, 0.12, 0), 0.4, 0.46, 0.24, Visuals.solid(dark))
+			Visuals.add_outline(base.material_override, team_col.lightened(0.4), 0.025)
+			var head := CharacterRig.pivot(model, "Head", Vector3(0, 0.6, 0))
+			var shell := CharacterRig.box(head, Vector3.ZERO, Vector3(0.5, 0.36, 0.5), Visuals.solid(team_col.darkened(0.3)))
+			Visuals.add_outline(shell.material_override, team_col.lightened(0.4), 0.025)
+			CharacterRig.cylinder(head, Vector3(0, 0, -0.45), 0.06, 0.06, 0.55, Visuals.solid(Color("8a949c")), Vector3(PI / 2, 0, 0))
+			CharacterRig.sphere(head, Vector3(0, 0.05, -0.74), 0.06, Visuals.glow(team_col, 2.5))
+			barrel = head
+		"pad":
+			var plate := CharacterRig.box(model, Vector3(0, 0.07, 0), Vector3(2.0, 0.14, 2.0), Visuals.solid(dark))
+			Visuals.add_outline(plate.material_override, team_col.lightened(0.4), 0.02)
+			for i in range(3):
+				var mat := Visuals.glow(team_col.lightened(0.2), 1.0)
+				chevrons.append(mat)
+				var arrow := CharacterRig.box(model, Vector3(0, 0.15, 0.55 - i * 0.55), Vector3(0.9, 0.03, 0.14), mat)
+				arrow.rotation.y = 0.0
+				CharacterRig.box(arrow, Vector3(-0.3, 0, 0.1), Vector3(0.4, 0.03, 0.12), mat, Vector3(0, 0.6, 0))
+				CharacterRig.box(arrow, Vector3(0.3, 0, 0.1), Vector3(0.4, 0.03, 0.12), mat, Vector3(0, -0.6, 0))
+		"cover":
+			var slab := CharacterRig.box(model, Vector3(0, 0.9, 0), Vector3(3.5, 1.8, 0.3), Visuals.solid(dark.lightened(0.15)))
+			Visuals.add_outline(slab.material_override, team_col.lightened(0.4), 0.02)
+			CharacterRig.box(model, Vector3(0, 1.75, 0), Vector3(3.5, 0.1, 0.34), Visuals.glow(team_col, 1.6))
+			CharacterRig.box(model, Vector3(0, 0.06, 0), Vector3(3.5, 0.1, 0.34), Visuals.glow(team_col, 1.2))
+			for side in [-1, 1]:
+				CharacterRig.box(model, Vector3(side * 1.6, 0.9, 0), Vector3(0.2, 1.8, 0.4), Visuals.solid(dark))
+		"smoke":
+			var puffs := CPUParticles3D.new()
+			puffs.local_coords = true
+			puffs.amount = 14
+			puffs.lifetime = 2.2
+			puffs.preprocess = 1.0
+			puffs.direction = Vector3.UP
+			puffs.spread = 70.0
+			puffs.initial_velocity_min = 0.05
+			puffs.initial_velocity_max = 0.3
+			puffs.gravity = Vector3.ZERO
+			puffs.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+			puffs.emission_sphere_radius = 0.9
+			var ball := SphereMesh.new()
+			ball.radius = 0.7
+			ball.height = 1.4
+			ball.radial_segments = 8
+			ball.rings = 4
+			puffs.mesh = ball
+			var smoke := StandardMaterial3D.new()
+			smoke.albedo_color = Color(0.78, 0.7, 0.9, 0.3)
+			smoke.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			smoke.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			puffs.material_override = smoke
+			puffs.position.y = 1.2
+			model.add_child(puffs)
 
 func update_visual() -> void:
 	display.visible = true

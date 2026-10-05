@@ -554,12 +554,12 @@ func combat_tick(p: Fighter, dt: float) -> void:
 			var hit := ray(p.muzzle(), p.aim_point(), [p.get_rid()])
 			if not hit.is_empty() and hit.collider is Deployable and hit.collider.team == p.team:
 				hit.collider.hp = minf(hit.collider.max_hp, hit.collider.hp + 30)
-			show_trace(p.muzzle(), hit.position if not hit.is_empty() else p.aim_point(), team_color(p.team))
+			show_trace(p.muzzle(), hit.position if not hit.is_empty() else p.aim_point(), team_color(p.team), Vfx.Style.REPAIR)
 		elif p.class_id == 2 and p.alt_timer <= 0:
 			p.alt_timer = 0.65 if p.gun_buff > 0 else 0.9
 			if cone_attack(p, 3.0, 75, 0.35, 3.0) > 0:
 				p.melee_buff = 2.0
-			show_trace(p.muzzle(), p.muzzle() + p.horizontal_direction() * 3, Color.WHITE)
+			show_trace(p.muzzle(), p.muzzle() + p.horizontal_direction() * 3, Color.WHITE, Vfx.Style.SWOOSH)
 	else:
 		p.charge = 0
 	# Bursts finish their committed three-shot sequence even if fire is released.
@@ -609,7 +609,10 @@ func fire_ray(p: Fighter, amount: float, ricochet: bool) -> void:
 			toward = (best.global_position + Vector3.UP - from).normalized()
 	var hit := ray(from, from + toward * p.spec.reach, [p.get_rid()])
 	var end: Vector3 = from + toward * p.spec.reach if hit.is_empty() else hit.position
-	show_trace(from, end, team_color(p.team))
+	var style: int = [Vfx.Style.SKYRUNNER, Vfx.Style.ARC, Vfx.Style.ENFORCER, Vfx.Style.MIRAGE][p.class_id]
+	if p.class_id == 0 and amount > 30.0:
+		style = Vfx.Style.CHARGED
+	show_trace(from, end, team_color(p.team), style, not hit.is_empty())
 	if hit.is_empty():
 		p.consecutive_hits = 0
 		return
@@ -620,7 +623,7 @@ func fire_ray(p: Fighter, amount: float, ricochet: bool) -> void:
 		var bounce := toward.bounce(hit.normal)
 		var start: Vector3 = hit.position + hit.normal * 0.04
 		var second := ray(start, start + bounce * remaining, [p.get_rid()])
-		show_trace(start, start + bounce * remaining if second.is_empty() else second.position, Color("ffe0ab"))
+		show_trace(start, start + bounce * remaining if second.is_empty() else second.position, Color("ffe0ab"), Vfx.Style.BOUNCE, not second.is_empty())
 		if not second.is_empty():
 			apply_hit(p, second, amount)
 	# Double echoes are visual only, never a second damage ray.
@@ -728,9 +731,11 @@ func activate(p: Fighter, slot: int) -> void:
 							p.hot_lap = 2
 				1:
 					p.velocity += Vector3.UP * 11 + p.horizontal_direction() * 3
+					show_ring(p.global_position, 1.6, team_color(p.team))
 					play_cue_at(p.global_position, 200)
 				2:
 					p.brake_time = 2
+					show_ring(p.global_position + Vector3.UP * 0.6, 1.2, Color("ffe2a3"))
 		1:
 			match slot:
 				0, 1:
@@ -758,6 +763,9 @@ func activate(p: Fighter, slot: int) -> void:
 			match slot:
 				0:
 					p.rush_time = 0.5
+					show_ring(p.global_position, 1.8, Color("ff8a4c"))
+					show_trace(p.global_position + Vector3.UP * 0.8, p.global_position + Vector3.UP * 0.8 + p.horizontal_direction() * 8, Color("ffd9a0"), Vfx.Style.SWOOSH)
+
 					p.rush_hit.clear()
 				1:
 					var place := placement(p, 4)
@@ -767,6 +775,8 @@ func activate(p: Fighter, slot: int) -> void:
 						create_entity(p, "cover", place, 180, 8)
 				2:
 					cone_attack(p, 5, 30, 0.4, 9)
+					show_ring(p.global_position, 5.0, team_color(p.team))
+					show_trace(p.global_position + Vector3.UP * 0.6, p.global_position + Vector3.UP * 0.6 + p.horizontal_direction() * 5, Color("ffd9a0"), Vfx.Style.SWOOSH)
 					play_cue_at(p.global_position, 100)
 		3:
 			match slot:
@@ -783,6 +793,7 @@ func activate(p: Fighter, slot: int) -> void:
 					throw_capsule(p)
 				2:
 					create_entity(p, "smoke", p.global_position, 1, 3)
+					show_ring(p.global_position, 2.5, Color("c7a8f1"))
 					p.conceal = 2.5
 	if success:
 		p.cooldowns[slot] = p.spec.cooldowns[slot]
@@ -870,6 +881,7 @@ func entities_tick(dt: float) -> void:
 			for p in fighters.values():
 				if p.hp > 0 and p.global_position.distance_to(e.global_position) < 1.7:
 					p.velocity.y = 13
+					show_ring(e.global_position, 1.7, team_color(e.team))
 					e.timer = 0.7
 					play_cue_at(e.global_position, 500)
 		elif e.kind == "turret" and e.timer <= 0:
@@ -883,7 +895,7 @@ func entities_tick(dt: float) -> void:
 				if not hit.is_empty() and hit.collider == target:
 					damage_fighter(target, 6, e.owner_id)
 					e.timer = 0.3
-					show_trace(from, hit.position, team_color(e.team))
+					show_trace(from, hit.position, team_color(e.team), Vfx.Style.SKYRUNNER, true)
 					break
 		e.update_visual()
 
@@ -972,29 +984,23 @@ func bot_input(p: Fighter, dt: float) -> void:
 	elif p.class_id == 0 and target != null and rng.randf() < dt * 0.1:
 		p.edges |= 16
 
-func show_trace(from: Vector3, to: Vector3, color: Color) -> void:
-	trace_visual(from, to, color)
+func show_trace(from: Vector3, to: Vector3, color: Color, style: int = 0, with_impact: bool = false) -> void:
+	trace_visual(from, to, color, style, with_impact)
 	if authoritative and multiplayer.get_peers().size() > 0:
-		trace_visual.rpc(from, to, color)
+		trace_visual.rpc(from, to, color, style, with_impact)
 
 @rpc("authority", "call_remote", "unreliable", 3)
-func trace_visual(from: Vector3, to: Vector3, color: Color) -> void:
-	if from.distance_to(to) < 0.01:
-		return
-	var line := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 0.018
-	mesh.bottom_radius = 0.018
-	mesh.height = from.distance_to(to)
-	line.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	line.material_override = mat
-	tracer_root.add_child(line)
-	line.global_position = (from + to) / 2
-	line.quaternion = Quaternion(Vector3.UP, (to - from).normalized())
-	get_tree().create_timer(0.08).timeout.connect(line.queue_free)
+func trace_visual(from: Vector3, to: Vector3, color: Color, style: int = 0, with_impact: bool = false) -> void:
+	Vfx.tracer(tracer_root, from, to, style, color, with_impact)
+
+func show_ring(pos: Vector3, radius: float, color: Color) -> void:
+	ring_visual(pos, radius, color)
+	if authoritative and multiplayer.get_peers().size() > 0:
+		ring_visual.rpc(pos, radius, color)
+
+@rpc("authority", "call_remote", "unreliable", 3)
+func ring_visual(pos: Vector3, radius: float, color: Color) -> void:
+	Vfx.ring(tracer_root, pos, radius, color)
 
 func hit_feedback(id: int) -> void:
 	if id == local_id:
