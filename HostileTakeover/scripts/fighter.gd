@@ -55,6 +55,8 @@ var remote_target: Vector3 = Vector3.ZERO
 var remote_velocity: Vector3 = Vector3.ZERO
 var has_remote_target := false
 var step_timer := 0.0
+var kills: int = 0
+var deaths: int = 0
 var equipment: Node3D
 var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
@@ -342,7 +344,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff}
+	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"]:
@@ -377,4 +379,6 @@ func unpack(data: Dictionary, local: bool) -> void:
 	spin = data.spin
 	gun_buff = data.gun_buff
 	melee_buff = data.melee_buff
+	kills = data.get("k", 0)
+	deaths = data.get("d", 0)
 	update_visual()

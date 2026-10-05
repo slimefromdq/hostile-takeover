@@ -70,7 +70,25 @@ static var _surface_shader: Shader
 static var _outline_shader: Shader
 static var _materials: Dictionary = {}
 
+const HELIX_CB := Color("0072b2")
+const MONARCH_CB := Color("e69f00")
+const SETTINGS_PATH := "user://settings.cfg"
+static var colorblind := false
+
+static func load_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) == OK:
+		colorblind = cfg.get_value("display", "colorblind", false)
+
+static func set_colorblind(value: bool) -> void:
+	colorblind = value
+	var cfg := ConfigFile.new()
+	cfg.set_value("display", "colorblind", value)
+	cfg.save(SETTINGS_PATH)
+
 static func team_color(side: int) -> Color:
+	if colorblind:
+		return HELIX_CB if side == 0 else MONARCH_CB
 	return HELIX if side == 0 else MONARCH
 
 static func team_color_dark(side: int) -> Color:

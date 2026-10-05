@@ -1,6 +1,10 @@
 class_name CivicDividend
 extends RefCounted
 
+# Play-area rectangle on the ground plane (x, z) and solid building footprints for the minimap.
+const BOUNDS := Rect2(-92, -28, 184, 56)
+static var footprints: Array[Rect2] = []
+
 static func box(root: Node3D, pos: Vector3, size: Vector3, color: Color, solid: bool = true, role: String = "") -> Node3D:
 	var node := StaticBody3D.new() if solid else Node3D.new()
 	root.add_child(node)
@@ -17,6 +21,8 @@ static func box(root: Node3D, pos: Vector3, size: Vector3, color: Color, solid: 
 	else:
 		mesh.material_override = Visuals.surface(role, color)
 	node.add_child(mesh)
+	if solid and size.y > 1.05:
+		footprints.append(Rect2(pos.x - size.x / 2.0, pos.z - size.z / 2.0, size.x, size.z))
 	if solid:
 		node.collision_layer = 1
 		node.collision_mask = 0
@@ -38,6 +44,7 @@ static func sign_text(root: Node3D, pos: Vector3, value: String, color: Color, s
 	root.add_child(label)
 
 static func build(root: Node3D) -> Array[Vector3]:
+	footprints.clear()
 	Visuals.build_environment(root)
 	box(root, Vector3(0, -0.6, 0), Vector3(180, 1, 52), Color("626d77"), true, "walk")
 	box(root, Vector3(0, 0, -25), Vector3(180, 1, 2), Color("a2afb9"), true, "walk")

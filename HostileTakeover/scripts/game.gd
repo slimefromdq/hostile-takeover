@@ -15,22 +15,10 @@ var point_meshes: Array[MeshInstance3D] = []
 var snapshot_timer := 0.0
 var input_edges := 0
 var simulation_tick := 0
-var menu: PanelContainer
-var hud: Control
-var stats: Label
-var abilities_label: Label
-var objective_label: Label
-var notice: Label
-var quip_label: Label
-var help_label: Label
-var class_picker: OptionButton
+var menu: GameMenu
+var hud: Hud
 var address: LineEdit
 var menu_status: Label
-var hitmarker: Label
-var feed: Label
-var notice_timer := 0.0
-var quip_timer := 0.0
-var hit_timer := 0.0
 var tracer_root: Node3D
 var menu_layer: CanvasLayer
 var request_times: Dictionary = {}
@@ -42,6 +30,7 @@ var last_world_tick := -1
 
 func _ready() -> void:
 	rng.seed = 47
+	Visuals.load_settings()
 	setup_inputs()
 	points = CivicDividend.build(self)
 	tracer_root = Node3D.new()
@@ -76,7 +65,7 @@ func _ready() -> void:
 		start_game("join")
 
 func setup_inputs() -> void:
-	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_CTRL, "dash": KEY_SHIFT, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V}
+	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_CTRL, "dash": KEY_SHIFT, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V, "scoreboard": KEY_TAB}
 	for action in bindings:
 		InputMap.add_action(action)
 		var key := InputEventKey.new()
@@ -98,77 +87,17 @@ func local_team() -> int:
 	var player := local_player()
 	return player.team if player != null else 0
 
-func make_label(parent: Node, text_value: String, size: int = 20) -> Label:
-	var label := Label.new()
-	label.text = text_value
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", Color("eef0e5"))
-	label.add_theme_color_override("font_shadow_color", Color.BLACK)
-	label.add_theme_constant_override("shadow_offset_x", 2)
-	label.add_theme_constant_override("shadow_offset_y", 2)
-	parent.add_child(label)
-	return label
-
 func make_ui() -> void:
 	menu_layer = CanvasLayer.new()
 	add_child(menu_layer)
-	hud = Control.new()
-	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	menu_layer.add_child(hud)
-	stats = make_label(hud, "", 24)
-	stats.position = Vector2(26, 550)
-	abilities_label = make_label(hud, "", 18)
-	abilities_label.position = Vector2(26, 625)
-	objective_label = make_label(hud, "", 22)
-	objective_label.position = Vector2(330, 22)
-	notice = make_label(hud, "", 22)
-	notice.position = Vector2(360, 115)
-	quip_label = make_label(hud, "", 18)
-	quip_label.position = Vector2(400, 575)
-	hitmarker = make_label(hud, "", 28)
-	hitmarker.position = Vector2(630, 342)
-	var cross := make_label(hud, "+", 24)
-	cross.position = Vector2(633, 342)
-	feed = make_label(hud, "", 16)
-	feed.position = Vector2(950, 100)
-	help_label = make_label(hud, "WASD move · SPACE jump / wall kick · SHIFT air dash · CTRL slide\nQ / E / F abilities · R reload · V shoulder · ESC class / menu", 15)
-	help_label.position = Vector2(26, 465)
+	hud = Hud.new()
 	hud.visible = false
-	menu = PanelContainer.new()
-	menu.position = Vector2(350, 90)
-	menu.size = Vector2(580, 500)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.04, 0.065, 0.1, 0.96)
-	style.content_margin_left = 28
-	style.content_margin_right = 28
-	style.content_margin_top = 24
-	style.content_margin_bottom = 24
-	menu.add_theme_stylebox_override("panel", style)
+	menu_layer.add_child(hud)
+	menu = GameMenu.new()
+	menu.setup(self)
 	menu_layer.add_child(menu)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	menu.add_child(column)
-	make_label(column, "HOSTILE TAKEOVER", 38)
-	make_label(column, "CIVIC DIVIDEND  /  ACQUISITION", 18)
-	make_label(column, "Four classes. Five points. Questionable employment.", 16)
-	class_picker = OptionButton.new()
-	for spec in Fighter.SPECS:
-		class_picker.add_item(spec.title)
-	column.add_child(class_picker)
-	class_picker.item_selected.connect(func(index): selected_class = index)
-	for pair in [["Play offline · 6v6 bots", "offline"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
-		var button := Button.new()
-		button.text = pair[0]
-		button.custom_minimum_size.y = 36
-		column.add_child(button)
-		button.pressed.connect(start_game.bind(pair[1]))
-	address = LineEdit.new()
-	address.text = "127.0.0.1"
-	address.placeholder_text = "Server IP"
-	column.add_child(address)
-	menu_status = make_label(column, "Godot 4.7 prototype · placeholder visuals", 15)
-	make_label(column, "Capture center, then advance. Final point wins.\nWeapons slow you down; stop firing to sprint automatically.", 15)
+	menu_status = menu.status
+	address = menu.address
 	var overview := Camera3D.new()
 	add_child(overview)
 	overview.position = Vector3(0, 28, 40)
@@ -327,6 +256,11 @@ func apply_class(id: int, index: int) -> void:
 	p.velocity = Vector3.ZERO
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+		hud.toggle_help()
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
+		Visuals.set_colorblind(not Visuals.colorblind)
+		announce("Colour-blind palette %s · applies as fighters respawn." % ("on" if Visuals.colorblind else "off"))
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		menu.visible = not menu.visible
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if menu.visible else Input.MOUSE_MODE_CAPTURED
@@ -640,7 +574,7 @@ func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 		p.consecutive_hits += 1
 		if p.class_id == 2 and p.consecutive_hits >= 5:
 			p.gun_buff = 2.0
-		hit_feedback(p.fighter_id)
+		hit_feedback(p.fighter_id, 2 if object.hp <= 0 else (1 if headshot and p.class_id != 1 else 0))
 	elif object is Deployable and object.team != p.team:
 		object.hp -= amount
 		object.last_damage = object.age
@@ -656,7 +590,14 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 		return
 	target.hp = maxf(0, target.hp - amount)
 	target.reveal = 0.65
+	var source: Fighter = fighters.get(attacker)
+	if source != null and not target.bot:
+		if target.fighter_id == local_id:
+			hud.damaged(source.global_position)
+		else:
+			damage_taken.rpc_id(target.fighter_id, source.global_position)
 	if target.hp <= 0:
+		target.deaths += 1
 		target.dead_time = 5.0
 		target.velocity = Vector3.ZERO
 		target.grapple_time = 0
@@ -664,12 +605,11 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 		remove_owned(target.fighter_id)
 		target.double_id = -1
 		target.update_visual()
-		var source: Fighter = fighters.get(attacker)
 		if source != null:
-			var text := "%s → %s" % [source.spec.title, target.spec.title]
-			kill_feed(text)
+			source.kills += 1
+			kill_feed(source.spec.title, source.team, target.spec.title, target.team)
 			if multiplayer.get_peers().size() > 0:
-				kill_feed.rpc(text)
+				kill_feed.rpc(source.spec.title, source.team, target.spec.title, target.team)
 			var line: String = source.spec.quips[rng.randi_range(0, source.spec.quips.size() - 1)]
 			if attacker == local_id:
 				character_quip(line)
@@ -1002,34 +942,34 @@ func show_ring(pos: Vector3, radius: float, color: Color) -> void:
 func ring_visual(pos: Vector3, radius: float, color: Color) -> void:
 	Vfx.ring(tracer_root, pos, radius, color)
 
-func hit_feedback(id: int) -> void:
+func hit_feedback(id: int, kind: int = 0) -> void:
 	if id == local_id:
-		hit_confirm()
+		hit_confirm(kind)
 	elif fighters.has(id) and not fighters[id].bot:
-		hit_confirm.rpc_id(id)
+		hit_confirm.rpc_id(id, kind)
 
 @rpc("authority", "call_remote", "unreliable")
-func hit_confirm() -> void:
-	hit_timer = 0.12
+func hit_confirm(kind: int = 0) -> void:
+	hud.hit(kind)
+
+@rpc("authority", "call_remote", "unreliable")
+func damage_taken(from_pos: Vector3) -> void:
+	hud.damaged(from_pos)
 
 @rpc("authority", "call_remote", "reliable")
-func kill_feed(value: String) -> void:
-	feed.text = value + "\n" + feed.text.left(180)
+func kill_feed(killer_title: String, killer_team: int, victim_title: String, victim_team: int) -> void:
+	hud.add_kill(killer_title, killer_team, victim_title, victim_team)
 
 @rpc("authority", "call_remote", "unreliable")
 func character_quip(value: String) -> void:
-	if quip_timer > 0:
-		return
-	quip_label.text = '“%s”' % value
-	quip_timer = 4
+	hud.quip(value)
 
 @rpc("authority", "call_remote", "reliable")
 func remote_notice(value: String) -> void:
 	announce(value)
 
 func announce(value: String) -> void:
-	notice.text = value
-	notice_timer = 3.0
+	hud.announce(value)
 
 func play_cue_at(pos: Vector3, frequency: float) -> void:
 	cue_visual(pos, frequency)
@@ -1058,41 +998,10 @@ func cue_visual(pos: Vector3, frequency: float) -> void:
 	audio.play()
 
 func update_hud(dt: float) -> void:
-	notice_timer = maxf(0, notice_timer - dt)
-	quip_timer = maxf(0, quip_timer - dt)
-	hit_timer = maxf(0, hit_timer - dt)
-	notice.visible = notice_timer > 0
-	quip_label.visible = quip_timer > 0
-	hitmarker.text = "×" if hit_timer > 0 else ""
-	var point_text := ""
-	for i in range(5):
-		var owner: int = match_state.owners[i]
-		var color := team_color(owner) if owner >= 0 else Color("c4c2af")
-		var mat: StandardMaterial3D = point_meshes[i].material_override
-		if mat == null:
-			mat = StandardMaterial3D.new()
-		mat.albedo_color = color if match_state.unlocked[i] else color.darkened(0.5)
-		point_meshes[i].material_override = mat
-		point_text += "%s%s %s %d%%    " % ["●" if match_state.unlocked[i] else "▪", String.chr(65 + i), "H" if owner == 0 else ("M" if owner == 1 else "—"), int(match_state.progress[i] * 100)]
-	var seconds := int(match_state.remaining)
-	objective_label.text = "%s\n%s" % [point_text, "OVERTIME" if match_state.overtime else "%02d:%02d   ·   HELIX / MONARCH" % [seconds / 60, seconds % 60]]
-	if match_state.winner != -2:
-		notice.visible = true
-		notice.text = "DRAW · Contract disputed" if match_state.winner == -1 else "%s WINS · Acquisition complete" % ("HELIX" if match_state.winner == 0 else "MONARCH")
+	hud.refresh(self, dt)
 	var p := local_player()
 	if p == null:
 		return
-	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
-	stats.text = "%s   ·   %s\nHP %d / %d    AMMO %d / %d    %s" % [p.spec.title.to_upper(), mode, int(p.hp), int(p.spec.health), p.ammo, p.spec.magazine, "RELOADING" if p.reload_timer > 0 else ""]
-	if p.hp <= 0:
-		stats.text += "\nRESPAWN %.1fs · ESC to change class" % maxf(0, p.dead_time)
-	var ability_text := ""
-	for i in range(3):
-		var ready := "READY" if p.cooldowns[i] <= 0 else "%.1fs" % p.cooldowns[i]
-		if p.class_id == 3 and i == 0 and entities.has(p.double_id) and not entities[p.double_id].used:
-			ready = "SWAP"
-		ability_text += "%s %s [%s]   " % [["Q", "E", "F"][i], p.spec.abilities[i], ready]
-	abilities_label.text = ability_text + "\n" + p.spec.passive
 	# Ricochet preview is local presentation only and never deals damage.
 	if p.class_id == 3 and p.held & 2 and simulation_tick % 4 == 0:
 		var start := p.muzzle()
