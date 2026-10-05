@@ -40,30 +40,9 @@ func configure(g: Node3D, data: Dictionary) -> void:
 	mesh.mesh = box
 	mesh.position.y = box.size.y / 2
 	if kind == "double":
-		var capsule := CapsuleMesh.new()
-		capsule.radius = 0.38
-		capsule.height = 1.5
-		mesh.mesh = capsule
-		mesh.position.y = 0.85
-		var head := MeshInstance3D.new()
-		var head_mesh := BoxMesh.new()
-		head_mesh.size = Vector3(0.5, 0.32, 0.5)
-		head.mesh = head_mesh
-		head.position.y = 1.7
-		var head_mat := StandardMaterial3D.new()
-		head_mat.albedo_color = Color("e7e9df")
-		head.material_override = head_mat
-		add_child(head)
-		var gun := MeshInstance3D.new()
-		var gun_mesh := BoxMesh.new()
-		gun_mesh.size = Vector3(0.15, 0.18, 0.6)
-		gun.mesh = gun_mesh
-		gun.position = Vector3(0.36, 1.3, -0.3)
-		var gun_mat := StandardMaterial3D.new()
-		gun_mat.albedo_color = Color("28323f")
-		gun.material_override = gun_mat
-		add_child(gun)
-		preload("res://scripts/class_identity.gd").build(self, 3, game.team_color(team))
+		# The double is a ghosted Mirage Agent rig; the box mesh only sizes the collider.
+		mesh.visible = false
+		preload("res://scripts/class_identity.gd").build(self, 3, game.team_color(team), true)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = g.team_color(team)
 	if kind == "smoke":

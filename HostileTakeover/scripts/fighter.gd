@@ -43,9 +43,10 @@ var alt_timer: float = 0.0
 var bot_think: float = 0.0
 var bot_target: Vector3 = Vector3.ZERO
 var aim_target: int = -1
-var body: MeshInstance3D
-var head: MeshInstance3D
-var gun: MeshInstance3D
+var nameplate: MeshInstance3D
+var rope: MeshInstance3D
+var trail: CPUParticles3D
+var sliding_visual := false
 var marker: Label3D
 var pivot: Node3D
 var camera: Camera3D
@@ -61,6 +62,10 @@ var outline_side: int = -1
 func _process(dt: float) -> void:
 	if game != null and not game.authoritative and fighter_id != game.local_id and has_remote_target:
 		global_position = global_position.lerp(remote_target, minf(1.0, dt * 20))
+	if is_instance_valid(equipment) and hp > 0:
+		var planar := Vector2(velocity.x, velocity.z).length()
+		var slide: bool = held & 8 != 0 and is_on_floor() and planar > 5.0
+		CharacterRig.animate(equipment, dt, class_id, planar, is_on_floor(), pitch, spin, slide)
 
 func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: bool) -> void:
 	game = owner_game
@@ -81,36 +86,28 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 	shape.shape = capsule
 	shape.position.y = 0.95
 	add_child(shape)
-	body = MeshInstance3D.new()
-	var mesh := CapsuleMesh.new()
-	mesh.radius = capsule.radius
-	mesh.height = 1.5
-	body.mesh = mesh
-	body.position.y = 0.85
-	body.material_override = outlined_material(game.team_color(team), 0.045)
-	add_child(body)
-	head = MeshInstance3D.new()
-	var helmet := BoxMesh.new()
-	helmet.size = Vector3(0.5, 0.32, 0.5)
-	head.mesh = helmet
-	head.position.y = 1.7
-	head.material_override = outlined_material(Color("e7e9df"), 0.03)
-	add_child(head)
-	gun = MeshInstance3D.new()
-	var barrel := BoxMesh.new()
-	barrel.size = Vector3(0.15 if class_id != 2 else 0.3, 0.18, 0.6)
-	gun.mesh = barrel
-	gun.material_override = outlined_material(Color("28323f"), 0.025)
-	gun.position = Vector3(0.36, 1.3, -0.3)
-	add_child(gun)
-	equipment = preload("res://scripts/class_identity.gd").build(self, class_id, game.team_color(team))
+	build_rig()
 	marker = Label3D.new()
 	marker.position.y = 2.3
-	marker.font_size = 30
-	marker.pixel_size = 0.008
+	marker.font_size = 26
+	marker.pixel_size = 0.0075
 	marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	marker.modulate = game.team_color(team)
 	add_child(marker)
+	nameplate = CharacterRig.make_nameplate()
+	nameplate.position.y = 2.2
+	add_child(nameplate)
+	rope = MeshInstance3D.new()
+	var rope_mesh := CylinderMesh.new()
+	rope_mesh.top_radius = 0.02
+	rope_mesh.bottom_radius = 0.02
+	rope_mesh.height = 1.0
+	rope_mesh.radial_segments = 6
+	rope.mesh = rope_mesh
+	rope.material_override = Visuals.glow(Color("ffe2a3"), 1.5)
+	rope.top_level = true
+	rope.visible = false
+	add_child(rope)
 	pivot = Node3D.new()
 	pivot.position.y = 1.55
 	add_child(pivot)
@@ -131,10 +128,30 @@ func make_material(color: Color) -> StandardMaterial3D:
 	mat.roughness = 0.85
 	return mat
 
-func outlined_material(color: Color, width: float) -> StandardMaterial3D:
-	var mat := make_material(color)
-	outlines.append(Visuals.add_outline(mat, Visuals.ENEMY_OUTLINE, width))
-	return mat
+func build_rig() -> void:
+	outlines.clear()
+	outline_side = -1
+	equipment = CharacterRig.build(self, class_id, game.team_color(team), outlines)
+	if is_instance_valid(trail):
+		trail.queue_free()
+	trail = null
+	if class_id == 0:
+		trail = CPUParticles3D.new()
+		trail.amount = 20
+		trail.lifetime = 0.45
+		trail.local_coords = false
+		trail.emitting = false
+		trail.direction = Vector3.ZERO
+		trail.spread = 180.0
+		trail.initial_velocity_min = 0.2
+		trail.initial_velocity_max = 0.6
+		trail.gravity = Vector3.ZERO
+		var bit := BoxMesh.new()
+		bit.size = Vector3(0.07, 0.07, 0.07)
+		trail.mesh = bit
+		trail.material_override = Visuals.glow(game.team_color(team).lightened(0.3), 2.0)
+		trail.position = Vector3(0, 1.0, 0.3)
+		equipment.add_child(trail)
 
 # Allies read cool, enemies read red, whatever the team palette is.
 func refresh_outline() -> void:
@@ -272,44 +289,56 @@ func change_class(value: int) -> void:
 	melee_buff = 0
 	gun_buff = 0
 	consecutive_hits = 0
-	if is_instance_valid(body):
-		body.mesh.radius = 0.52 if class_id == 2 else 0.38
+	if is_instance_valid(equipment):
 		get_child(0).shape.radius = 0.52 if class_id == 2 else 0.38
-		gun.mesh.size.x = 0.3 if class_id == 2 else 0.15
-		if is_instance_valid(equipment):
-			equipment.queue_free()
-		equipment = preload("res://scripts/class_identity.gd").build(self, class_id, game.team_color(team))
+		equipment.queue_free()
+		build_rig()
 	update_visual()
 
 func update_visual() -> void:
-	if not is_instance_valid(body):
+	if not is_instance_valid(equipment):
 		return
-	body.rotation.y = yaw
-	head.rotation.y = yaw
-	gun.rotation.y = yaw
 	equipment.rotation.y = yaw
-	gun.position = Basis(Vector3.UP, yaw) * Vector3(0.36, 1.3, -0.3)
 	pivot.rotation = Vector3(pitch, yaw, 0)
 	pivot.get_child(0).position.x = 0.65 * shoulder
 	var hidden := hp <= 0
-	body.visible = not hidden
-	head.visible = not hidden
-	gun.visible = not hidden
-	equipment.visible = not hidden
-	marker.visible = not hidden and fighter_id != game.local_id
+	var local_side: int = game.local_team()
+	var is_ally: bool = team == local_side or fighter_id == game.local_id
+	var player = game.local_player()
+	var distance: float = 0.0
+	if player != null and is_inside_tree() and player.is_inside_tree():
+		distance = player.global_position.distance_to(global_position)
+	var shown := not hidden
+	var alpha := 1.0
+	if conceal > 0 and reveal <= 0 and not hidden:
+		if is_ally:
+			alpha = 0.3
+		elif distance > 5.0:
+			shown = false
+	equipment.visible = shown
+	CharacterRig.set_alpha(equipment, alpha)
+	var plate: bool = shown and fighter_id != game.local_id and (is_ally or distance < 25.0 or reveal > 0)
+	marker.visible = plate
+	nameplate.visible = plate
+	if plate:
+		CharacterRig.update_nameplate(nameplate, hp / spec.health, Visuals.team_color(team) if is_ally else Visuals.ENEMY_OUTLINE)
 	refresh_outline()
-	var obscured: bool = conceal > 0 and reveal <= 0 and game.local_team() != team and fighter_id != game.local_id
-	if obscured and game.local_player() != null:
-		obscured = game.local_player().global_position.distance_to(global_position) > 5.0
-	if obscured:
-		body.visible = false
-		head.visible = false
-		gun.visible = false
-		equipment.visible = false
-		marker.visible = false
 	marker.text = "%s%s" % ["BOT · " if bot else "", spec.title]
-	if team == game.local_team():
-		marker.text += "\n%d / %d" % [int(hp), int(spec.health)]
+	if class_id == 0 and grapple_time > 0 and not hidden and is_inside_tree():
+		var hand := muzzle()
+		var span := grapple - hand
+		var length := span.length()
+		if length > 0.1:
+			var dir := span / length
+			var tilt := Basis(Quaternion(Vector3.UP, dir)) if absf(dir.y) < 0.999 else (Basis.IDENTITY if dir.y > 0 else Basis(Vector3.RIGHT, PI))
+			rope.global_transform = Transform3D(tilt.scaled(Vector3(1, length, 1)), hand + span * 0.5)
+			rope.visible = true
+		else:
+			rope.visible = false
+	else:
+		rope.visible = false
+	if is_instance_valid(trail):
+		trail.emitting = shown and (hot_lap > 0 or Vector2(velocity.x, velocity.z).length() > 9.0)
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
