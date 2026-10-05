@@ -89,7 +89,7 @@ func setup_inputs() -> void:
 		InputMap.action_add_event(pair[0], mouse)
 
 func team_color(side: int) -> Color:
-	return Color("53c8f4") if side == 0 else Color("ff956f")
+	return Visuals.team_color(side)
 
 func local_player() -> Fighter:
 	return fighters.get(local_id)

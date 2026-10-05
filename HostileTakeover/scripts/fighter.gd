@@ -55,6 +55,8 @@ var remote_velocity: Vector3 = Vector3.ZERO
 var has_remote_target := false
 var step_timer := 0.0
 var equipment: Node3D
+var outlines: Array[ShaderMaterial] = []
+var outline_side: int = -1
 
 func _process(dt: float) -> void:
 	if game != null and not game.authoritative and fighter_id != game.local_id and has_remote_target:
@@ -85,20 +87,20 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 	mesh.height = 1.5
 	body.mesh = mesh
 	body.position.y = 0.85
-	body.material_override = make_material(game.team_color(team))
+	body.material_override = outlined_material(game.team_color(team), 0.045)
 	add_child(body)
 	head = MeshInstance3D.new()
 	var helmet := BoxMesh.new()
 	helmet.size = Vector3(0.5, 0.32, 0.5)
 	head.mesh = helmet
 	head.position.y = 1.7
-	head.material_override = make_material(Color("e7e9df"))
+	head.material_override = outlined_material(Color("e7e9df"), 0.03)
 	add_child(head)
 	gun = MeshInstance3D.new()
 	var barrel := BoxMesh.new()
 	barrel.size = Vector3(0.15 if class_id != 2 else 0.3, 0.18, 0.6)
 	gun.mesh = barrel
-	gun.material_override = make_material(Color("28323f"))
+	gun.material_override = outlined_material(Color("28323f"), 0.025)
 	gun.position = Vector3(0.36, 1.3, -0.3)
 	add_child(gun)
 	equipment = preload("res://scripts/class_identity.gd").build(self, class_id, game.team_color(team))
@@ -128,6 +130,21 @@ func make_material(color: Color) -> StandardMaterial3D:
 	mat.albedo_color = color
 	mat.roughness = 0.85
 	return mat
+
+func outlined_material(color: Color, width: float) -> StandardMaterial3D:
+	var mat := make_material(color)
+	outlines.append(Visuals.add_outline(mat, Visuals.ENEMY_OUTLINE, width))
+	return mat
+
+# Allies read cool, enemies read red, whatever the team palette is.
+func refresh_outline() -> void:
+	var local_side: int = game.local_team()
+	if local_side == outline_side:
+		return
+	outline_side = local_side
+	var color := Visuals.outline_color_for(team, local_side)
+	for outline in outlines:
+		outline.set_shader_parameter("outline_color", color)
 
 func direction() -> Vector3:
 	return Basis.from_euler(Vector3(pitch, yaw, 0.0)) * Vector3.FORWARD
@@ -280,6 +297,7 @@ func update_visual() -> void:
 	gun.visible = not hidden
 	equipment.visible = not hidden
 	marker.visible = not hidden and fighter_id != game.local_id
+	refresh_outline()
 	var obscured: bool = conceal > 0 and reveal <= 0 and game.local_team() != team and fighter_id != game.local_id
 	if obscured and game.local_player() != null:
 		obscured = game.local_player().global_position.distance_to(global_position) > 5.0

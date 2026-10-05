@@ -71,6 +71,8 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		mat.albedo_color.a = 0.65 if kind == "double" else 0.25
 		mat.emission_enabled = true
 		mat.emission = g.team_color(team) * 0.3
+	if kind != "smoke":
+		Visuals.add_outline(mat, Visuals.team_color(team).lightened(0.4), 0.03)
 	mesh.material_override = mat
 	add_child(mesh)
 	if collision_layer != 0:
