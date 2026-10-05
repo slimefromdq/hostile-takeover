@@ -1,0 +1,378 @@
+extends SceneTree
+
+var checks := 0
+var failures := 0
+var game: Node3D
+
+func _initialize() -> void:
+	call_deferred("run")
+
+func check(condition: bool, message: String) -> void:
+	checks += 1
+	if not condition:
+		failures += 1
+		printerr("FAIL: ", message)
+
+func empty_occupancy() -> Array:
+	return [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+
+func capture(state: Acquisition, index: int, team: int) -> void:
+	var occupancy := empty_occupancy()
+	occupancy[index][team] = 1
+	state.tick(Acquisition.TIMES[index] + 0.01, occupancy)
+
+func run() -> void:
+	test_objectives()
+	test_specs()
+	game = load("res://scenes/main.tscn").instantiate()
+	root.add_child(game)
+	game.set_physics_process(false)
+	game.start_game("offline")
+	game.set_physics_process(false)
+	for p in game.fighters.values():
+		p.global_position = Vector3(60, 0, 20)
+	await physics_frame
+	await process_frame
+	await test_movement()
+	await test_weapons()
+	await test_mirage()
+	await test_machinery()
+	test_authority_and_respawn()
+	print("RESULT: %d checks, %d failures" % [checks, failures])
+	game.queue_free()
+	await process_frame
+	quit(0 if failures == 0 else 1)
+
+func test_objectives() -> void:
+	var state := Acquisition.new()
+	check(state.unlocked == [false, false, true, false, false], "only center unlocked initially")
+	capture(state, 2, 0)
+	check(state.owners == [0, 0, 0, 1, 1], "center acquisition")
+	check(state.unlocked == [false, false, true, true, false], "center and enemy intermediate unlock")
+	capture(state, 3, 0)
+	check(state.unlocked == [false, false, false, true, true], "advance locks point behind")
+	capture(state, 3, 1)
+	check(state.unlocked == [false, false, true, true, false], "counterpush restores frontier")
+	capture(state, 2, 1)
+	check(state.unlocked == [false, true, true, false, false], "counterpush into blue territory")
+	capture(state, 1, 1)
+	capture(state, 0, 1)
+	check(state.winner == 1, "enemy final point wins")
+	state.reset()
+	capture(state, 2, 0)
+	capture(state, 3, 0)
+	capture(state, 4, 0)
+	check(state.winner == 0, "mirrored final victory")
+	state.reset()
+	var occupancy := empty_occupancy()
+	occupancy[2] = [1, 1]
+	state.tick(20, occupancy)
+	check(state.progress[2] == 0, "contested point never advances")
+	occupancy[2] = [1, 0]
+	state.tick(2, occupancy)
+	var partial := state.progress[2]
+	state.tick(2.9, empty_occupancy())
+	check(is_equal_approx(partial, state.progress[2]), "three-second decay grace")
+	state.tick(1, empty_occupancy())
+	check(state.progress[2] < partial, "abandoned capture decays")
+	state.reset()
+	state.remaining = 0.1
+	state.tick(0.2, occupancy)
+	check(state.overtime and state.winner == -2, "active capture triggers overtime")
+	state.tick(2.9, empty_occupancy())
+	check(state.winner == -2, "overtime grace preserves match")
+	state.tick(0.2, empty_occupancy())
+	check(state.winner == -1, "equal territory draws after overtime")
+	state.reset()
+	capture(state, 2, 0)
+	state.remaining = 0
+	state.tick(0.1, empty_occupancy())
+	check(state.winner == 0, "territory leader wins at timer")
+	state.reset()
+	capture(state, 2, 0)
+	state.progress[2] = 0.999
+	state.attackers[2] = 1
+	state.progress[3] = 0.999
+	state.attackers[3] = 0
+	occupancy = empty_occupancy()
+	occupancy[2] = [0, 1]
+	occupancy[3] = [1, 0]
+	state.tick(0.1, occupancy)
+	check(state.owners == [0, 0, 0, 1, 1], "simultaneous opposing exchange cannot create islands")
+	check(state.unlocked.count(true) <= 2, "at most two frontier points unlocked")
+	state.reset()
+	occupancy = empty_occupancy()
+	occupancy[0] = [0, 6]
+	state.tick(60, occupancy)
+	check(state.owners[0] == 0, "locked points ignore occupancy")
+	var packed := state.pack()
+	var copy := Acquisition.new()
+	copy.unpack(packed)
+	check(copy.owners == state.owners and copy.unlocked == state.unlocked, "match snapshot round trip")
+
+func test_specs() -> void:
+	var expected := [2.07, 2.8, 2.6, 2.2]
+	for i in range(4):
+		var spec: ClassSpec = Fighter.SPECS[i]
+		print("MODEL TTK %s: %.3fs" % [spec.title, spec.body_ttk()])
+		check(absf(spec.body_ttk() - expected[i]) < 0.02, "weapon model target: " + spec.title)
+		check(spec.abilities.size() == 3, "three active abilities: " + spec.title)
+	check(Fighter.SPECS[0].body_ttk() < Fighter.SPECS[3].body_ttk(), "Skyrunner fastest primary")
+	check(35 + Fighter.SPECS[3].damage * 1.35 < 160, "capsule plus one headshot cannot instant kill lowest-health class")
+	var limited := ClassSpec.new()
+	limited.damage = 50
+	limited.magazine = 2
+	limited.interval = 0.5
+	limited.reload_time = 1.4
+	check(is_equal_approx(limited.body_ttk(), 2.4), "weapon model includes reload time")
+
+func test_movement() -> void:
+	var p: Fighter = game.local_player()
+	p.global_position = Vector3(-10, 0.01, -21)
+	p.change_class(0)
+	p.movement = Vector2(0, -1)
+	p.yaw = -PI / 2
+	p.held = 0
+	p.idle_weapon = 0
+	for i in range(80):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.idle_weapon >= 1.25 and p.velocity.x > 7.9, "automatic sprint after idle delay")
+	p.held = 1
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.idle_weapon == 0, "primary weapon resets sprint immediately")
+	p.held = 2
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.idle_weapon == 0, "alternate weapon also resets sprint")
+	p.held = 0
+	p.global_position = Vector3(-10, 4, -21)
+	p.air_dash = true
+	p.simulate_movement(1.0 / 60, 0)
+	p.simulate_movement(1.0 / 60, 2)
+	check(not p.air_dash and p.velocity.x > 14, "air dash consumed and propels")
+	p.global_position = Vector3(-10, 0, -21)
+	p.velocity = Vector3.ZERO
+	for i in range(20):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.air_dash, "landing restores air dash")
+	for archetype in range(4):
+		p.change_class(archetype)
+		p.global_position = Vector3(88.8, 3, 20)
+		p.velocity = Vector3.ZERO
+		p.yaw = -PI / 2
+		p.movement = Vector2.ZERO
+		p.simulate_movement(1.0 / 60, 0)
+		p.simulate_movement(1.0 / 60, 1)
+		check(p.velocity.x < -5 and p.velocity.y > 0, "universal wall kick: " + p.spec.title)
+	p.global_position = Vector3(-10, 0, -21)
+	p.velocity = Vector3.ZERO
+	p.movement = Vector2.ZERO
+	p.held = 0
+	for i in range(20):
+		p.simulate_movement(1.0 / 60, 0)
+	p.velocity = Vector3(10, 0, 0)
+	p.movement = Vector2(0, -1)
+	p.held = 8
+	p.simulate_movement(1.0 / 60, 0)
+	var slide_speed := p.velocity.x
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.velocity.x > 9 and slide_speed - p.velocity.x < 0.05, "slide preserves momentum")
+	p.global_position = Vector3(-5.2, 0.3, 5)
+	p.velocity = Vector3.ZERO
+	p.held = 0
+	p.simulate_movement(1.0 / 60, 0)
+	p.held = 16
+	p.velocity.y = 0
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.velocity.y >= 5.9, "held jump mantles a low ledge")
+	p.held = 0
+	await physics_frame
+	await process_frame
+
+func aim_at(p: Fighter, target: Vector3) -> void:
+	for i in range(12):
+		var basis := Basis.from_euler(Vector3(p.pitch, p.yaw, 0))
+		var cam := p.global_position + Vector3.UP * 1.55 + basis * Vector3(0.65 * p.shoulder, 0, 3.6)
+		var diff := (target - cam).normalized()
+		p.yaw = atan2(-diff.x, -diff.z)
+		p.pitch = asin(diff.y)
+
+func test_weapons() -> void:
+	var p: Fighter = game.local_player()
+	var target: Fighter = game.fighters[105]
+	for class_index in range(4):
+		p.change_class(class_index)
+		p.global_position = Vector3(-10, 0, -21)
+		p.velocity = Vector3.ZERO
+		p.held = 1
+		p.spin = 1
+		target.change_class(1)
+		target.global_position = Vector3(0, 0, -21)
+		target.hp = 200
+		target.update_visual()
+		await physics_frame
+		await process_frame
+		aim_at(p, target.global_position + Vector3.UP * 1.1)
+		var elapsed := 0.0
+		var first_hit := -1.0
+		for frame in range(360):
+			game.combat_tick(p, 1.0 / 60.0)
+			if target.hp < 200 and first_hit < 0:
+				first_hit = elapsed
+			if target.hp <= 0:
+				break
+			elapsed += 1.0 / 60.0
+		var ttk := elapsed - first_hit
+		print("LIVE TTK %s: %.3fs" % [p.spec.title, ttk])
+		check(target.hp <= 0, "authoritative primary hits target: " + p.spec.title)
+		check(absf(ttk - p.spec.body_ttk()) <= 0.11, "live primary cadence matches model: " + p.spec.title)
+	p.held = 0
+	# Friendly hits cannot award damage.
+	target.change_class(1)
+	target.team = p.team
+	game.apply_hit(p, {"collider": target, "position": target.global_position + Vector3.UP}, 100)
+	check(target.hp == target.spec.health, "friendly fire disabled")
+	target.team = 1
+
+func test_mirage() -> void:
+	var p: Fighter = game.local_player()
+	p.change_class(3)
+	p.global_position = Vector3(-10, 0.05, -21)
+	var pos := Vector3(-3, 0.05, -21)
+	p.double_id = game.create_entity(p, "double", pos, 45, 8)
+	await physics_frame
+	await process_frame
+	var e: Deployable = game.entities[p.double_id]
+	p.velocity = Vector3(3, 2, -4)
+	p.yaw = 0.9
+	p.ammo = 2
+	p.idle_weapon = 0
+	var old := p.global_position
+	game.activate(p, 0)
+	check(p.global_position.is_equal_approx(pos) and e.global_position.is_equal_approx(old), "double exchanges both positions")
+	check(p.velocity.is_equal_approx(Vector3(3, 2, -4)) and p.yaw == 0.9, "swap preserves velocity and facing")
+	check(e.used and p.ammo == 3 and p.idle_weapon >= 1.25, "swap consumes use and triggers Clean Getaway")
+	game.activate(p, 0)
+	check(p.global_position.is_equal_approx(pos), "second swap unavailable")
+	game.remove_owned(p.fighter_id)
+	p.double_id = game.create_entity(p, "double", Vector3(9, 0.05, -13), 45, 8)
+	await physics_frame
+	await process_frame
+	var blocked: Deployable = game.entities[p.double_id]
+	old = p.global_position
+	game.activate(p, 0)
+	check(p.global_position.is_equal_approx(old) and not blocked.used, "obstructed swap fails without consuming")
+	blocked.hp = 0
+	game.activate(p, 0)
+	check(p.global_position.is_equal_approx(old), "destroyed double cannot swap before removal tick")
+	game.entities_tick(0.01)
+	check(p.double_id == -1, "destroying double removes escape")
+	p.double_id = game.create_entity(p, "double", game.points[2], 45, 8)
+	game.match_state.reset()
+	for other in game.fighters.values():
+		other.global_position = Vector3(60, 0, 20)
+	game.objectives_tick(10)
+	check(game.match_state.progress[2] == 0 and game.match_state.owners[2] == -1, "double cannot capture or contest")
+	game.entities_tick(8.1)
+	check(p.double_id == -1, "double expires")
+	check(p.collision_mask & 8 == 0, "double collision layer cannot block fighters")
+	p.cooldowns[2] = 0
+	game.activate(p, 2)
+	check(p.conceal == 2.5, "concealment activates")
+	p.held = 1
+	p.shot_timer = 0
+	game.combat_tick(p, 1.0 / 60)
+	check(p.conceal == 0, "firing ends concealment")
+	p.conceal = 2
+	game.damage_fighter(p, 10, 105)
+	check(p.conceal == 2 and p.reveal > 0, "damage reveals without cancelling concealment")
+	p.cooldowns[1] = 0
+	p.held = 0
+	game.activate(p, 1)
+	check(p.conceal == 0, "Dead Drop ends concealment")
+	await create_timer(0.2).timeout
+
+func test_machinery() -> void:
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.global_position = Vector3(-10, 0, -21)
+	var id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
+	var e: Deployable = game.entities[id]
+	e.hp = 50
+	e.age = 5
+	game.entities_tick(1)
+	check(e.hp > 50, "engineer passive repairs idle nearby machinery")
+	e.last_damage = e.age
+	var hp := e.hp
+	game.entities_tick(1)
+	check(e.hp == hp, "recent damage stops passive repair")
+	game.activate(p, 2)
+	check(not game.entities.has(id), "recall removes installation")
+	var pad: int = game.create_entity(p, "pad", p.global_position, 80, 90)
+	game.entities_tick(0.01)
+	check(p.velocity.y == 13, "launch pad propels fighters")
+	var opponent: Fighter = game.fighters[105]
+	opponent.change_class(1)
+	opponent.global_position = p.global_position + Vector3(0.5, 0, 0)
+	game.entities[pad].timer = 0
+	game.entities_tick(0.01)
+	check(opponent.velocity.y == 13, "enemy can use engineer launch pad")
+	game.remove_entity(pad)
+	await physics_frame
+	await process_frame
+	var turret_id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
+	var turret: Deployable = game.entities[turret_id]
+	turret.rotation.y = 0
+	opponent.global_position = turret.global_position + Vector3(0, 0, 3)
+	await physics_frame
+	await process_frame
+	game.entities_tick(0.1)
+	check(opponent.hp == 200, "turret cannot attack outside firing arc")
+	opponent.global_position = turret.global_position + Vector3(0, 0, -4)
+	await physics_frame
+	await process_frame
+	game.entities_tick(0.1)
+	check(opponent.hp < 200, "turret supplements primary with aimed pressure")
+	turret.hp = 0
+	game.entities_tick(0.01)
+	check(not game.entities.has(turret_id), "destroyed turret is removed")
+	p.change_class(2)
+	p.global_position = Vector3(-10, 0, -21)
+	p.yaw = -PI / 2
+	opponent.global_position = Vector3(-8, 0, -21)
+	opponent.hp = 200
+	await physics_frame
+	await process_frame
+	p.held = 2
+	game.combat_tick(p, 1.0 / 60)
+	check(opponent.hp == 125 and p.melee_buff > 0, "Enforcer melee damages and improves spin-up")
+	for i in range(5):
+		game.apply_hit(p, {"collider": opponent, "position": opponent.global_position + Vector3.UP}, p.spec.damage)
+	check(p.gun_buff > 0, "sustained gun hits improve melee recovery")
+	p.held = 0
+
+func test_authority_and_respawn() -> void:
+	var p: Fighter = game.local_player()
+	game.authoritative = false
+	var hp := p.hp
+	game.damage_fighter(p, 100, 105)
+	check(p.hp == hp, "client cannot award damage")
+	game.authoritative = true
+	p.global_position = Vector3(0, 0, 20)
+	game.damage_fighter(p, 10000, 105)
+	check(p.hp == 0 and p.dead_time == 5, "death schedules respawn")
+	game.respawn(p)
+	check(p.hp == p.spec.health and p.ammo == p.spec.magazine, "respawn restores class and ammunition")
+	game.apply_class(p.fighter_id, 0)
+	check(p.class_id == 0, "class change permitted at spawn")
+	p.global_position = Vector3.ZERO
+	game.apply_class(p.fighter_id, 2)
+	check(p.class_id == 0, "class change forbidden away from spawn")
+	game.last_world_tick = 100
+	var count: int = game.fighters.size()
+	game.apply_world({"tick": 99, "players": [], "entities": [], "match": game.match_state.pack()})
+	check(game.fighters.size() == count, "stale snapshot cannot erase newly joined fighters")
+	game.last_world_tick = -1
+	game.match_state.winner = 1
+	game.start_game("restart")
+	check(game.match_state.winner == -2 and game.match_state.remaining == 720, "host restart resets round")
+	check(game.entities.is_empty() and p.hp == p.spec.health, "restart clears deployables and restores fighters")

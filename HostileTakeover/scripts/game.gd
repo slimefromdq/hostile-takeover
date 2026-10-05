@@ -1,0 +1,1100 @@
+extends Node3D
+
+const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://scenes/field_engineer.tscn"), preload("res://scenes/enforcer.tscn"), preload("res://scenes/mirage_agent.tscn")]
+const PORT = 27847
+var authoritative := true
+var running := false
+var local_id := 1
+var selected_class := 0
+var fighters: Dictionary = {}
+var entities: Dictionary = {}
+var entity_next := 1
+var match_state := Acquisition.new()
+var points: Array[Vector3] = []
+var point_meshes: Array[MeshInstance3D] = []
+var snapshot_timer := 0.0
+var input_edges := 0
+var simulation_tick := 0
+var menu: PanelContainer
+var hud: Control
+var stats: Label
+var abilities_label: Label
+var objective_label: Label
+var notice: Label
+var quip_label: Label
+var help_label: Label
+var class_picker: OptionButton
+var address: LineEdit
+var menu_status: Label
+var hitmarker: Label
+var feed: Label
+var notice_timer := 0.0
+var quip_timer := 0.0
+var hit_timer := 0.0
+var tracer_root: Node3D
+var menu_layer: CanvasLayer
+var request_times: Dictionary = {}
+var rng := RandomNumberGenerator.new()
+var network_delay := 0.0
+var drop_every := 0
+var network_packets := 0
+var last_world_tick := -1
+
+func _ready() -> void:
+	rng.seed = 47
+	setup_inputs()
+	points = CivicDividend.build(self)
+	tracer_root = Node3D.new()
+	add_child(tracer_root)
+	for i in range(5):
+		var mesh := MeshInstance3D.new()
+		var cylinder := CylinderMesh.new()
+		cylinder.top_radius = 4.5
+		cylinder.bottom_radius = 4.5
+		cylinder.height = 0.1
+		mesh.mesh = cylinder
+		mesh.position = points[i] + Vector3.UP * 0.1
+		add_child(mesh)
+		point_meshes.append(mesh)
+	make_ui()
+	multiplayer.peer_connected.connect(peer_connected)
+	multiplayer.peer_disconnected.connect(peer_disconnected)
+	multiplayer.connected_to_server.connect(connected)
+	multiplayer.connection_failed.connect(connection_failed)
+	multiplayer.server_disconnected.connect(server_disconnected)
+	var args := OS.get_cmdline_user_args()
+	for arg in args:
+		if arg.begins_with("--latency-ms="):
+			network_delay = clampf(arg.get_slice("=", 1).to_float() / 1000, 0, 0.5)
+		elif arg.begins_with("--drop-every="):
+			drop_every = maxi(0, arg.get_slice("=", 1).to_int())
+	if "--smoke" in args:
+		start_game("offline")
+	elif "--host-test" in args:
+		start_game("host")
+	elif "--join-test" in args:
+		start_game("join")
+
+func setup_inputs() -> void:
+	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_CTRL, "dash": KEY_SHIFT, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V}
+	for action in bindings:
+		InputMap.add_action(action)
+		var key := InputEventKey.new()
+		key.physical_keycode = bindings[action]
+		InputMap.action_add_event(action, key)
+	for pair in [["fire", MOUSE_BUTTON_LEFT], ["alt", MOUSE_BUTTON_RIGHT]]:
+		InputMap.add_action(pair[0])
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = pair[1]
+		InputMap.action_add_event(pair[0], mouse)
+
+func team_color(side: int) -> Color:
+	return Color("53c8f4") if side == 0 else Color("ff956f")
+
+func local_player() -> Fighter:
+	return fighters.get(local_id)
+
+func local_team() -> int:
+	var player := local_player()
+	return player.team if player != null else 0
+
+func make_label(parent: Node, text_value: String, size: int = 20) -> Label:
+	var label := Label.new()
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", Color("eef0e5"))
+	label.add_theme_color_override("font_shadow_color", Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	parent.add_child(label)
+	return label
+
+func make_ui() -> void:
+	menu_layer = CanvasLayer.new()
+	add_child(menu_layer)
+	hud = Control.new()
+	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_layer.add_child(hud)
+	stats = make_label(hud, "", 24)
+	stats.position = Vector2(26, 550)
+	abilities_label = make_label(hud, "", 18)
+	abilities_label.position = Vector2(26, 625)
+	objective_label = make_label(hud, "", 22)
+	objective_label.position = Vector2(330, 22)
+	notice = make_label(hud, "", 22)
+	notice.position = Vector2(360, 115)
+	quip_label = make_label(hud, "", 18)
+	quip_label.position = Vector2(400, 575)
+	hitmarker = make_label(hud, "", 28)
+	hitmarker.position = Vector2(630, 342)
+	var cross := make_label(hud, "+", 24)
+	cross.position = Vector2(633, 342)
+	feed = make_label(hud, "", 16)
+	feed.position = Vector2(950, 100)
+	help_label = make_label(hud, "WASD move · SPACE jump / wall kick · SHIFT air dash · CTRL slide\nQ / E / F abilities · R reload · V shoulder · ESC class / menu", 15)
+	help_label.position = Vector2(26, 465)
+	hud.visible = false
+	menu = PanelContainer.new()
+	menu.position = Vector2(350, 90)
+	menu.size = Vector2(580, 500)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.065, 0.1, 0.96)
+	style.content_margin_left = 28
+	style.content_margin_right = 28
+	style.content_margin_top = 24
+	style.content_margin_bottom = 24
+	menu.add_theme_stylebox_override("panel", style)
+	menu_layer.add_child(menu)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	menu.add_child(column)
+	make_label(column, "HOSTILE TAKEOVER", 38)
+	make_label(column, "CIVIC DIVIDEND  /  ACQUISITION", 18)
+	make_label(column, "Four classes. Five points. Questionable employment.", 16)
+	class_picker = OptionButton.new()
+	for spec in Fighter.SPECS:
+		class_picker.add_item(spec.title)
+	column.add_child(class_picker)
+	class_picker.item_selected.connect(func(index): selected_class = index)
+	for pair in [["Play offline · 6v6 bots", "offline"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
+		var button := Button.new()
+		button.text = pair[0]
+		button.custom_minimum_size.y = 36
+		column.add_child(button)
+		button.pressed.connect(start_game.bind(pair[1]))
+	address = LineEdit.new()
+	address.text = "127.0.0.1"
+	address.placeholder_text = "Server IP"
+	column.add_child(address)
+	menu_status = make_label(column, "Godot 4.7 prototype · placeholder visuals", 15)
+	make_label(column, "Capture center, then advance. Final point wins.\nWeapons slow you down; stop firing to sprint automatically.", 15)
+	var overview := Camera3D.new()
+	add_child(overview)
+	overview.position = Vector3(0, 28, 40)
+	overview.look_at(Vector3.ZERO)
+	overview.current = true
+
+func start_game(mode: String) -> void:
+	if mode == "restart":
+		if not running or not authoritative:
+			menu_status.text = "Only the host or offline player can restart a running round."
+			return
+		match_state.reset()
+		for e in entities.values():
+			remove_entity(e.entity_id)
+		for p in fighters.values():
+			respawn(p)
+		apply_class(local_id, selected_class)
+		menu.hide()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		announce("NEW CONTRACT · Center point unlocked.")
+		return
+	if mode == "resume":
+		if not running:
+			return
+		request_class(selected_class)
+		menu.hide()
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		return
+	if running:
+		menu_status.text = "Match already running. Apply class / Resume, or restart the app."
+		return
+	if mode == "join":
+		var client := ENetMultiplayerPeer.new()
+		var err := client.create_client(address.text.strip_edges(), PORT)
+		if err != OK:
+			menu_status.text = "Connection could not start: %s" % error_string(err)
+			return
+		authoritative = false
+		multiplayer.multiplayer_peer = client
+		menu_status.text = "Connecting…"
+		return
+	if mode == "host":
+		var server := ENetMultiplayerPeer.new()
+		var err := server.create_server(PORT, 11)
+		if err != OK:
+			menu_status.text = "Host failed: %s" % error_string(err)
+			return
+		multiplayer.multiplayer_peer = server
+	authoritative = true
+	local_id = 1
+	spawn_fighter(1, 0, selected_class, false)
+	for i in range(11):
+		spawn_fighter(100 + i, 0 if i < 5 else 1, i % 4, true)
+	running = true
+	menu.hide()
+	hud.show()
+	local_player().camera.current = true
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	announce("ACQUISITION · The center is open for business.")
+
+func connected() -> void:
+	local_id = multiplayer.get_unique_id()
+	running = true
+	menu.hide()
+	hud.show()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	join_request.rpc_id(1, selected_class)
+
+func connection_failed() -> void:
+	menu_status.text = "Connection failed. Check server IP and UDP port 27847."
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	authoritative = true
+
+func server_disconnected() -> void:
+	running = false
+	menu.show()
+	hud.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	menu_status.text = "Server disconnected. Restart the app to start a fresh match."
+
+func peer_connected(_id: int) -> void:
+	pass
+
+func peer_disconnected(id: int) -> void:
+	if not authoritative or not fighters.has(id):
+		return
+	var side: int = fighters[id].team
+	remove_owned(id)
+	fighters[id].queue_free()
+	fighters.erase(id)
+	request_times.erase(id)
+	var replacement := 100
+	while fighters.has(replacement):
+		replacement += 1
+	spawn_fighter(replacement, side, replacement % 4, true)
+
+@rpc("any_peer", "call_remote", "reliable")
+func join_request(class_choice: int) -> void:
+	if not authoritative:
+		return
+	var id := multiplayer.get_remote_sender_id()
+	if fighters.has(id):
+		return
+	var counts := [0, 0]
+	for p in fighters.values():
+		if not p.bot:
+			counts[p.team] += 1
+	var side := 0 if counts[0] <= counts[1] else 1
+	for p in fighters.values():
+		if p.bot and p.team == side:
+			remove_owned(p.fighter_id)
+			fighters.erase(p.fighter_id)
+			p.queue_free()
+			break
+	spawn_fighter(id, side, clampi(class_choice, 0, 3), false)
+	initial_sync.rpc_id(id, encode_world())
+
+func spawn_position(side: int, id: int) -> Vector3:
+	return Vector3(-86 if side == 0 else 86, 0.2, -7 + (abs(id) % 6) * 2.8)
+
+func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool) -> Fighter:
+	var p: Fighter = CLASS_SCENES[archetype].instantiate()
+	p.configure(self, id, side, archetype, is_bot)
+	add_child(p)
+	p.global_position = spawn_position(side, id)
+	p.yaw = -PI / 2 if side == 0 else PI / 2
+	fighters[id] = p
+	return p
+
+func request_class(index: int) -> void:
+	if authoritative:
+		apply_class(local_id, index)
+	else:
+		class_request.rpc_id(1, index)
+
+@rpc("any_peer", "call_remote", "reliable")
+func class_request(index: int) -> void:
+	if authoritative:
+		apply_class(multiplayer.get_remote_sender_id(), index)
+
+func apply_class(id: int, index: int) -> void:
+	if not fighters.has(id):
+		return
+	var p: Fighter = fighters[id]
+	if p.hp > 0 and absf(p.global_position.x) < 80:
+		if id == local_id:
+			announce("Class changes are available at spawn or while awaiting respawn.")
+		else:
+			remote_notice.rpc_id(id, "Return to spawn to change class.")
+		return
+	remove_owned(id)
+	p.double_id = -1
+	p.change_class(index)
+	p.dead_time = 0
+	p.global_position = spawn_position(p.team, id)
+	p.velocity = Vector3.ZERO
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		menu.visible = not menu.visible
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if menu.visible else Input.MOUSE_MODE_CAPTURED
+		return
+	var p := local_player()
+	if p == null or not running or menu.visible:
+		return
+	if event is InputEventMouseMotion:
+		p.yaw -= event.relative.x * 0.0025
+		p.pitch = clampf(p.pitch - event.relative.y * 0.0025, -1.25, 1.2)
+	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32]]:
+		if event.is_action_pressed(pair[0]) and not event.is_echo():
+			input_edges |= pair[1]
+	if event.is_action_pressed("shoulder"):
+		p.shoulder *= -1
+
+func _physics_process(dt: float) -> void:
+	if not running:
+		return
+	simulation_tick += 1
+	var p := local_player()
+	if p != null:
+		var motion := Input.get_vector("left", "right", "forward", "back") if not menu.visible else Vector2.ZERO
+		var buttons := 0
+		if not menu.visible:
+			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (4 if Input.is_action_pressed("ability3") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0)
+		p.movement = motion
+		p.held = buttons
+		if authoritative:
+			p.edges |= input_edges
+		else:
+			network_packets += 1
+			if drop_every <= 0 or network_packets % drop_every != 0:
+				var send_motion := send_motion_packet.bind(motion, p.yaw, p.pitch, buttons, p.shoulder)
+				if network_delay > 0:
+					get_tree().create_timer(network_delay).timeout.connect(send_motion)
+				else:
+					send_motion.call()
+			if input_edges != 0:
+				var send_action := send_action_packet.bind(input_edges)
+				if network_delay > 0:
+					get_tree().create_timer(network_delay).timeout.connect(send_action)
+				else:
+					send_action.call()
+			if match_state.winner == -2:
+				p.simulate_movement(dt, input_edges)
+		input_edges = 0
+	if authoritative:
+		for player in fighters.values():
+			if player.bot:
+				bot_input(player, dt)
+			elif player.fighter_id != local_id and Time.get_ticks_msec() - request_times.get(player.fighter_id, 0) > 500:
+				player.held = 0
+				player.movement = Vector2.ZERO
+			if player.hp <= 0:
+				player.dead_time -= dt
+				if player.dead_time <= 0:
+					respawn(player)
+				continue
+			if match_state.winner == -2:
+				player.simulate_movement(dt, player.edges)
+				combat_tick(player, dt)
+			player.edges = 0
+		if match_state.winner == -2:
+			entities_tick(dt)
+			objectives_tick(dt)
+		snapshot_timer += dt
+		if snapshot_timer >= 0.05:
+			snapshot_timer = 0
+			if multiplayer.has_multiplayer_peer() and multiplayer.get_peers().size() > 0:
+				network_packets += 1
+				if drop_every <= 0 or network_packets % drop_every != 0:
+					var send_state := send_world_packet.bind(encode_world())
+					if network_delay > 0:
+						get_tree().create_timer(network_delay).timeout.connect(send_state)
+					else:
+						send_state.call()
+	update_hud(dt)
+
+func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
+	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		submit_input.rpc_id(1, motion, aim_yaw, aim_pitch, buttons, shoulder_value)
+
+func send_action_packet(pressed: int) -> void:
+	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+		submit_actions.rpc_id(1, pressed)
+
+func send_world_packet(payload: PackedByteArray) -> void:
+	if running and multiplayer.get_peers().size() > 0:
+		snapshot.rpc(payload)
+
+@rpc("any_peer", "call_remote", "unreliable_ordered", 1)
+func submit_input(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
+	if not authoritative:
+		return
+	var id := multiplayer.get_remote_sender_id()
+	if not fighters.has(id) or not motion.is_finite() or not is_finite(aim_yaw) or not is_finite(aim_pitch):
+		return
+	var p: Fighter = fighters[id]
+	p.movement = motion.limit_length(1.0)
+	p.yaw = wrapf(aim_yaw, -PI, PI)
+	p.pitch = clampf(aim_pitch, -1.25, 1.2)
+	p.held = buttons & 31
+	p.shoulder = 1.0 if shoulder_value >= 0 else -1.0
+	request_times[id] = Time.get_ticks_msec()
+
+@rpc("any_peer", "call_remote", "reliable", 1)
+func submit_actions(pressed: int) -> void:
+	if not authoritative:
+		return
+	var id := multiplayer.get_remote_sender_id()
+	if fighters.has(id):
+		fighters[id].edges |= pressed & 63
+
+func packed_world() -> Dictionary:
+	var players: Array = []
+	var deploys: Array = []
+	for p in fighters.values():
+		players.append(p.pack())
+	for e in entities.values():
+		deploys.append(e.pack())
+	return {"players": players, "entities": deploys, "match": match_state.pack(), "tick": simulation_tick}
+
+func encode_world() -> PackedByteArray:
+	return var_to_bytes(packed_world()).compress(FileAccess.COMPRESSION_DEFLATE)
+
+func decode_world(payload: PackedByteArray) -> void:
+	if payload.size() > 65536:
+		return
+	var decoded = bytes_to_var(payload.decompress_dynamic(1048576, FileAccess.COMPRESSION_DEFLATE))
+	if decoded is Dictionary:
+		apply_world(decoded)
+
+@rpc("authority", "call_remote", "reliable", 2)
+func initial_sync(payload: PackedByteArray) -> void:
+	if not authoritative:
+		decode_world(payload)
+
+@rpc("authority", "call_remote", "unreliable_ordered", 2)
+func snapshot(payload: PackedByteArray) -> void:
+	if authoritative:
+		return
+	decode_world(payload)
+
+func apply_world(data: Dictionary) -> void:
+	if data.tick < last_world_tick:
+		return
+	last_world_tick = data.tick
+	var seen: Array = []
+	for state in data.players:
+		seen.append(state.id)
+		if not fighters.has(state.id):
+			spawn_fighter(state.id, state.team, state["class"], state.bot)
+		fighters[state.id].unpack(state, state.id == local_id)
+		if state.id == local_id:
+			fighters[state.id].camera.current = true
+	for id in fighters.keys():
+		if not seen.has(id):
+			fighters[id].queue_free()
+			fighters.erase(id)
+	seen.clear()
+	for state in data.entities:
+		seen.append(state.id)
+		if not entities.has(state.id):
+			create_entity_from(state)
+		var e: Deployable = entities[state.id]
+		e.global_position = state.pos
+		e.rotation.y = state.yaw
+		e.hp = state.hp
+		e.used = state.used
+		e.update_visual()
+	for id in entities.keys():
+		if not seen.has(id):
+			entities[id].queue_free()
+			entities.erase(id)
+	match_state.unpack(data.match)
+
+func ray(from: Vector3, to: Vector3, exclude: Array = [], mask: int = 15) -> Dictionary:
+	var query := PhysicsRayQueryParameters3D.create(from, to, mask)
+	query.exclude = exclude
+	return get_world_3d().direct_space_state.intersect_ray(query)
+
+func respawn(p: Fighter) -> void:
+	remove_owned(p.fighter_id)
+	p.double_id = -1
+	p.change_class(p.class_id)
+	p.global_position = spawn_position(p.team, p.fighter_id)
+	p.velocity = Vector3.ZERO
+	p.idle_weapon = 2
+	p.air_dash = true
+	p.held = 0
+	p.edges = 0
+
+func combat_tick(p: Fighter, dt: float) -> void:
+	for i in range(3):
+		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
+	p.shot_timer = maxf(0, p.shot_timer - dt)
+	p.alt_timer = maxf(0, p.alt_timer - dt)
+	p.conceal = maxf(0, p.conceal - dt)
+	p.reveal = maxf(0, p.reveal - dt)
+	p.melee_buff = maxf(0, p.melee_buff - dt)
+	p.gun_buff = maxf(0, p.gun_buff - dt)
+	if p.edges & 4 and p.ammo < p.spec.magazine and p.reload_timer <= 0:
+		p.reload_timer = p.spec.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+	if p.reload_timer > 0:
+		p.reload_timer -= dt
+		if p.reload_timer <= 0:
+			p.ammo = p.spec.magazine
+	for i in range(3):
+		if p.edges & (8 << i):
+			activate(p, i)
+	if p.class_id == 2:
+		p.spin = move_toward(p.spin, 1.0 if p.held & 1 else 0.0, dt / (0.25 if p.melee_buff > 0 else 0.6))
+	if p.held & 2:
+		p.conceal = 0
+		if p.class_id == 0:
+			p.charge += dt
+			if p.charge >= 0.9 and p.shot_timer <= 0.00001 and p.ammo >= 3 and p.reload_timer <= 0:
+				p.ammo -= 3
+				p.shot_timer = 0.9
+				p.charge = 0
+				fire_ray(p, 60, false)
+		elif p.class_id == 1 and p.alt_timer <= 0:
+			p.alt_timer = 0.35
+			var hit := ray(p.muzzle(), p.aim_point(), [p.get_rid()])
+			if not hit.is_empty() and hit.collider is Deployable and hit.collider.team == p.team:
+				hit.collider.hp = minf(hit.collider.max_hp, hit.collider.hp + 30)
+			show_trace(p.muzzle(), hit.position if not hit.is_empty() else p.aim_point(), team_color(p.team))
+		elif p.class_id == 2 and p.alt_timer <= 0:
+			p.alt_timer = 0.65 if p.gun_buff > 0 else 0.9
+			if cone_attack(p, 3.0, 75, 0.35, 3.0) > 0:
+				p.melee_buff = 2.0
+			show_trace(p.muzzle(), p.muzzle() + p.horizontal_direction() * 3, Color.WHITE)
+	else:
+		p.charge = 0
+	# Bursts finish their committed three-shot sequence even if fire is released.
+	if p.burst_left > 0:
+		p.burst_timer -= dt
+		if p.burst_timer <= 0.00001 and p.ammo > 0 and p.reload_timer <= 0:
+			p.burst_left -= 1
+			p.burst_timer += p.spec.burst_gap
+			p.ammo -= 1
+			p.conceal = 0
+			p.idle_weapon = 0
+			fire_ray(p, p.spec.damage, false)
+	elif p.held & 1 and not p.held & 2 and p.shot_timer <= 0.00001 and p.reload_timer <= 0 and (p.class_id != 2 or p.spin >= 0.99):
+		if p.ammo <= 0:
+			p.reload_timer = p.spec.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+		else:
+			p.conceal = 0
+			p.ammo -= 1
+			p.shot_timer = p.spec.interval
+			p.burst_left = p.spec.burst - 1
+			p.burst_timer = p.spec.burst_gap
+			fire_ray(p, p.spec.damage, p.class_id == 3)
+	if p.rush_time > 0:
+		for target in fighters.values():
+			if target.team != p.team and target.hp > 0 and not p.rush_hit.has(target.fighter_id) and target.global_position.distance_to(p.global_position) < 1.8:
+				p.rush_hit.append(target.fighter_id)
+				damage_fighter(target, 35, p.fighter_id)
+	p.update_visual()
+
+func fire_ray(p: Fighter, amount: float, ricochet: bool) -> void:
+	play_cue_at(p.global_position, 850 + p.class_id * 130)
+	var from := p.muzzle()
+	var toward := (p.aim_point() - from).normalized()
+	if p.class_id == 1:
+		var best: Fighter = null
+		var best_dot := cos(deg_to_rad(10.0))
+		for target in fighters.values():
+			if target.team == p.team or target.hp <= 0:
+				continue
+			var diff: Vector3 = target.global_position + Vector3.UP - from
+			if diff.length() <= p.spec.reach and toward.dot(diff.normalized()) > best_dot:
+				var sight := ray(from, target.global_position + Vector3.UP, [p.get_rid()])
+				if not sight.is_empty() and sight.collider == target:
+					best = target
+					best_dot = toward.dot(diff.normalized())
+		if best != null:
+			toward = (best.global_position + Vector3.UP - from).normalized()
+	var hit := ray(from, from + toward * p.spec.reach, [p.get_rid()])
+	var end: Vector3 = from + toward * p.spec.reach if hit.is_empty() else hit.position
+	show_trace(from, end, team_color(p.team))
+	if hit.is_empty():
+		p.consecutive_hits = 0
+		return
+	if hit.collider is Fighter or hit.collider is Deployable:
+		apply_hit(p, hit, amount)
+	elif ricochet:
+		var remaining := p.spec.reach - from.distance_to(hit.position)
+		var bounce := toward.bounce(hit.normal)
+		var start: Vector3 = hit.position + hit.normal * 0.04
+		var second := ray(start, start + bounce * remaining, [p.get_rid()])
+		show_trace(start, start + bounce * remaining if second.is_empty() else second.position, Color("ffe0ab"))
+		if not second.is_empty():
+			apply_hit(p, second, amount)
+	# Double echoes are visual only, never a second damage ray.
+	if entities.has(p.double_id):
+		var e: Deployable = entities[p.double_id]
+		show_trace(e.global_position + Vector3.UP * 1.3, e.global_position + Vector3.UP * 1.3 + toward * 8, team_color(p.team).darkened(0.3))
+		play_cue_at(e.global_position, 850 + p.class_id * 130)
+
+func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
+	var object = hit.collider
+	if object is Fighter and object.team != p.team:
+		var headshot: bool = hit.position.y - object.global_position.y > 1.55
+		damage_fighter(object, amount * (1.35 if headshot and p.class_id != 1 else 1.0), p.fighter_id)
+		p.consecutive_hits += 1
+		if p.class_id == 2 and p.consecutive_hits >= 5:
+			p.gun_buff = 2.0
+		hit_feedback(p.fighter_id)
+	elif object is Deployable and object.team != p.team:
+		object.hp -= amount
+		object.last_damage = object.age
+		hit_feedback(p.fighter_id)
+	else:
+		p.consecutive_hits = 0
+
+func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
+	if target.hp <= 0 or not authoritative:
+		return
+	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
+	if absf(target.global_position.x) > 83 and attacker >= 0:
+		return
+	target.hp = maxf(0, target.hp - amount)
+	target.reveal = 0.65
+	if target.hp <= 0:
+		target.dead_time = 5.0
+		target.velocity = Vector3.ZERO
+		target.grapple_time = 0
+		target.conceal = 0
+		remove_owned(target.fighter_id)
+		target.double_id = -1
+		target.update_visual()
+		var source: Fighter = fighters.get(attacker)
+		if source != null:
+			var text := "%s → %s" % [source.spec.title, target.spec.title]
+			kill_feed(text)
+			if multiplayer.get_peers().size() > 0:
+				kill_feed.rpc(text)
+			var line: String = source.spec.quips[rng.randi_range(0, source.spec.quips.size() - 1)]
+			if attacker == local_id:
+				character_quip(line)
+			elif not source.bot:
+				character_quip.rpc_id(attacker, line)
+
+func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push: float) -> int:
+	var hits := 0
+	for target in fighters.values():
+		var diff: Vector3 = target.global_position - p.global_position
+		if target.team == p.team or target.hp <= 0 or diff.length() > reach or p.horizontal_direction().dot(diff.normalized()) < dot_limit:
+			continue
+		var sight := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
+		if sight.is_empty() or sight.collider != target:
+			continue
+		damage_fighter(target, amount, p.fighter_id)
+		var reduction := 0.5 if target.class_id == 2 and target.spin > 0.8 and target.horizontal_direction().dot(-diff.normalized()) > 0.5 else 1.0
+		target.velocity += diff.normalized() * push * reduction
+		hits += 1
+	return hits
+
+func activate(p: Fighter, slot: int) -> void:
+	if p.hp <= 0:
+		return
+	if p.class_id == 0 and slot == 0 and p.grapple_time > 0:
+		p.grapple_time = 0
+		p.hot_lap = 2
+		return
+	if p.class_id == 3 and slot == 0 and entities.has(p.double_id):
+		var double: Deployable = entities[p.double_id]
+		if not double.used and double.hp > 0 and p.global_position.distance_to(double.global_position) <= 25 and clear_body(p, double.global_position) and clear_double(double, p.global_position):
+			var old := p.global_position
+			show_trace(old + Vector3.UP, double.global_position + Vector3.UP, Color("d9b8ff"))
+			p.global_position = double.global_position
+			double.global_position = old
+			double.used = true
+			p.ammo = mini(p.spec.magazine, p.ammo + 1)
+			p.idle_weapon = 1.25
+			play_cue_at(old, 440)
+			play_cue_at(p.global_position, 660)
+		return
+	if p.cooldowns[slot] > 0:
+		return
+	var success := true
+	match p.class_id:
+		0:
+			match slot:
+				0:
+					if p.grapple_time > 0:
+						p.grapple_time = 0
+						p.hot_lap = 2
+					else:
+						var hit := ray(p.muzzle(), p.muzzle() + p.direction() * 28, [p.get_rid()], 1 | 4)
+						if hit.is_empty():
+							success = false
+						else:
+							p.grapple = hit.position
+							p.grapple_time = 2.5
+							p.hot_lap = 2
+				1:
+					p.velocity += Vector3.UP * 11 + p.horizontal_direction() * 3
+					play_cue_at(p.global_position, 200)
+				2:
+					p.brake_time = 2
+		1:
+			match slot:
+				0, 1:
+					var place := placement(p, 8.0)
+					if place == Vector3.INF:
+						success = false
+					else:
+						var kind := "turret" if slot == 0 else "pad"
+						for e in entities.values():
+							if e.owner_id == p.fighter_id and e.kind == kind:
+								remove_entity(e.entity_id)
+						create_entity(p, kind, place, 100 if slot == 0 else 80, 90)
+				2:
+					var nearest: Deployable = null
+					for e in entities.values():
+						if e.owner_id == p.fighter_id and e.kind in ["turret", "pad"] and (nearest == null or p.global_position.distance_to(e.global_position) < p.global_position.distance_to(nearest.global_position)):
+							nearest = e
+					if nearest == null:
+						success = false
+					else:
+						var refund_slot := 0 if nearest.kind == "turret" else 1
+						p.cooldowns[refund_slot] = maxf(0, p.cooldowns[refund_slot] - p.spec.cooldowns[refund_slot] * 0.5)
+						remove_entity(nearest.entity_id)
+		2:
+			match slot:
+				0:
+					p.rush_time = 0.5
+					p.rush_hit.clear()
+				1:
+					var place := placement(p, 4)
+					if place == Vector3.INF:
+						success = false
+					else:
+						create_entity(p, "cover", place, 180, 8)
+				2:
+					cone_attack(p, 5, 30, 0.4, 9)
+					play_cue_at(p.global_position, 100)
+		3:
+			match slot:
+				0:
+					var place := placement(p, 15)
+					if place == Vector3.INF or not clear_body(p, place):
+						success = false
+					else:
+						if entities.has(p.double_id):
+							remove_entity(p.double_id)
+						p.double_id = create_entity(p, "double", place, p.spec.health * 0.25, 8)
+				1:
+					p.conceal = 0
+					throw_capsule(p)
+				2:
+					create_entity(p, "smoke", p.global_position, 1, 3)
+					p.conceal = 2.5
+	if success:
+		p.cooldowns[slot] = p.spec.cooldowns[slot]
+		if p.fighter_id == local_id:
+			announce(p.spec.abilities[slot])
+
+func placement(p: Fighter, reach: float) -> Vector3:
+	var origin := p.global_position + Vector3.UP * 1.5
+	var end := origin + p.direction() * reach
+	var hit := ray(origin, end, [p.get_rid()], 1 | 4)
+	if not hit.is_empty():
+		end = hit.position + hit.normal * 0.7
+	var ground := ray(end + Vector3.UP * 0.5, end + Vector3.DOWN * 12, [p.get_rid()], 1)
+	if ground.is_empty() or ground.normal.y < 0.7:
+		return Vector3.INF
+	return ground.position + Vector3.UP * 0.05
+
+func clear_body(p: Fighter, pos: Vector3) -> bool:
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.39
+	shape.height = 1.9
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis.IDENTITY, pos + Vector3.UP * 0.97)
+	query.collision_mask = 1 | 2 | 4 | 8
+	var exclusions: Array[RID] = [p.get_rid()]
+	if entities.has(p.double_id):
+		exclusions.append(entities[p.double_id].get_rid())
+	query.exclude = exclusions
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+func clear_double(e: Deployable, pos: Vector3) -> bool:
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(0.7, 1.7, 0.55)
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis(Vector3.UP, e.rotation.y), pos + Vector3.UP * 0.9)
+	query.collision_mask = 1 | 2 | 4
+	query.exclude = [e.get_rid(), fighters[e.owner_id].get_rid()]
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+func create_entity(p: Fighter, kind: String, pos: Vector3, hp_value: float, life: float) -> int:
+	var data := {"id": entity_next, "owner": p.fighter_id, "team": p.team, "kind": kind, "hp": hp_value, "life": life, "pos": pos, "yaw": p.yaw, "used": false}
+	entity_next += 1
+	create_entity_from(data)
+	return data.id
+
+func create_entity_from(data: Dictionary) -> void:
+	var e := Deployable.new()
+	e.configure(self, data)
+	add_child(e)
+	e.global_position = data.pos
+	e.rotation.y = data.yaw
+	e.used = data.used
+	entities[data.id] = e
+	e.update_visual()
+
+func remove_entity(id: int) -> void:
+	if entities.has(id):
+		var e: Deployable = entities[id]
+		if e.kind == "double" and fighters.has(e.owner_id) and fighters[e.owner_id].double_id == id:
+			fighters[e.owner_id].double_id = -1
+		e.collision_layer = 0
+		e.queue_free()
+		entities.erase(id)
+
+func remove_owned(id: int) -> void:
+	for e in entities.values():
+		if e.owner_id == id:
+			remove_entity(e.entity_id)
+
+func entities_tick(dt: float) -> void:
+	for e in entities.values():
+		e.age += dt
+		e.timer = maxf(0, e.timer - dt)
+		if e.age >= e.lifetime or e.hp <= 0:
+			remove_entity(e.entity_id)
+			continue
+		var owner: Fighter = fighters.get(e.owner_id)
+		if e.kind in ["turret", "pad"] and owner != null and owner.hp > 0 and owner.global_position.distance_to(e.global_position) < 12 and e.age - e.last_damage > 4:
+			e.hp = minf(e.max_hp, e.hp + 8 * dt)
+		if e.kind == "double" and owner != null:
+			e.rotation.y = owner.yaw
+		if e.kind == "pad" and e.timer <= 0:
+			for p in fighters.values():
+				if p.hp > 0 and p.global_position.distance_to(e.global_position) < 1.7:
+					p.velocity.y = 13
+					e.timer = 0.7
+					play_cue_at(e.global_position, 500)
+		elif e.kind == "turret" and e.timer <= 0:
+			var forward := Basis(Vector3.UP, e.rotation.y) * Vector3.FORWARD
+			var from: Vector3 = e.global_position + Vector3.UP * 0.85
+			for target in fighters.values():
+				var diff: Vector3 = target.global_position + Vector3.UP - from
+				if target.team == e.team or target.hp <= 0 or diff.length() > 14 or forward.dot(diff.normalized()) < 0.5:
+					continue
+				var hit := ray(from, target.global_position + Vector3.UP, [e.get_rid()])
+				if not hit.is_empty() and hit.collider == target:
+					damage_fighter(target, 6, e.owner_id)
+					e.timer = 0.3
+					show_trace(from, hit.position, team_color(e.team))
+					break
+		e.update_visual()
+
+func throw_capsule(p: Fighter) -> void:
+	var capsule := preload("res://scripts/dead_drop.gd").new()
+	capsule.configure(self, p)
+	add_child(capsule)
+	capsule.global_position = p.muzzle()
+	if entities.has(p.double_id):
+		var e: Deployable = entities[p.double_id]
+		show_trace(e.global_position + Vector3.UP, e.global_position + Vector3.UP + p.direction() * 5, team_color(p.team))
+
+func objectives_tick(dt: float) -> void:
+	var occupancy: Array = []
+	for point in points:
+		var counts := [0, 0]
+		for p in fighters.values():
+			if p.hp > 0 and Vector2(p.global_position.x - point.x, p.global_position.z - point.z).length() < 4.5 and absf(p.global_position.y - point.y) < 2.0:
+				counts[p.team] += 1
+		occupancy.append(counts)
+	match_state.tick(dt, occupancy)
+	for capture in match_state.captures:
+		var message := "%s acquired point %s" % ["HELIX" if capture[1] == 0 else "MONARCH", String.chr(65 + capture[0])]
+		announce(message)
+		if multiplayer.get_peers().size() > 0:
+			remote_notice.rpc(message)
+
+func bot_input(p: Fighter, dt: float) -> void:
+	if p.hp <= 0:
+		return
+	p.bot_think -= dt
+	if p.bot_think <= 0:
+		p.bot_think = rng.randf_range(0.25, 0.5)
+		var objective := 2
+		var closest := INF
+		for i in range(5):
+			if match_state.unlocked[i] and match_state.owners[i] != p.team:
+				var distance := p.global_position.distance_to(points[i])
+				if distance < closest:
+					closest = distance
+					objective = i
+		p.bot_target = points[objective] + Vector3(rng.randf_range(-2, 2), 0, rng.randf_range(-2, 2))
+		p.aim_target = -1
+		closest = 30
+		for target in fighters.values():
+			if target.team == p.team or target.hp <= 0 or target.conceal > 0 and target.reveal <= 0:
+				continue
+			var distance := p.global_position.distance_to(target.global_position)
+			if distance < closest:
+				var hit := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
+				if not hit.is_empty() and hit.collider == target:
+					closest = distance
+					p.aim_target = target.fighter_id
+	var destination := p.bot_target
+	if absf(destination.x - p.global_position.x) > 9:
+		destination.z = -7.0 if p.fighter_id % 2 == 0 else 7.0
+	if absf(p.global_position.x) > 80:
+		var side_sign := -1.0 if p.team == 0 else 1.0
+		var gate_z := -7.0 if p.global_position.z < 0 else 7.0
+		destination = Vector3(side_sign * (86 if absf(p.global_position.z) < 6.6 else 77), 0, gate_z)
+	var target: Fighter = fighters.get(p.aim_target)
+	var diff := destination - p.global_position
+	var aim := diff.normalized()
+	p.held = 0
+	if target != null and target.hp > 0:
+		var target_diff := target.global_position + Vector3.UP * 1.1 - p.muzzle()
+		aim = target_diff.normalized()
+		if target_diff.length() <= p.spec.reach:
+			p.held = 1
+		if p.class_id == 2 and target_diff.length() < 3:
+			p.held = 2
+		if rng.randf() < dt * 0.25:
+			p.edges |= 16
+	if aim.length() > 0.01:
+		p.yaw = lerp_angle(p.yaw, atan2(-aim.x, -aim.z), minf(1, dt * 9))
+		p.pitch = lerpf(p.pitch, asin(clampf(aim.y, -1, 1)), minf(1, dt * 9))
+	var local_move := Basis(Vector3.UP, -p.yaw) * diff.normalized()
+	var stopping_distance := 0.25 if absf(p.global_position.x) > 80 else 2.0
+	p.movement = Vector2(local_move.x, local_move.z) if diff.length() > stopping_distance else Vector2.ZERO
+	if p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1:
+		p.edges |= 1
+	if p.class_id == 1 and absf(p.global_position.x) < 75 and rng.randf() < dt * 0.25:
+		p.edges |= 8
+	elif p.class_id == 3 and rng.randf() < dt * 0.2:
+		p.edges |= 8 if p.double_id < 0 else 32
+	elif p.class_id == 0 and target != null and rng.randf() < dt * 0.1:
+		p.edges |= 16
+
+func show_trace(from: Vector3, to: Vector3, color: Color) -> void:
+	trace_visual(from, to, color)
+	if authoritative and multiplayer.get_peers().size() > 0:
+		trace_visual.rpc(from, to, color)
+
+@rpc("authority", "call_remote", "unreliable", 3)
+func trace_visual(from: Vector3, to: Vector3, color: Color) -> void:
+	if from.distance_to(to) < 0.01:
+		return
+	var line := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.018
+	mesh.bottom_radius = 0.018
+	mesh.height = from.distance_to(to)
+	line.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	line.material_override = mat
+	tracer_root.add_child(line)
+	line.global_position = (from + to) / 2
+	line.quaternion = Quaternion(Vector3.UP, (to - from).normalized())
+	get_tree().create_timer(0.08).timeout.connect(line.queue_free)
+
+func hit_feedback(id: int) -> void:
+	if id == local_id:
+		hit_confirm()
+	elif fighters.has(id) and not fighters[id].bot:
+		hit_confirm.rpc_id(id)
+
+@rpc("authority", "call_remote", "unreliable")
+func hit_confirm() -> void:
+	hit_timer = 0.12
+
+@rpc("authority", "call_remote", "reliable")
+func kill_feed(value: String) -> void:
+	feed.text = value + "\n" + feed.text.left(180)
+
+@rpc("authority", "call_remote", "unreliable")
+func character_quip(value: String) -> void:
+	if quip_timer > 0:
+		return
+	quip_label.text = '“%s”' % value
+	quip_timer = 4
+
+@rpc("authority", "call_remote", "reliable")
+func remote_notice(value: String) -> void:
+	announce(value)
+
+func announce(value: String) -> void:
+	notice.text = value
+	notice_timer = 3.0
+
+func play_cue_at(pos: Vector3, frequency: float) -> void:
+	cue_visual(pos, frequency)
+	if authoritative and multiplayer.get_peers().size() > 0:
+		cue_visual.rpc(pos, frequency)
+
+@rpc("authority", "call_remote", "unreliable")
+func cue_visual(pos: Vector3, frequency: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var audio := AudioStreamPlayer3D.new()
+	var wave := AudioStreamWAV.new()
+	wave.format = AudioStreamWAV.FORMAT_16_BITS
+	wave.mix_rate = 22050
+	var bytes := PackedByteArray()
+	bytes.resize(4410)
+	for i in range(2205):
+		var value := int(sin(float(i) * frequency * TAU / 22050) * 6500 * (1.0 - float(i) / 2205))
+		bytes.encode_s16(i * 2, value)
+	wave.data = bytes
+	audio.stream = wave
+	audio.max_distance = 30
+	add_child(audio)
+	audio.global_position = pos + Vector3.UP
+	audio.finished.connect(audio.queue_free)
+	audio.play()
+
+func update_hud(dt: float) -> void:
+	notice_timer = maxf(0, notice_timer - dt)
+	quip_timer = maxf(0, quip_timer - dt)
+	hit_timer = maxf(0, hit_timer - dt)
+	notice.visible = notice_timer > 0
+	quip_label.visible = quip_timer > 0
+	hitmarker.text = "×" if hit_timer > 0 else ""
+	var point_text := ""
+	for i in range(5):
+		var owner: int = match_state.owners[i]
+		var color := team_color(owner) if owner >= 0 else Color("c4c2af")
+		var mat: StandardMaterial3D = point_meshes[i].material_override
+		if mat == null:
+			mat = StandardMaterial3D.new()
+		mat.albedo_color = color if match_state.unlocked[i] else color.darkened(0.5)
+		point_meshes[i].material_override = mat
+		point_text += "%s%s %s %d%%    " % ["●" if match_state.unlocked[i] else "▪", String.chr(65 + i), "H" if owner == 0 else ("M" if owner == 1 else "—"), int(match_state.progress[i] * 100)]
+	var seconds := int(match_state.remaining)
+	objective_label.text = "%s\n%s" % [point_text, "OVERTIME" if match_state.overtime else "%02d:%02d   ·   HELIX / MONARCH" % [seconds / 60, seconds % 60]]
+	if match_state.winner != -2:
+		notice.visible = true
+		notice.text = "DRAW · Contract disputed" if match_state.winner == -1 else "%s WINS · Acquisition complete" % ("HELIX" if match_state.winner == 0 else "MONARCH")
+	var p := local_player()
+	if p == null:
+		return
+	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
+	stats.text = "%s   ·   %s\nHP %d / %d    AMMO %d / %d    %s" % [p.spec.title.to_upper(), mode, int(p.hp), int(p.spec.health), p.ammo, p.spec.magazine, "RELOADING" if p.reload_timer > 0 else ""]
+	if p.hp <= 0:
+		stats.text += "\nRESPAWN %.1fs · ESC to change class" % maxf(0, p.dead_time)
+	var ability_text := ""
+	for i in range(3):
+		var ready := "READY" if p.cooldowns[i] <= 0 else "%.1fs" % p.cooldowns[i]
+		if p.class_id == 3 and i == 0 and entities.has(p.double_id) and not entities[p.double_id].used:
+			ready = "SWAP"
+		ability_text += "%s %s [%s]   " % [["Q", "E", "F"][i], p.spec.abilities[i], ready]
+	abilities_label.text = ability_text + "\n" + p.spec.passive
+	# Ricochet preview is local presentation only and never deals damage.
+	if p.class_id == 3 and p.held & 2 and simulation_tick % 4 == 0:
+		var start := p.muzzle()
+		var direction := (p.aim_point() - start).normalized()
+		var hit := ray(start, start + direction * p.spec.reach, [p.get_rid()])
+		trace_visual(start, start + direction * p.spec.reach if hit.is_empty() else hit.position, Color("bc9ee8"))
+		if not hit.is_empty() and not hit.collider is Fighter and not hit.collider is Deployable:
+			var next: Vector3 = hit.position + hit.normal * 0.05
+			var end: Vector3 = next + direction.bounce(hit.normal) * (p.spec.reach - start.distance_to(hit.position))
+			var second := ray(next, end, [p.get_rid()])
+			trace_visual(next, end if second.is_empty() else second.position, Color("e1c7ff"))

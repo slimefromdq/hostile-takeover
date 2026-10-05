@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ClassSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/class_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Field Engineer"
+health = 200.0
+damage = 7.0
+interval = 0.1
+magazine = 60
+reach = 12.0
+abilities = PackedStringArray("Desk Job", "Express Service", "Recall Notice")
+cooldowns = PackedFloat32Array(12, 10, 3)
+passive = "PREVENTIVE MAINTENANCE · Nearby idle machinery repairs itself; condition visible through walls."
+quips = PackedStringArray("That explosion is outside your warranty.", "Parts and labour. Mostly labour.", "Please stop voiding the warranty.")
