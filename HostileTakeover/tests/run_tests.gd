@@ -38,6 +38,7 @@ func run() -> void:
 	await test_mirage()
 	await test_machinery()
 	test_authority_and_respawn()
+	await test_hud()
 	print("RESULT: %d checks, %d failures" % [checks, failures])
 	game.queue_free()
 	await process_frame
@@ -376,3 +377,40 @@ func test_authority_and_respawn() -> void:
 	game.start_game("restart")
 	check(game.match_state.winner == -2 and game.match_state.remaining == 720, "host restart resets round")
 	check(game.entities.is_empty() and p.hp == p.spec.health, "restart clears deployables and restores fighters")
+
+func test_hud() -> void:
+	game.set_physics_process(false)
+	var victim: Fighter = game.fighters[100]
+	var killer: Fighter = game.fighters[105]
+	victim.team = 0
+	killer.team = 1
+	victim.global_position = Vector3(0, 0, 20)
+	killer.global_position = Vector3(1, 0, 20)
+	victim.hp = victim.spec.health
+	var before: int = game.hud.feed.size()
+	var kills_before: int = killer.kills
+	var deaths_before: int = victim.deaths
+	game.damage_fighter(victim, 10000, 105)
+	check(killer.kills == kills_before + 1 and victim.deaths == deaths_before + 1, "kill increments killer kills and victim deaths")
+	check(game.hud.feed.size() == mini(5, before + 1) and game.hud.feed[0].killer == killer.spec.title, "kill feed records the kill")
+	check(killer.pack().k == killer.kills and victim.pack().d == victim.deaths, "kills and deaths are replicated in snapshots")
+	var twin: Fighter = game.fighters[101]
+	twin.unpack(killer.pack(), false)
+	check(twin.kills == killer.kills, "snapshot restores kills")
+	for i in range(8):
+		game.hud.add_kill("A", 0, "B", 1)
+	check(game.hud.feed.size() == 5, "kill feed keeps at most five entries")
+	var rows: Array = Hud.scoreboard_rows(game)
+	check(rows[0].size() == 6 and rows[1].size() == 6, "scoreboard lists six fighters per team")
+	check(rows[1][0].k >= rows[1][-1].k, "scoreboard sorts by kills")
+	var mini: Minimap = game.hud.minimap
+	check(mini.to_map(CivicDividend.BOUNDS.position.x, CivicDividend.BOUNDS.position.y).is_zero_approx(), "minimap maps bounds origin to its corner")
+	check(mini.to_map(CivicDividend.BOUNDS.end.x, CivicDividend.BOUNDS.end.y).is_equal_approx(mini.size), "minimap maps bounds end to its far corner")
+	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
+	check(game.menu.cards.size() == Fighter.SPECS.size(), "menu has a card per class")
+	game.hud.hit(2)
+	game.hud.damaged(Vector3(5, 0, 5))
+	game.hud.refresh(game, 0.016)
+	check(game.hud.hit_timer > 0.0 and game.hud.indicators.size() >= 1, "hit marker and damage indicator register")
+	game.respawn(victim)
+	game.respawn(killer)
