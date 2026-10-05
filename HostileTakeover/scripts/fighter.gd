@@ -2,6 +2,24 @@ class_name Fighter
 extends CharacterBody3D
 
 const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resources/engineer.tres"), preload("res://resources/enforcer.tres"), preload("res://resources/mirage.tres")]
+# Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
+const GRAVITY := 26.0
+const JUMP_SPEED := 10.0
+const DOUBLE_JUMP_SPEED := 9.0
+const WALL_KICK_UP := 10.5
+const WALL_KICK_PUSH := 7.5
+const WALL_KICK_PUSH_SKYRUNNER := 9.0
+const DASH_SPEED := 22.0
+const DASH_TIME := 0.28
+const GROUND_ACCEL := 20.0
+const GROUND_FRICTION := 14.0
+const AIR_CAP := 1.2
+const AIR_CAP_HOT_LAP := 2.0
+const AIR_ACCEL := 60.0
+const AIR_ACCEL_HOT_LAP := 100.0
+const AIR_SPEED_SOFT_CAP := 15.0
+const MANTLE_SPEED := 8.5
+const MANTLE_HEAD_CLEARANCE := 2.6
 var game: Node3D
 var fighter_id: int = 0
 var team: int = 0
@@ -61,6 +79,8 @@ var remote_target: Vector3 = Vector3.ZERO
 var remote_velocity: Vector3 = Vector3.ZERO
 var has_remote_target := false
 var step_timer := 0.0
+var dash_time := 0.0
+var dash_velocity := Vector3.ZERO
 var kills: int = 0
 var deaths: int = 0
 var equipment: Node3D
@@ -209,27 +229,34 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if grounded:
 		air_dash = true
 		wall_repeats = 0
+		wall_normal = Vector3.ZERO
 	var desired := Basis(Vector3.UP, yaw) * Vector3(movement.x, 0, movement.y)
 	var speed := 8.0 if idle_weapon >= 1.25 else 6.0
 	if class_id == 2 and held & 1:
 		speed *= 0.55
 	var sliding: bool = held & 8 != 0 and grounded and Vector2(velocity.x, velocity.z).length() > 5.0
-	var acceleration := 28.0 if grounded else (16.0 if hot_lap > 0 else 9.0)
+	dash_time = maxf(0.0, dash_time - dt)
 	if sliding:
 		var downhill := Vector3.DOWN.slide(get_floor_normal())
 		velocity += downhill * 16.0 * dt
 		velocity.x = move_toward(velocity.x, desired.x * speed, 2 * dt)
 		velocity.z = move_toward(velocity.z, desired.z * speed, 2 * dt)
+	elif grounded:
+		var rate := GROUND_ACCEL if desired.length() > 0.05 else GROUND_FRICTION
+		velocity.x = move_toward(velocity.x, desired.x * speed, rate * dt)
+		velocity.z = move_toward(velocity.z, desired.z * speed, rate * dt)
+	elif dash_time > 0.0:
+		velocity.x = dash_velocity.x
+		velocity.z = dash_velocity.z
 	else:
-		velocity.x = move_toward(velocity.x, desired.x * speed, acceleration * dt)
-		velocity.z = move_toward(velocity.z, desired.z * speed, acceleration * dt)
+		_air_steer(desired, dt)
 	if not grounded:
-		velocity.y -= 22.0 * dt
+		velocity.y -= GRAVITY * (0.35 if dash_time > 0.0 else 1.0) * dt
 	else:
 		velocity.y = -0.1
 	if movement_edges & 1:
 		if grounded:
-			velocity.y = 8.0
+			velocity.y = JUMP_SPEED
 		else:
 			var wall: Dictionary = game.ray(global_position + Vector3.UP, global_position + Vector3.UP + horizontal_direction() * 0.85, [get_rid()], 1 | 4)
 			if wall.is_empty():
@@ -243,14 +270,24 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 				else:
 					wall_repeats = 0
 				wall_normal = wall.normal
-				velocity += wall.normal * (8.5 if class_id == 0 else 7.0)
-				velocity.y = 8.0 / (1.0 + wall_repeats * 0.6)
+				velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
+				velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
+				dash_time = 0.0
+				air_dash = true
 				if class_id == 0:
 					hot_lap = 2.0
+			elif air_dash:
+				# Double jump shares its charge with the air dash (one air action per landing or wall kick).
+				air_dash = false
+				velocity.y = DOUBLE_JUMP_SPEED
+				velocity.x += desired.x * 1.5
+				velocity.z += desired.z * 1.5
 	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
 		var dash_dir := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
-		velocity = dash_dir * 16.0 + Vector3.UP * maxf(velocity.y, 1.0)
+		dash_time = DASH_TIME
+		dash_velocity = dash_dir * DASH_SPEED
+		velocity = dash_velocity + Vector3.UP * maxf(velocity.y, 1.5)
 	if grapple_time > 0:
 		velocity += (grapple - global_position).normalized() * 32.0 * dt
 		velocity = velocity.limit_length(23.0)
@@ -266,11 +303,11 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		velocity.x = rush.x
 		velocity.z = rush.z
 	# Held jump requests a mantle only against a low wall with clear headroom.
-	if held & 16 and not grounded and velocity.y <= 3.0:
+	if held & 16 and not grounded and velocity.y <= 4.0:
 		var low: Dictionary = game.ray(global_position + Vector3.UP * 0.7, global_position + Vector3.UP * 0.7 + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
-		var high: Dictionary = game.ray(global_position + Vector3.UP * 1.9, global_position + Vector3.UP * 1.9 + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
+		var high: Dictionary = game.ray(global_position + Vector3.UP * MANTLE_HEAD_CLEARANCE, global_position + Vector3.UP * MANTLE_HEAD_CLEARANCE + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
 		if not low.is_empty() and high.is_empty():
-			velocity.y = 6.0
+			velocity.y = MANTLE_SPEED
 	move_and_slide()
 	step_timer -= dt
 	if game.authoritative and is_on_floor() and Vector2(velocity.x, velocity.z).length() > 2 and step_timer <= 0:
@@ -280,12 +317,34 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		game.damage_fighter(self, 10000, -1)
 	update_visual()
 
+# Source-style air control: input only adds speed along the wish direction up to a small cap, so
+# holding forward does nothing at speed and steering comes from strafing while turning the view.
+func _air_steer(desired: Vector3, dt: float) -> void:
+	var wish_len := desired.length()
+	if wish_len > 0.01:
+		var wish_dir := desired / wish_len
+		var cap := (AIR_CAP_HOT_LAP if hot_lap > 0 else AIR_CAP) * wish_len
+		var current := velocity.x * wish_dir.x + velocity.z * wish_dir.z
+		var add := cap - current
+		if add > 0.0:
+			var gain := minf((AIR_ACCEL_HOT_LAP if hot_lap > 0 else AIR_ACCEL) * dt, add)
+			velocity.x += wish_dir.x * gain
+			velocity.z += wish_dir.z * gain
+	# Soft ceiling so strafing and dashes cannot build unbounded speed.
+	if grapple_time <= 0.0 and rush_time <= 0.0:
+		var horizontal := Vector2(velocity.x, velocity.z)
+		if horizontal.length() > AIR_SPEED_SOFT_CAP:
+			var limited := horizontal.move_toward(horizontal.normalized() * AIR_SPEED_SOFT_CAP, 18.0 * dt)
+			velocity.x = limited.x
+			velocity.z = limited.y
+
 func change_class(value: int) -> void:
 	class_id = clampi(value, 0, 3)
 	spec = SPECS[class_id]
 	hp = spec.health
 	ammo = spec.magazine
 	cooldowns.assign([0.0, 0.0, 0.0])
+	dash_time = 0.0
 	reload_timer = 0
 	shot_timer = 0
 	burst_left = 0

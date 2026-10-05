@@ -60,7 +60,7 @@ func setup(owner_game: Node3D) -> void:
 	toggle.flat = true
 	toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	column.add_child(toggle)
-	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again at a wall to kick, hold at a low ledge to mantle\nSHIFT air dash (sprint is automatic) · CTRL slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
+	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, hold at a ledge to mantle\nSHIFT air dash (shares a charge with the double jump; sprint is automatic) · strafe to steer in the air · CTRL slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
 	toggle.pressed.connect(func():

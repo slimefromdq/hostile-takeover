@@ -12,13 +12,15 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 |---|---|
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire |
-| Space | Jump; press again against a wall to kick; hold near a low ledge to mantle |
-| Shift | Air dash — **not sprint** |
+| Space | Jump; press again in the air to double jump, or against a wall to wall-kick; hold near a ledge (up to about 2.6 m) to mantle |
+| Shift | Air dash (about 6 m, shares its single charge with the double jump; restored on landing or a wall kick) — **not sprint** |
 | Ctrl | Slide while moving on ground |
 | Q / E / F | Three class abilities |
 | R | Reload |
 | V | Switch camera shoulder |
 | Escape | Class selector / resume menu |
+
+Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m.
 
 Sprint activates automatically after 1.25 seconds without weapon use. Shooting and alternate fire return you to combat speed. Damage and nonweapon abilities do not reset sprint. Changes of class are accepted only in your depot or while dead. Respawn takes five seconds. The match continues while the menu is open.
 

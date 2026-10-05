@@ -348,9 +348,9 @@ func _draw_feed() -> void:
 func _draw_help() -> void:
 	if not help_shown():
 		return
-	var lines := ["WASD move · SPACE jump / wall kick · SHIFT air dash · CTRL slide", "Q / E / F abilities · R reload · V shoulder · TAB scoreboard", "ESC menu · F1 hide hints · F2 colour-blind palette"]
+	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT air dash · CTRL slide · strafe to steer in the air", "Q / E / F abilities · R reload · V shoulder · TAB scores", "ESC menu · F1 hide hints · F2 colour-blind palette"]
 	for i in range(lines.size()):
-		text(Vector2(size.x - 520.0, size.y - 76.0 + i * 22.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 500.0)
+		text(Vector2(size.x - 420.0, size.y - 98.0 + i * 20.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 404.0)
 
 func _draw_winner() -> void:
 	var winner: int = game.match_state.winner

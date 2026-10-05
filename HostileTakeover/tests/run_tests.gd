@@ -160,12 +160,14 @@ func test_movement() -> void:
 	for archetype in range(4):
 		p.change_class(archetype)
 		p.global_position = O + Vector3(88.8, 3, 20)
+		p.wall_repeats = 0
+		p.wall_normal = Vector3.ZERO
 		p.velocity = Vector3.ZERO
 		p.yaw = -PI / 2
 		p.movement = Vector2.ZERO
 		p.simulate_movement(1.0 / 60, 0)
 		p.simulate_movement(1.0 / 60, 1)
-		check(p.velocity.x < -5 and p.velocity.y > 0, "universal wall kick: " + p.spec.title)
+		check(p.velocity.x < -6 and p.velocity.y >= 10.4, "universal wall kick: " + p.spec.title)
 	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	p.movement = Vector2.ZERO
@@ -186,10 +188,12 @@ func test_movement() -> void:
 	p.held = 16
 	p.velocity.y = 0
 	p.simulate_movement(1.0 / 60, 0)
-	check(p.velocity.y >= 5.9, "held jump mantles a low ledge")
+	check(p.velocity.y >= 8.4, "held jump mantles a low ledge")
 	p.held = 0
 	await physics_frame
 	await process_frame
+	await test_air_movement()
+	test_visual_pipeline()
 
 func aim_at(p: Fighter, target: Vector3) -> void:
 	for i in range(12):
@@ -312,13 +316,13 @@ func test_machinery() -> void:
 	check(not game.entities.has(id), "recall removes installation")
 	var pad: int = game.create_entity(p, "pad", p.global_position, 80, 90)
 	game.entities_tick(0.01)
-	check(p.velocity.y == 13, "launch pad propels fighters")
+	check(p.velocity.y == 14.5, "launch pad propels fighters")
 	var opponent: Fighter = game.fighters[105]
 	opponent.change_class(1)
 	opponent.global_position = p.global_position + Vector3(0.5, 0, 0)
 	game.entities[pad].timer = 0
 	game.entities_tick(0.01)
-	check(opponent.velocity.y == 13, "enemy can use engineer launch pad")
+	check(opponent.velocity.y == 14.5, "enemy can use engineer launch pad")
 	game.remove_entity(pad)
 	await physics_frame
 	await process_frame
@@ -416,3 +420,75 @@ func test_hud() -> void:
 	check(game.hud.hit_timer > 0.0 and game.hud.indicators.size() >= 1, "hit marker and damage indicator register")
 	game.respawn(victim)
 	game.respawn(killer)
+
+func test_visual_pipeline() -> void:
+	# Writing ALPHA in the opaque map shader moves every map mesh into the transparent pipeline
+	# (no depth writes), which made walls draw on top of each other.
+	check(Visuals.SURFACE_SHADER.find("ALPHA") == -1, "map surface shader stays in the opaque pipeline")
+	check(Visuals.surface("glass", Color.WHITE) is StandardMaterial3D, "glass uses its own transparent material")
+
+func test_air_movement() -> void:
+	# move_and_slide uses the physics delta only inside a physics frame, so each section starts on one.
+	await physics_frame
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.held = 0
+	# Jump height: a full jump should clear a 1.9 m ledge but not much more.
+	p.global_position = O + Vector3(-30, 0.01, -20)
+	p.velocity = Vector3.ZERO
+	p.movement = Vector2.ZERO
+	for i in range(10):
+		p.simulate_movement(1.0 / 60, 0)
+		p.simulate_movement(1.0 / 60, 1)
+	var apex := 0.0
+	for i in range(80):
+		p.simulate_movement(1.0 / 60, 0)
+		apex = maxf(apex, p.global_position.y)
+	check(apex > 1.55 and apex < 2.3, "jump apex is 1.6-2.2 m, up from about 1.4 (%.2f)" % apex)
+	await physics_frame
+	# Double jump spends the shared air charge and gives a second lift; a dash cannot follow it.
+	p.global_position = O + Vector3(-30, 6.0, -20)
+	p.velocity = Vector3(0, -2, 0)
+	p.simulate_movement(1.0 / 60, 0)
+	p.air_dash = true
+	p.simulate_movement(1.0 / 60, 1)
+	check(p.velocity.y > 8.0 and not p.air_dash, "double jump lifts and consumes the air charge")
+	var before := p.velocity
+	p.simulate_movement(1.0 / 60, 2)
+	check(p.velocity.x == before.x and p.velocity.z == before.z, "no dash after a double jump")
+	await physics_frame
+	# Dash covers a long horizontal distance and is exclusive with the double jump.
+	p.global_position = O + Vector3(-30, 8.0, -20)
+	p.velocity = Vector3.ZERO
+	p.yaw = -PI / 2
+	p.movement = Vector2(0, -1)
+	p.air_dash = true
+	var start_x := p.global_position.x
+	p.simulate_movement(1.0 / 60, 2)
+	for i in range(30):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.global_position.x - start_x > 7.0, "air dash travels over 7 m in half a second (%.1f)" % (p.global_position.x - start_x))
+	await physics_frame
+	# Air control: forward input at speed adds nothing; strafing adds a bounded amount.
+	p.global_position = O + Vector3(-30, 8.0, -20)
+	p.velocity = Vector3(8, 0, 0)
+	p.air_dash = false
+	p.yaw = -PI / 2
+	p.movement = Vector2(0, -1)
+	for i in range(20):
+		p.simulate_movement(1.0 / 60, 0)
+	check(absf(p.velocity.x - 8.0) < 0.05, "holding forward in the air adds no speed")
+	p.movement = Vector2(1, 0)
+	p.velocity = Vector3(8, 0, 0)
+	for i in range(30):
+		p.simulate_movement(1.0 / 60, 0)
+	check(absf(p.velocity.z) > 0.3 and absf(p.velocity.z) < 2.0, "air strafing nudges sideways velocity only slightly (%.2f)" % p.velocity.z)
+	await physics_frame
+	# Ground momentum: stopping takes noticeable time.
+	p.global_position = O + Vector3(-30, 0.01, 5)
+	p.velocity = Vector3(8, 0, 0)
+	p.movement = Vector2.ZERO
+	for i in range(10):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.velocity.x > 5.0, "ground friction is weighty, not instant (%.1f after 0.17 s)" % p.velocity.x)
+	p.movement = Vector2.ZERO
