@@ -35,7 +35,7 @@ Godot 4.7.2 stable, Linux, headless plus xvfb/llvmpipe renders. These are automa
 
 | Check | Result |
 |---|---|
-| Behavioral suite (`run_tests.gd`) | **94 checks passed**, zero failures (82 original + kills/deaths, kill feed, scoreboard, minimap, menu) |
+| Behavioral suite (`run_tests.gd`) | **103 checks passed**, zero failures (82 original + kills/deaths, kill feed, scoreboard, minimap, menu, new air movement, render pipeline) |
 | Map audit (`map_audit.gd`) | **26 checks passed**: bounds, no overlaps/z-fighting/wedge gaps/narrow gaps, 0.25 m grid, mirror symmetry, waypoint ground and capsule clearance, edge sweeps, flat capture discs, 4 route families to B and C, sightline budgets, spawn dogleg |
 | Walker (`map_walk.gd`) | **64 routes walked, 0 failures** (Skyrunner and Enforcer, 4 route families, both depots, all points) |
 | Bot match (`match_smoke.gd`) | PASS, 11 of 12 fighters advanced; bots spread over boulevard, trench, alleys and roofs (`bot_routes.gd`) |
@@ -47,3 +47,8 @@ alleys max 40 m; roofs max 58 m. No capture point sees a point two or more steps
 
 Not verified: human playtests, balance on the new map, and the 1080p/60 fps target on reference hardware. Software
 rendering here says nothing about real frame rates.
+
+Follow-up fixes: the map surface shader no longer writes ALPHA (it forced every map mesh into the transparent
+pipeline, so walls drew over each other; a regression check guards this), and movement was retuned (gravity 26,
+jump 10 m/s, double jump, dash 22 m/s for 0.28 s, wall kick 10.5 m/s up, mantle to about 2.6 m, Source-style
+air control and ground friction). Feel and balance of the new movement still need human playtests.

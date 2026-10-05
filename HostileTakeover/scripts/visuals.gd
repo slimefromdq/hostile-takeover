@@ -30,7 +30,6 @@ uniform float cell = 2.0;
 uniform float line_width = 0.05;
 uniform float emission_strength = 0.0;
 uniform float top_lines = 1.0;
-uniform float alpha = 1.0;
 varying vec3 world_pos;
 varying vec3 world_normal;
 void vertex() {
@@ -53,7 +52,6 @@ void fragment() {
 	ALBEDO = mix(base_color.rgb, line_color.rgb, line * 0.55);
 	ROUGHNESS = 0.85;
 	EMISSION = line_color.rgb * line * emission_strength;
-	ALPHA = alpha;
 }
 """
 
@@ -104,6 +102,15 @@ static func surface(role: String, color: Color) -> Material:
 	if _materials.has(key):
 		return _materials[key]
 	var mat: Material
+	if role == "glass":
+		# Writing ALPHA in the opaque surface shader would push every map mesh into the transparent
+		# pipeline (no depth writes, per-mesh sorting), so walls draw over each other. Glass is separate.
+		var glass := StandardMaterial3D.new()
+		glass.albedo_color = Color(color, 0.35)
+		glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glass.roughness = 0.1
+		_materials[key] = glass
+		return glass
 	var tex := AssetLibrary.texture(role + "_albedo")
 	if tex != null:
 		var std := StandardMaterial3D.new()
@@ -126,8 +133,6 @@ static func surface(role: String, color: Color) -> Material:
 		sm.set_shader_parameter("line_width", params[3])
 		sm.set_shader_parameter("emission_strength", params[4])
 		sm.set_shader_parameter("top_lines", params[5])
-		if role == "glass":
-			sm.set_shader_parameter("alpha", 0.35)
 		mat = sm
 	_materials[key] = mat
 	return mat

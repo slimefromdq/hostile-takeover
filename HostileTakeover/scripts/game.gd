@@ -701,7 +701,7 @@ func activate(p: Fighter, slot: int) -> void:
 							p.grapple_time = 2.5
 							p.hot_lap = 2
 				1:
-					p.velocity += Vector3.UP * 11 + p.horizontal_direction() * 3
+					p.velocity += Vector3.UP * 12.5 + p.horizontal_direction() * 3
 					show_ring(p.global_position, 1.6, team_color(p.team))
 					play_cue_at(p.global_position, 200)
 				2:
@@ -851,7 +851,7 @@ func entities_tick(dt: float) -> void:
 		if e.kind == "pad" and e.timer <= 0:
 			for p in fighters.values():
 				if p.hp > 0 and p.global_position.distance_to(e.global_position) < 1.7:
-					p.velocity.y = 13
+					p.velocity.y = 14.5
 					show_ring(e.global_position, 1.7, team_color(e.team))
 					e.timer = 0.7
 					play_cue_at(e.global_position, 500)
