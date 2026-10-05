@@ -42,6 +42,12 @@ var double_id: int = -1
 var alt_timer: float = 0.0
 var bot_think: float = 0.0
 var bot_target: Vector3 = Vector3.ZERO
+var bot_path: Array[Vector3] = []
+var bot_path_i: int = 0
+var bot_goal: int = -1
+var bot_bias: Dictionary = {}
+var bot_progress_pos: Vector3 = Vector3.ZERO
+var bot_progress_time: float = 0.0
 var aim_target: int = -1
 var nameplate: MeshInstance3D
 var rope: MeshInstance3D
@@ -121,6 +127,8 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 	pivot.add_child(arm)
 	camera = Camera3D.new()
 	camera.fov = 80
+	camera.near = 0.1
+	camera.far = 500.0
 	arm.add_child(camera)
 	update_visual()
 

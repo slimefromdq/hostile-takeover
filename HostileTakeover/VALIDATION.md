@@ -27,3 +27,23 @@ Run the bot-match check with:
 ```
 
 `--fixed-fps` accelerates the simulation without establishing real rendered performance. **Human playtests, final balance, production networking, and the 1080p/60-fps target remain unverified.**
+
+
+# Validation addendum - Phases 1-5 (visual, HUD and map overhaul)
+
+Godot 4.7.2 stable, Linux, headless plus xvfb/llvmpipe renders. These are automated checks only.
+
+| Check | Result |
+|---|---|
+| Behavioral suite (`run_tests.gd`) | **94 checks passed**, zero failures (82 original + kills/deaths, kill feed, scoreboard, minimap, menu) |
+| Map audit (`map_audit.gd`) | **26 checks passed**: bounds, no overlaps/z-fighting/wedge gaps/narrow gaps, 0.25 m grid, mirror symmetry, waypoint ground and capsule clearance, edge sweeps, flat capture discs, 4 route families to B and C, sightline budgets, spawn dogleg |
+| Walker (`map_walk.gd`) | **64 routes walked, 0 failures** (Skyrunner and Enforcer, 4 route families, both depots, all points) |
+| Bot match (`match_smoke.gd`) | PASS, 11 of 12 fighters advanced; bots spread over boulevard, trench, alleys and roofs (`bot_routes.gd`) |
+| Host/client (`network_test.gd`, 80 ms, drop every 5th) | PASS; compressed twelve-fighter snapshot about 1.2 KB (includes kills/deaths) |
+| Renders | Gameplay, HUD, scoreboard, menu, class lineup, effects and 13 map views inspected under xvfb (`docs/previews/`) |
+
+Measured map sightlines (free head-height run, lane-aligned): boulevard median 10 m, p90 26 m, max 57 m; trench max 46 m;
+alleys max 40 m; roofs max 58 m. No capture point sees a point two or more steps away.
+
+Not verified: human playtests, balance on the new map, and the 1080p/60 fps target on reference hardware. Software
+rendering here says nothing about real frame rates.

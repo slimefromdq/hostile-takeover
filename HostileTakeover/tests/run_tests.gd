@@ -3,6 +3,7 @@ extends SceneTree
 var checks := 0
 var failures := 0
 var game: Node3D
+const O := ProvingGround.ORIGIN
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -27,10 +28,11 @@ func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
+	ProvingGround.build(game)
 	game.start_game("offline")
 	game.set_physics_process(false)
 	for p in game.fighters.values():
-		p.global_position = Vector3(60, 0, 20)
+		p.global_position = O + Vector3(60, 0, 20)
 	await physics_frame
 	await process_frame
 	await test_movement()
@@ -129,7 +131,7 @@ func test_specs() -> void:
 
 func test_movement() -> void:
 	var p: Fighter = game.local_player()
-	p.global_position = Vector3(-10, 0.01, -21)
+	p.global_position = O + Vector3(-10, 0.01, -21)
 	p.change_class(0)
 	p.movement = Vector2(0, -1)
 	p.yaw = -PI / 2
@@ -145,26 +147,26 @@ func test_movement() -> void:
 	p.simulate_movement(1.0 / 60, 0)
 	check(p.idle_weapon == 0, "alternate weapon also resets sprint")
 	p.held = 0
-	p.global_position = Vector3(-10, 4, -21)
+	p.global_position = O + Vector3(-10, 4, -21)
 	p.air_dash = true
 	p.simulate_movement(1.0 / 60, 0)
 	p.simulate_movement(1.0 / 60, 2)
 	check(not p.air_dash and p.velocity.x > 14, "air dash consumed and propels")
-	p.global_position = Vector3(-10, 0, -21)
+	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.air_dash, "landing restores air dash")
 	for archetype in range(4):
 		p.change_class(archetype)
-		p.global_position = Vector3(88.8, 3, 20)
+		p.global_position = O + Vector3(88.8, 3, 20)
 		p.velocity = Vector3.ZERO
 		p.yaw = -PI / 2
 		p.movement = Vector2.ZERO
 		p.simulate_movement(1.0 / 60, 0)
 		p.simulate_movement(1.0 / 60, 1)
 		check(p.velocity.x < -5 and p.velocity.y > 0, "universal wall kick: " + p.spec.title)
-	p.global_position = Vector3(-10, 0, -21)
+	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	p.movement = Vector2.ZERO
 	p.held = 0
@@ -177,7 +179,7 @@ func test_movement() -> void:
 	var slide_speed := p.velocity.x
 	p.simulate_movement(1.0 / 60, 0)
 	check(p.velocity.x > 9 and slide_speed - p.velocity.x < 0.05, "slide preserves momentum")
-	p.global_position = Vector3(-5.2, 0.3, 5)
+	p.global_position = O + Vector3(-5.2, 0.3, 5)
 	p.velocity = Vector3.ZERO
 	p.held = 0
 	p.simulate_movement(1.0 / 60, 0)
@@ -202,12 +204,12 @@ func test_weapons() -> void:
 	var target: Fighter = game.fighters[105]
 	for class_index in range(4):
 		p.change_class(class_index)
-		p.global_position = Vector3(-10, 0, -21)
+		p.global_position = O + Vector3(-10, 0, -21)
 		p.velocity = Vector3.ZERO
 		p.held = 1
 		p.spin = 1
 		target.change_class(1)
-		target.global_position = Vector3(0, 0, -21)
+		target.global_position = O + Vector3(0, 0, -21)
 		target.hp = 200
 		target.update_visual()
 		await physics_frame
@@ -237,8 +239,8 @@ func test_weapons() -> void:
 func test_mirage() -> void:
 	var p: Fighter = game.local_player()
 	p.change_class(3)
-	p.global_position = Vector3(-10, 0.05, -21)
-	var pos := Vector3(-3, 0.05, -21)
+	p.global_position = O + Vector3(-10, 0.05, -21)
+	var pos := O + Vector3(-3, 0.05, -21)
 	p.double_id = game.create_entity(p, "double", pos, 45, 8)
 	await physics_frame
 	await process_frame
@@ -255,7 +257,7 @@ func test_mirage() -> void:
 	game.activate(p, 0)
 	check(p.global_position.is_equal_approx(pos), "second swap unavailable")
 	game.remove_owned(p.fighter_id)
-	p.double_id = game.create_entity(p, "double", Vector3(9, 0.05, -13), 45, 8)
+	p.double_id = game.create_entity(p, "double", O + Vector3(9, 0.05, -13), 45, 8)
 	await physics_frame
 	await process_frame
 	var blocked: Deployable = game.entities[p.double_id]
@@ -270,7 +272,7 @@ func test_mirage() -> void:
 	p.double_id = game.create_entity(p, "double", game.points[2], 45, 8)
 	game.match_state.reset()
 	for other in game.fighters.values():
-		other.global_position = Vector3(60, 0, 20)
+		other.global_position = O + Vector3(60, 0, 20)
 	game.objectives_tick(10)
 	check(game.match_state.progress[2] == 0 and game.match_state.owners[2] == -1, "double cannot capture or contest")
 	game.entities_tick(8.1)
@@ -295,7 +297,7 @@ func test_mirage() -> void:
 func test_machinery() -> void:
 	var p: Fighter = game.local_player()
 	p.change_class(1)
-	p.global_position = Vector3(-10, 0, -21)
+	p.global_position = O + Vector3(-10, 0, -21)
 	var id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
 	var e: Deployable = game.entities[id]
 	e.hp = 50
@@ -337,9 +339,9 @@ func test_machinery() -> void:
 	game.entities_tick(0.01)
 	check(not game.entities.has(turret_id), "destroyed turret is removed")
 	p.change_class(2)
-	p.global_position = Vector3(-10, 0, -21)
+	p.global_position = O + Vector3(-10, 0, -21)
 	p.yaw = -PI / 2
-	opponent.global_position = Vector3(-8, 0, -21)
+	opponent.global_position = O + Vector3(-8, 0, -21)
 	opponent.hp = 200
 	await physics_frame
 	await process_frame
@@ -358,7 +360,7 @@ func test_authority_and_respawn() -> void:
 	game.damage_fighter(p, 100, 105)
 	check(p.hp == hp, "client cannot award damage")
 	game.authoritative = true
-	p.global_position = Vector3(0, 0, 20)
+	p.global_position = O + Vector3(0, 0, 20)
 	game.damage_fighter(p, 10000, 105)
 	check(p.hp == 0 and p.dead_time == 5, "death schedules respawn")
 	game.respawn(p)
@@ -384,8 +386,8 @@ func test_hud() -> void:
 	var killer: Fighter = game.fighters[105]
 	victim.team = 0
 	killer.team = 1
-	victim.global_position = Vector3(0, 0, 20)
-	killer.global_position = Vector3(1, 0, 20)
+	victim.global_position = O + Vector3(0, 0, 20)
+	killer.global_position = O + Vector3(1, 0, 20)
 	victim.hp = victim.spec.health
 	var before: int = game.hud.feed.size()
 	var kills_before: int = killer.kills

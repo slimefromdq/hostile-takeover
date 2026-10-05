@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Renders res://preview.png (gameplay view) and res://preview_classes.png (class lineup).
+# Renders res://docs/previews/preview.png (gameplay view) and res://docs/previews/preview_classes.png (class lineup).
 func _initialize() -> void:
 	call_deferred("run")
 
@@ -8,12 +8,12 @@ func run() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.start_game("offline")
-	game.local_player().global_position = Vector3(-11, 0.1, -7)
+	game.local_player().global_position = Vector3(-50, 0.1, -2)
 	game.local_player().yaw = -PI / 2
-	game.local_player().pitch = -0.08
+	game.local_player().pitch = -0.05
 	await create_timer(3).timeout
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://preview.png")
+	root.get_texture().get_image().save_png("res://docs/previews/preview.png")
 	# Lineup: all four classes, allies (left row) and enemies (right row) facing the camera.
 	for p in game.fighters.values():
 		p.global_position = Vector3(0, -50, 80)
@@ -43,7 +43,7 @@ func run() -> void:
 	game.hud.hide()
 	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://preview_classes.png")
+	root.get_texture().get_image().save_png("res://docs/previews/preview_classes.png")
 	print("RENDER PREVIEW SAVED")
 	game.queue_free()
 	await process_frame

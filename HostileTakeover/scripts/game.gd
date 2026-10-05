@@ -11,7 +11,9 @@ var entities: Dictionary = {}
 var entity_next := 1
 var match_state := Acquisition.new()
 var points: Array[Vector3] = []
+var bot_graph: MapGraph
 var point_meshes: Array[MeshInstance3D] = []
+var beacon_meshes: Array[MeshInstance3D] = []
 var snapshot_timer := 0.0
 var input_edges := 0
 var simulation_tick := 0
@@ -33,6 +35,7 @@ func _ready() -> void:
 	Visuals.load_settings()
 	setup_inputs()
 	points = CivicDividend.build(self)
+	bot_graph = MapGraph.from_layout()
 	tracer_root = Node3D.new()
 	add_child(tracer_root)
 	for i in range(5):
@@ -43,8 +46,26 @@ func _ready() -> void:
 		cylinder.height = 0.1
 		mesh.mesh = cylinder
 		mesh.position = points[i] + Vector3.UP * 0.1
+		mesh.material_override = Visuals.glow(Color("c4c2af"), 0.6)
 		add_child(mesh)
 		point_meshes.append(mesh)
+		# Beacon: a thin translucent column above head height so each point is findable over the skyline.
+		var beacon := MeshInstance3D.new()
+		var column := CylinderMesh.new()
+		column.top_radius = 0.18
+		column.bottom_radius = 0.18
+		column.height = 36.0
+		column.radial_segments = 8
+		beacon.mesh = column
+		var beam := StandardMaterial3D.new()
+		beam.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		beam.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		beam.albedo_color = Color(1, 1, 1, 0.3)
+		beacon.material_override = beam
+		beacon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		beacon.position = points[i] + Vector3.UP * 22.0
+		add_child(beacon)
+		beacon_meshes.append(beacon)
 	make_ui()
 	multiplayer.peer_connected.connect(peer_connected)
 	multiplayer.peer_disconnected.connect(peer_disconnected)
@@ -216,7 +237,7 @@ func join_request(class_choice: int) -> void:
 	initial_sync.rpc_id(id, encode_world())
 
 func spawn_position(side: int, id: int) -> Vector3:
-	return Vector3(-86 if side == 0 else 86, 0.2, -7 + (abs(id) % 6) * 2.8)
+	return Vector3(-MapLayout.SPAWN_X if side == 0 else MapLayout.SPAWN_X, 0.2, -7 + (abs(id) % 6) * 2.8)
 
 func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool) -> Fighter:
 	var p: Fighter = CLASS_SCENES[archetype].instantiate()
@@ -320,6 +341,9 @@ func _physics_process(dt: float) -> void:
 				if player.dead_time <= 0:
 					respawn(player)
 				continue
+			if out_of_bounds(player.global_position):
+				damage_fighter(player, 10000, -1)
+				continue
 			if match_state.winner == -2:
 				player.simulate_movement(dt, player.edges)
 				combat_tick(player, dt)
@@ -339,6 +363,11 @@ func _physics_process(dt: float) -> void:
 					else:
 						send_state.call()
 	update_hud(dt)
+
+# Grapples and launch pads can never carry a fighter out of the arena.
+func out_of_bounds(pos: Vector3) -> bool:
+	var b := MapLayout.BOUNDS
+	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > 40.0
 
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
@@ -446,6 +475,8 @@ func ray(from: Vector3, to: Vector3, exclude: Array = [], mask: int = 15) -> Dic
 func respawn(p: Fighter) -> void:
 	remove_owned(p.fighter_id)
 	p.double_id = -1
+	p.bot_path.clear()
+	p.bot_bias.clear()
 	p.change_class(p.class_id)
 	p.global_position = spawn_position(p.team, p.fighter_id)
 	p.velocity = Vector3.ZERO
@@ -586,7 +617,7 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 	if target.hp <= 0 or not authoritative:
 		return
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
-	if absf(target.global_position.x) > 83 and attacker >= 0:
+	if absf(target.global_position.x) > MapLayout.DEPOT_LIMIT and attacker >= 0:
 		return
 	target.hp = maxf(0, target.hp - amount)
 	target.reveal = 0.65
@@ -878,6 +909,8 @@ func bot_input(p: Fighter, dt: float) -> void:
 					closest = distance
 					objective = i
 		p.bot_target = points[objective] + Vector3(rng.randf_range(-2, 2), 0, rng.randf_range(-2, 2))
+		if objective != p.bot_goal or p.bot_path.is_empty():
+			plan_bot_path(p, objective)
 		p.aim_target = -1
 		closest = 30
 		for target in fighters.values():
@@ -889,13 +922,7 @@ func bot_input(p: Fighter, dt: float) -> void:
 				if not hit.is_empty() and hit.collider == target:
 					closest = distance
 					p.aim_target = target.fighter_id
-	var destination := p.bot_target
-	if absf(destination.x - p.global_position.x) > 9:
-		destination.z = -7.0 if p.fighter_id % 2 == 0 else 7.0
-	if absf(p.global_position.x) > 80:
-		var side_sign := -1.0 if p.team == 0 else 1.0
-		var gate_z := -7.0 if p.global_position.z < 0 else 7.0
-		destination = Vector3(side_sign * (86 if absf(p.global_position.z) < 6.6 else 77), 0, gate_z)
+	var destination := bot_waypoint(p, dt)
 	var target: Fighter = fighters.get(p.aim_target)
 	var diff := destination - p.global_position
 	var aim := diff.normalized()
@@ -913,7 +940,7 @@ func bot_input(p: Fighter, dt: float) -> void:
 		p.yaw = lerp_angle(p.yaw, atan2(-aim.x, -aim.z), minf(1, dt * 9))
 		p.pitch = lerpf(p.pitch, asin(clampf(aim.y, -1, 1)), minf(1, dt * 9))
 	var local_move := Basis(Vector3.UP, -p.yaw) * diff.normalized()
-	var stopping_distance := 0.25 if absf(p.global_position.x) > 80 else 2.0
+	var stopping_distance := 2.0 if p.bot_path_i >= p.bot_path.size() - 1 else 0.4
 	p.movement = Vector2(local_move.x, local_move.z) if diff.length() > stopping_distance else Vector2.ZERO
 	if p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1:
 		p.edges |= 1
@@ -923,6 +950,61 @@ func bot_input(p: Fighter, dt: float) -> void:
 		p.edges |= 8 if p.double_id < 0 else 32
 	elif p.class_id == 0 and target != null and rng.randf() < dt * 0.1:
 		p.edges |= 16
+
+# Each bot commits to a route family (class-weighted odds) so a squad spreads over the flanks;
+# the chosen family is cheap to path through, the others expensive but still usable as connectors.
+func bot_weights(p: Fighter) -> Dictionary:
+	if p.bot_bias.is_empty():
+		var odds := {"blv": 0.25, "roof": 0.25, "trn": 0.25, "aln": 0.25}
+		match p.class_id:
+			0:
+				odds = {"blv": 0.2, "roof": 0.4, "trn": 0.2, "aln": 0.2}
+			1:
+				odds = {"blv": 0.25, "roof": 0.1, "trn": 0.35, "aln": 0.3}
+			2:
+				odds = {"blv": 0.45, "roof": 0.1, "trn": 0.3, "aln": 0.15}
+		var roll := rng.randf()
+		var chosen := "blv"
+		for tag in odds:
+			roll -= odds[tag]
+			if roll <= 0.0:
+				chosen = tag
+				break
+		for tag in odds:
+			p.bot_bias[tag] = (0.4 if tag == chosen else 2.0) * rng.randf_range(0.9, 1.1)
+	return p.bot_bias.duplicate()
+
+func plan_bot_path(p: Fighter, objective: int) -> void:
+	var goal_names := ["A", "B", "C", "e_B", "e_A"]
+	p.bot_goal = objective
+	p.bot_path = bot_graph.path(bot_graph.nearest(p.global_position), bot_graph.node(goal_names[objective]), bot_weights(p))
+	p.bot_path_i = 0
+	p.bot_progress_pos = p.global_position
+	p.bot_progress_time = 0.0
+
+# Current steering target: next waypoint on the planned route, then the capture point itself.
+func bot_waypoint(p: Fighter, dt: float) -> Vector3:
+	if p.bot_path.is_empty():
+		return p.bot_target
+	while p.bot_path_i < p.bot_path.size() - 1:
+		var wp: Vector3 = p.bot_path[p.bot_path_i]
+		if Vector2(wp.x - p.global_position.x, wp.z - p.global_position.z).length() < 1.4 and absf(wp.y - p.global_position.y) < 2.0:
+			p.bot_path_i += 1
+		else:
+			break
+	# Replan when wedged: little horizontal progress while trying to move.
+	p.bot_progress_time += dt
+	if p.bot_progress_time > 2.0:
+		var moved := Vector2(p.global_position.x - p.bot_progress_pos.x, p.global_position.z - p.bot_progress_pos.z).length()
+		if moved < 0.8 and p.bot_path_i < p.bot_path.size() - 1:
+			p.bot_bias.clear()
+			plan_bot_path(p, p.bot_goal)
+			p.edges |= 1
+		p.bot_progress_pos = p.global_position
+		p.bot_progress_time = 0.0
+	if p.bot_path_i >= p.bot_path.size() - 1:
+		return p.bot_target if Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 12.0 else p.bot_path[p.bot_path.size() - 1]
+	return p.bot_path[p.bot_path_i]
 
 func show_trace(from: Vector3, to: Vector3, color: Color, style: int = 0, with_impact: bool = false) -> void:
 	trace_visual(from, to, color, style, with_impact)
@@ -997,7 +1079,21 @@ func cue_visual(pos: Vector3, frequency: float) -> void:
 	audio.finished.connect(audio.queue_free)
 	audio.play()
 
+# Capture discs and beacons take the owner's colour; locked points are dimmed.
+func update_points() -> void:
+	for i in range(point_meshes.size()):
+		var owner: int = match_state.owners[i]
+		var color := team_color(owner) if owner >= 0 else Color("c4c2af")
+		if not match_state.unlocked[i]:
+			color = color.darkened(0.55)
+		var disc: StandardMaterial3D = point_meshes[i].material_override
+		disc.albedo_color = color
+		disc.emission = color
+		var beam: StandardMaterial3D = beacon_meshes[i].material_override
+		beam.albedo_color = Color(color, 0.12 if not match_state.unlocked[i] else 0.35)
+
 func update_hud(dt: float) -> void:
+	update_points()
 	hud.refresh(self, dt)
 	var p := local_player()
 	if p == null:

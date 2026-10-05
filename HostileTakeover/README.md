@@ -52,12 +52,19 @@ Against a 200-HP body-shot target, measured authoritative firing times are:
 
 All measurements include firing cadence and any required reload. Enforcer spin-up adds approximately 0.6 seconds from rest. Headshots multiply damage by 1.35 except for the electric hose. A capsule plus one revolver headshot cannot eliminate even the lowest-health class.
 
-Class tuning lives in `resources/*.tres`; movement in `scripts/fighter.gd`; combat and authority in `scripts/game.gd`; map geometry in `scripts/civic_dividend.gd`; objective rules in `scripts/acquisition.gd`.
+Class tuning lives in `resources/*.tres`; movement in `scripts/fighter.gd`; combat and authority in `scripts/game.gd`; map in `scripts/map_layout.gd` (built through `scripts/map_builder.gd`, see `MAP.md`); objective rules in `scripts/acquisition.gd`; HUD in `scripts/hud.gd`; visuals in `scripts/visuals.gd`, `scripts/character_rig.gd` and `scripts/vfx.gd`. Blender exports drop into `assets/` (see `assets/README.md`).
 
 Run behavioral checks:
 
 ```powershell
 & 'path\to\godot_console.exe' --headless --path . --script res://tests/run_tests.gd
+```
+
+Run the map audits (geometry, traversal, sightlines) and the walker test:
+
+```powershell
+& 'path\to\godot_console.exe' --headless --path . --script res://tests/map_audit.gd
+& 'path\to\godot_console.exe' --headless --path . --script res://tests/map_walk.gd
 ```
 
 Run network checks in two terminals, starting the server first:
@@ -71,6 +78,6 @@ The development flags delay outgoing movement/actions/snapshots by 80 millisecon
 
 ## Prototype limits
 
-Art is generated primitive geometry; dialogue is contextual text, and sound is synthesized placeholder cues. Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level kit use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
+Art is generated primitive geometry (class rigs, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized placeholder cues. Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level kit use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.
