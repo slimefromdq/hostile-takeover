@@ -13,13 +13,13 @@ const ALLY_OUTLINE := Color("8fe3ff")
 
 # role -> [surface base multiplier, line colour, grid cell metres, line width, emission]
 const ROLES := {
-	"walk": [1.0, Color("c9cfd2"), 4.0, 0.05, 0.0],
-	"wall": [1.0, Color("ffd36b"), 2.0, 0.06, 0.6],
-	"tower": [0.55, Color("ffe7a8"), 3.0, 0.5, 0.25],
-	"cover": [1.0, Color("ffffff"), 1.0, 0.04, 0.0],
-	"accent": [1.0, Color("ffffff"), 2.0, 0.2, 1.4],
-	"hazard": [1.0, Color("ffcc00"), 1.0, 0.25, 0.8],
-	"glass": [1.0, Color("bfe9ff"), 2.0, 0.05, 0.2],
+	"walk": [1.0, Color("c9cfd2"), 4.0, 0.05, 0.0, 1.0],
+	"wall": [1.0, Color("ffd36b"), 2.0, 0.06, 0.6, 0.0],
+	"tower": [0.7, Color("cfc8b4"), 3.0, 0.45, 0.1, 0.0],
+	"cover": [1.0, Color("ffffff"), 1.0, 0.04, 0.0, 0.0],
+	"accent": [1.0, Color("ffffff"), 2.0, 0.2, 1.4, 1.0],
+	"hazard": [1.0, Color("ffcc00"), 1.0, 0.25, 0.8, 1.0],
+	"glass": [1.0, Color("bfe9ff"), 2.0, 0.05, 0.2, 1.0],
 }
 
 const SURFACE_SHADER := """
@@ -29,6 +29,7 @@ uniform vec4 line_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
 uniform float cell = 2.0;
 uniform float line_width = 0.05;
 uniform float emission_strength = 0.0;
+uniform float top_lines = 1.0;
 uniform float alpha = 1.0;
 varying vec3 world_pos;
 varying vec3 world_normal;
@@ -46,6 +47,9 @@ void fragment() {
 	}
 	vec2 g = abs(fract(uv / cell - 0.5) - 0.5) * cell;
 	float line = 1.0 - step(line_width, min(g.x, g.y));
+	if (n.y > 0.7) {
+		line *= top_lines;
+	}
 	ALBEDO = mix(base_color.rgb, line_color.rgb, line * 0.55);
 	ROUGHNESS = 0.85;
 	EMISSION = line_color.rgb * line * emission_strength;
@@ -121,6 +125,7 @@ static func surface(role: String, color: Color) -> Material:
 		sm.set_shader_parameter("cell", params[2])
 		sm.set_shader_parameter("line_width", params[3])
 		sm.set_shader_parameter("emission_strength", params[4])
+		sm.set_shader_parameter("top_lines", params[5])
 		if role == "glass":
 			sm.set_shader_parameter("alpha", 0.35)
 		mat = sm
@@ -171,7 +176,7 @@ static func build_environment(root: Node3D) -> void:
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.45
+	environment.ambient_light_energy = 0.55
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
 	environment.fog_light_color = Color("a98d85")
@@ -183,7 +188,7 @@ static func build_environment(root: Node3D) -> void:
 	world_env.environment = environment
 	root.add_child(world_env)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-38, -35, 0)
+	sun.rotation_degrees = Vector3(-60, -35, 0)
 	sun.light_color = Color("ffd8a8")
 	sun.light_energy = 1.0
 	sun.shadow_enabled = true

@@ -19,6 +19,10 @@ func to_map(x: float, z: float) -> Vector2:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.05, 0.08, 0.62))
+	for rect in CivicDividend.sunken:
+		var sa := to_map(rect.position.x, rect.position.y)
+		var sb := to_map(rect.end.x, rect.end.y)
+		draw_rect(Rect2(sa, sb - sa), Color(0.2, 0.35, 0.55, 0.35))
 	for rect in CivicDividend.footprints:
 		var a := to_map(rect.position.x, rect.position.y)
 		var b := to_map(rect.end.x, rect.end.y)
