@@ -71,7 +71,6 @@ func configure(g: Node3D, data: Dictionary) -> void:
 	add_child(display)
 
 var chevrons: Array[StandardMaterial3D] = []
-var barrel: Node3D
 
 func _process(_dt: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
@@ -102,7 +101,6 @@ func build_model() -> void:
 			Visuals.add_outline(shell.material_override, team_col.lightened(0.4), 0.025)
 			CharacterRig.cylinder(head, Vector3(0, 0, -0.45), 0.06, 0.06, 0.55, Visuals.solid(Color("8a949c")), Vector3(PI / 2, 0, 0))
 			CharacterRig.sphere(head, Vector3(0, 0.05, -0.74), 0.06, Visuals.glow(team_col, 2.5))
-			barrel = head
 		"pad":
 			var plate := CharacterRig.box(model, Vector3(0, 0.07, 0), Vector3(2.0, 0.14, 2.0), Visuals.solid(dark))
 			Visuals.add_outline(plate.material_override, team_col.lightened(0.4), 0.02)

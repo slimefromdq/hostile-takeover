@@ -15,7 +15,6 @@ const POINT_X: Array[float] = [-64.0, -32.0, 0.0, 32.0, 64.0]
 const SPAWN_X := 86.0
 const DEPOT_LIMIT := 83.0
 const TEST_LANE := Vector3(-20, 0.05, 0)
-const CROSS_HALF := 6.0
 
 const ROAD := Color("5c656f")
 const PAVE := Color("78818a")

@@ -66,12 +66,16 @@ static func capsule(parent: Node3D, pos: Vector3, radius: float, height: float, 
 	var m := CapsuleMesh.new()
 	m.radius = radius
 	m.height = height
+	m.radial_segments = 12
+	m.rings = 3
 	return mesh_part(parent, m, pos, mat, rot)
 
 static func sphere(parent: Node3D, pos: Vector3, radius: float, mat: Material, squash: float = 1.0) -> MeshInstance3D:
 	var m := SphereMesh.new()
 	m.radius = radius
 	m.height = radius * 2.0 * squash
+	m.radial_segments = 14
+	m.rings = 7
 	return mesh_part(parent, m, pos, mat)
 
 static func cylinder(parent: Node3D, pos: Vector3, top: float, bottom: float, height: float, mat: Material, rot: Vector3 = Vector3.ZERO) -> MeshInstance3D:
@@ -79,6 +83,8 @@ static func cylinder(parent: Node3D, pos: Vector3, top: float, bottom: float, he
 	m.top_radius = top
 	m.bottom_radius = bottom
 	m.height = height
+	m.radial_segments = 12
+	m.rings = 1
 	return mesh_part(parent, m, pos, mat, rot)
 
 static func pivot(parent: Node3D, node_name: String, pos: Vector3) -> Node3D:
@@ -112,6 +118,10 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 		1: _engineer(ctx, legs, body)
 		2: _enforcer(ctx, legs, body)
 		_: _mirage(ctx, legs, body)
+	# Only the body capsules and spheres cast shadows; small details would just double draw calls.
+	for part in root.find_children("*", "MeshInstance3D", true, false):
+		if not (part.mesh is CapsuleMesh or part.mesh is SphereMesh):
+			part.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.set_meta("materials", ctx.materials)
 	if ghost:
 		set_alpha(root, 0.55)
@@ -178,6 +188,8 @@ static func _engineer(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
 	var coil := TorusMesh.new()
 	coil.inner_radius = 0.07
 	coil.outer_radius = 0.2
+	coil.rings = 14
+	coil.ring_segments = 6
 	mesh_part(body, coil, Vector3(-0.3, 0.2, 0.0), ctx.lit(DARK), Vector3(0, 0, PI / 2))
 	_free_arm(ctx, body, Vector3(-0.34, 0.65, 0), 0.09, overalls)
 	var weapon := _weapon_arm(ctx, body, Vector3(0.34, 0.65, 0), 0.09, overalls)

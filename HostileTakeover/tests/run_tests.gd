@@ -194,6 +194,8 @@ func test_movement() -> void:
 	await process_frame
 	await test_air_movement()
 	test_visual_pipeline()
+	test_effect_pool()
+	test_sfx()
 
 func aim_at(p: Fighter, target: Vector3) -> void:
 	for i in range(12):
@@ -420,6 +422,26 @@ func test_hud() -> void:
 	check(game.hud.hit_timer > 0.0 and game.hud.indicators.size() >= 1, "hit marker and damage indicator register")
 	game.respawn(victim)
 	game.respawn(killer)
+
+func test_sfx() -> void:
+	var silent := 0
+	var total := 0
+	for kind in Sfx.Kind.values():
+		var wave := Sfx.stream(kind)
+		total += 1
+		var peak := 0
+		for i in range(0, wave.data.size() - 1, 2):
+			peak = maxi(peak, absi(wave.data.decode_s16(i)))
+		if wave.data.size() < 1000 or peak < 1500:
+			silent += 1
+	check(silent == 0 and total == Sfx.RECIPES.size(), "every sound cue synthesises audible audio (%d cues)" % total)
+	check(Sfx.stream(Sfx.Kind.SHOT_ENFORCER) == Sfx.stream(Sfx.Kind.SHOT_ENFORCER), "cues are cached")
+
+func test_effect_pool() -> void:
+	var root_node: Node3D = game.tracer_root
+	for i in range(600):
+		Vfx.tracer(root_node, Vector3(0, 1, 0), Vector3(20, 1, 0), Vfx.Style.ARC, Color.WHITE, true)
+	check(root_node.get_child_count() <= Vfx.MAX_EFFECT_NODES + 40, "effect nodes stay capped under a tracer flood (%d)" % root_node.get_child_count())
 
 func test_visual_pipeline() -> void:
 	# Writing ALPHA in the opaque map shader moves every map mesh into the transparent pipeline

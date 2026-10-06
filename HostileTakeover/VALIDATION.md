@@ -1,54 +1,29 @@
-# Validation — October 5, 2026
+# Validation
 
-Tested with Godot **4.7.2 stable**, Windows, compatibility renderer.
+Godot **4.7.2 stable**, Linux. Headless runs for logic, xvfb with software OpenGL for renders and probes. Everything
+below is automated; nothing here replaces human playtesting or measurement on real hardware.
 
-| Check | Result |
-|---|---|
-| Behavioral suite | **82 checks passed**, zero failures or runtime errors |
-| Host/client integration | Both processes passed with 80 ms outgoing delay on each side and every fifth unreliable motion/state packet dropped |
-| Network behaviors | Human replaces bot; twelve-player roster; class assignment; reliable double deployment; one-use swap; authoritative relocation and teleport correction; predicted movement |
-| Packet size | Compressed twelve-fighter snapshot measured **897 bytes** in the final network test |
-| Two-minute simulated match | Passed: twelve valid fighters, ten bots advanced out of spawn, center acquired, valid frontier |
-| Render verification | OpenGL 3.3 on Intel Arc; gameplay screenshot saved and inspected; no rendering errors |
+| Check | Command | Result |
+|---|---|---|
+| Behavioral suite | `--headless --script res://tests/run_tests.gd` | **106 checks, 0 failures**: acquisition rules, class specs and TTK, movement (jump, double jump, dash, air control, friction, wall kick, mantle, slide), weapons, abilities, deployables, authority and respawn, kills/deaths, kill feed, scoreboard, minimap, menu, effect cap, sound synthesis, shader pipeline |
+| Map audit | `--headless --script res://tests/map_audit.gd` | **26 checks, 0 failures**: containment, no overlaps / z-fighting / wedge or narrow gaps, 0.25 m grid, east-west mirror, waypoint ground and capsule clearance, edge sweeps, flat capture discs, four route families to B and C, sightline budgets, spawn dogleg |
+| Walker | `--headless --script res://tests/map_walk.gd` | **64 routes, 0 failures** (Skyrunner and Enforcer, 4 route families, both depots, every point, no jumping) |
+| Bot match | `--headless --fixed-fps 60 --script res://tests/match_smoke.gd` | PASS (12 fighters, bots advance, objective pressure) |
+| Bot route spread | `tests/bot_routes.gd` | boulevard ~48%, trench ~15%, alleys ~11%, cross streets/lobbies ~9%, roofs ~7% of bot samples |
+| Host/client | `tests/network_test.gd` server + client, `--latency-ms=80 --drop-every=5` | PASS; compressed twelve-fighter snapshot about 1.2 KB |
+| Soak | `--headless --fixed-fps 60 --script res://tests/soak.gd -- minutes=10` | PASS: nodes stayed within 953-1025, zero orphans over ten simulated minutes |
+| Render cost | `xvfb-run ... tests/perf_probe.gd` | primitives per frame about 1.33 M -> 0.11-0.13 M after lowering character mesh resolution; peak draw calls about 630-780; 220-node cap on live effects |
+| Renders | `tests/render_*.gd` | gameplay, HUD, scoreboard, menu, class lineup, effects and 13 map views regenerated and inspected (`docs/previews/`) |
+| Startup | `--headless --quit-after 120`, `--check-only` per script | no errors or warnings |
 
-Live authoritative body-shot measurements against 200 HP:
+## What changed on the way (for context)
+Two defects were found by looking at real renders and fixed with regression tests: the opaque map shader wrote ALPHA, which
+forced every map mesh into the transparent pipeline so walls drew over each other, and character meshes used default
+high-resolution primitives (about 540 k triangles for twelve fighters).
 
-- Skyrunner: **2.083 seconds**.
-- Mirage Agent: **2.250 seconds**.
-- Field Engineer: **2.800 seconds**.
-- Enforcer: **2.600 seconds**, excluding its initial spin-up.
-
-The behavioral suite covers capture progression and counterpushes, locks, both final-point victories, contested capture, decay, overtime, simultaneous opposing captures, reload-aware damage timing, primary hits, friendly-fire exclusion, automatic sprint, air dash, all-class wall kicks, sliding, mantling, double exchange and obstruction, double destruction and expiry, objective exclusion, concealment, turret arcs and repair, shared launch pads, Enforcer passive triggers, server authority, respawn, class changes, stale-snapshot rejection, and round restart.
-
-Run the bot-match check with:
-
-```powershell
-& 'path\to\godot_console.exe' --headless --fixed-fps 60 --path . --script res://tests/match_smoke.gd
-```
-
-`--fixed-fps` accelerates the simulation without establishing real rendered performance. **Human playtests, final balance, production networking, and the 1080p/60-fps target remain unverified.**
-
-
-# Validation addendum - Phases 1-5 (visual, HUD and map overhaul)
-
-Godot 4.7.2 stable, Linux, headless plus xvfb/llvmpipe renders. These are automated checks only.
-
-| Check | Result |
-|---|---|
-| Behavioral suite (`run_tests.gd`) | **103 checks passed**, zero failures (82 original + kills/deaths, kill feed, scoreboard, minimap, menu, new air movement, render pipeline) |
-| Map audit (`map_audit.gd`) | **26 checks passed**: bounds, no overlaps/z-fighting/wedge gaps/narrow gaps, 0.25 m grid, mirror symmetry, waypoint ground and capsule clearance, edge sweeps, flat capture discs, 4 route families to B and C, sightline budgets, spawn dogleg |
-| Walker (`map_walk.gd`) | **64 routes walked, 0 failures** (Skyrunner and Enforcer, 4 route families, both depots, all points) |
-| Bot match (`match_smoke.gd`) | PASS, 11 of 12 fighters advanced; bots spread over boulevard, trench, alleys and roofs (`bot_routes.gd`) |
-| Host/client (`network_test.gd`, 80 ms, drop every 5th) | PASS; compressed twelve-fighter snapshot about 1.2 KB (includes kills/deaths) |
-| Renders | Gameplay, HUD, scoreboard, menu, class lineup, effects and 13 map views inspected under xvfb (`docs/previews/`) |
-
-Measured map sightlines (free head-height run, lane-aligned): boulevard median 10 m, p90 26 m, max 57 m; trench max 46 m;
-alleys max 40 m; roofs max 58 m. No capture point sees a point two or more steps away.
-
-Not verified: human playtests, balance on the new map, and the 1080p/60 fps target on reference hardware. Software
-rendering here says nothing about real frame rates.
-
-Follow-up fixes: the map surface shader no longer writes ALPHA (it forced every map mesh into the transparent
-pipeline, so walls drew over each other; a regression check guards this), and movement was retuned (gravity 26,
-jump 10 m/s, double jump, dash 22 m/s for 0.28 s, wall kick 10.5 m/s up, mantle to about 2.6 m, Source-style
-air control and ground friction). Feel and balance of the new movement still need human playtests.
+## Not verified
+- Human playtests: feel and balance of the retuned movement (gravity 26, jump 10 m/s, double jump, dash 22 m/s for 0.28 s,
+  Source-style air control) on the new map. Roofs and the gallery are now easy to reach.
+- Real-hardware 1080p / 60 fps. Software-rendered timings are only comparable run to run.
+- Audio quality: sounds are procedural and were only checked for synthesis and error-free playback, not by ear.
+- Production netcode (rollback, lag compensation), dedicated server, matchmaking, progression, persistence.

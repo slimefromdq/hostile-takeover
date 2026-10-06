@@ -70,13 +70,11 @@ var aim_target: int = -1
 var nameplate: MeshInstance3D
 var rope: MeshInstance3D
 var trail: CPUParticles3D
-var sliding_visual := false
 var marker: Label3D
 var pivot: Node3D
 var camera: Camera3D
 var shoulder: float = 1.0
 var remote_target: Vector3 = Vector3.ZERO
-var remote_velocity: Vector3 = Vector3.ZERO
 var has_remote_target := false
 var step_timer := 0.0
 var dash_time := 0.0
@@ -151,12 +149,6 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 	camera.far = 500.0
 	arm.add_child(camera)
 	update_visual()
-
-func make_material(color: Color) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.roughness = 0.85
-	return mat
 
 func build_rig() -> void:
 	outlines.clear()
@@ -257,6 +249,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if movement_edges & 1:
 		if grounded:
 			velocity.y = JUMP_SPEED
+			if game.authoritative:
+				game.play_sfx(global_position, Sfx.Kind.JUMP)
 		else:
 			var wall: Dictionary = game.ray(global_position + Vector3.UP, global_position + Vector3.UP + horizontal_direction() * 0.85, [get_rid()], 1 | 4)
 			if wall.is_empty():
@@ -274,12 +268,16 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 				velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
 				dash_time = 0.0
 				air_dash = true
+				if game.authoritative:
+					game.play_sfx(global_position, Sfx.Kind.JUMP)
 				if class_id == 0:
 					hot_lap = 2.0
 			elif air_dash:
 				# Double jump shares its charge with the air dash (one air action per landing or wall kick).
 				air_dash = false
 				velocity.y = DOUBLE_JUMP_SPEED
+				if game.authoritative:
+					game.play_sfx(global_position, Sfx.Kind.JUMP)
 				velocity.x += desired.x * 1.5
 				velocity.z += desired.z * 1.5
 	if movement_edges & 2 and not grounded and air_dash:
@@ -287,6 +285,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		var dash_dir := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
 		dash_time = DASH_TIME
 		dash_velocity = dash_dir * DASH_SPEED
+		if game.authoritative:
+			game.play_sfx(global_position, Sfx.Kind.DASH)
 		velocity = dash_velocity + Vector3.UP * maxf(velocity.y, 1.5)
 	if grapple_time > 0:
 		velocity += (grapple - global_position).normalized() * 32.0 * dt
@@ -312,7 +312,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	step_timer -= dt
 	if game.authoritative and is_on_floor() and Vector2(velocity.x, velocity.z).length() > 2 and step_timer <= 0:
 		step_timer = 0.36
-		game.play_cue_at(global_position, 75)
+		game.play_sfx(global_position, Sfx.Kind.STEP)
 	if global_position.y < -12.0 and game.authoritative:
 		game.damage_fighter(self, 10000, -1)
 	update_visual()

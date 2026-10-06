@@ -44,6 +44,8 @@ func _ready() -> void:
 		cylinder.top_radius = 4.5
 		cylinder.bottom_radius = 4.5
 		cylinder.height = 0.1
+		cylinder.radial_segments = 32
+		cylinder.rings = 1
 		mesh.mesh = cylinder
 		mesh.position = points[i] + Vector3.UP * 0.1
 		mesh.material_override = Visuals.glow(Color("c4c2af"), 0.6)
@@ -279,6 +281,9 @@ func apply_class(id: int, index: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
 		hud.toggle_help()
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+		Sfx.set_muted(not Sfx.muted)
+		announce("Sound %s." % ("muted" if Sfx.muted else "on"))
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		Visuals.set_colorblind(not Visuals.colorblind)
 		announce("Colour-blind palette %s · applies as fighters respawn." % ("on" if Visuals.colorblind else "off"))
@@ -555,7 +560,10 @@ func combat_tick(p: Fighter, dt: float) -> void:
 	p.update_visual()
 
 func fire_ray(p: Fighter, amount: float, ricochet: bool) -> void:
-	play_cue_at(p.global_position, 850 + p.class_id * 130)
+	var cue: int = [Sfx.Kind.SHOT_SKYRUNNER, Sfx.Kind.SHOT_ENGINEER, Sfx.Kind.SHOT_ENFORCER, Sfx.Kind.SHOT_MIRAGE][p.class_id]
+	if p.class_id == 0 and amount > 30.0:
+		cue = Sfx.Kind.SHOT_CHARGED
+	play_sfx(p.global_position, cue)
 	var from := p.muzzle()
 	var toward := (p.aim_point() - from).normalized()
 	if p.class_id == 1:
@@ -595,7 +603,7 @@ func fire_ray(p: Fighter, amount: float, ricochet: bool) -> void:
 	if entities.has(p.double_id):
 		var e: Deployable = entities[p.double_id]
 		show_trace(e.global_position + Vector3.UP * 1.3, e.global_position + Vector3.UP * 1.3 + toward * 8, team_color(p.team).darkened(0.3))
-		play_cue_at(e.global_position, 850 + p.class_id * 130)
+		play_sfx(e.global_position, cue)
 
 func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 	var object = hit.collider
@@ -679,8 +687,8 @@ func activate(p: Fighter, slot: int) -> void:
 			double.used = true
 			p.ammo = mini(p.spec.magazine, p.ammo + 1)
 			p.idle_weapon = 1.25
-			play_cue_at(old, 440)
-			play_cue_at(p.global_position, 660)
+			play_sfx(old, Sfx.Kind.SWAP)
+			play_sfx(p.global_position, Sfx.Kind.SWAP)
 		return
 	if p.cooldowns[slot] > 0:
 		return
@@ -698,15 +706,17 @@ func activate(p: Fighter, slot: int) -> void:
 							success = false
 						else:
 							p.grapple = hit.position
+							play_sfx(p.global_position, Sfx.Kind.GRAPPLE)
 							p.grapple_time = 2.5
 							p.hot_lap = 2
 				1:
 					p.velocity += Vector3.UP * 12.5 + p.horizontal_direction() * 3
 					show_ring(p.global_position, 1.6, team_color(p.team))
-					play_cue_at(p.global_position, 200)
+					play_sfx(p.global_position, Sfx.Kind.KICKOFF)
 				2:
 					p.brake_time = 2
 					show_ring(p.global_position + Vector3.UP * 0.6, 1.2, Color("ffe2a3"))
+					play_sfx(p.global_position, Sfx.Kind.BRAKE)
 		1:
 			match slot:
 				0, 1:
@@ -735,6 +745,7 @@ func activate(p: Fighter, slot: int) -> void:
 				0:
 					p.rush_time = 0.5
 					show_ring(p.global_position, 1.8, Color("ff8a4c"))
+					play_sfx(p.global_position, Sfx.Kind.BREACH)
 					show_trace(p.global_position + Vector3.UP * 0.8, p.global_position + Vector3.UP * 0.8 + p.horizontal_direction() * 8, Color("ffd9a0"), Vfx.Style.SWOOSH)
 
 					p.rush_hit.clear()
@@ -748,7 +759,7 @@ func activate(p: Fighter, slot: int) -> void:
 					cone_attack(p, 5, 30, 0.4, 9)
 					show_ring(p.global_position, 5.0, team_color(p.team))
 					show_trace(p.global_position + Vector3.UP * 0.6, p.global_position + Vector3.UP * 0.6 + p.horizontal_direction() * 5, Color("ffd9a0"), Vfx.Style.SWOOSH)
-					play_cue_at(p.global_position, 100)
+					play_sfx(p.global_position, Sfx.Kind.EVICT)
 		3:
 			match slot:
 				0:
@@ -765,6 +776,7 @@ func activate(p: Fighter, slot: int) -> void:
 				2:
 					create_entity(p, "smoke", p.global_position, 1, 3)
 					show_ring(p.global_position, 2.5, Color("c7a8f1"))
+					play_sfx(p.global_position, Sfx.Kind.SMOKE)
 					p.conceal = 2.5
 	if success:
 		p.cooldowns[slot] = p.spec.cooldowns[slot]
@@ -810,6 +822,8 @@ func create_entity(p: Fighter, kind: String, pos: Vector3, hp_value: float, life
 	var data := {"id": entity_next, "owner": p.fighter_id, "team": p.team, "kind": kind, "hp": hp_value, "life": life, "pos": pos, "yaw": p.yaw, "used": false}
 	entity_next += 1
 	create_entity_from(data)
+	if kind != "smoke":
+		play_sfx(pos, Sfx.Kind.PLACE)
 	return data.id
 
 func create_entity_from(data: Dictionary) -> void:
@@ -854,7 +868,7 @@ func entities_tick(dt: float) -> void:
 					p.velocity.y = 14.5
 					show_ring(e.global_position, 1.7, team_color(e.team))
 					e.timer = 0.7
-					play_cue_at(e.global_position, 500)
+					play_sfx(e.global_position, Sfx.Kind.PAD)
 		elif e.kind == "turret" and e.timer <= 0:
 			var forward := Basis(Vector3.UP, e.rotation.y) * Vector3.FORWARD
 			var from: Vector3 = e.global_position + Vector3.UP * 0.85
@@ -867,6 +881,7 @@ func entities_tick(dt: float) -> void:
 					damage_fighter(target, 6, e.owner_id)
 					e.timer = 0.3
 					show_trace(from, hit.position, team_color(e.team), Vfx.Style.SKYRUNNER, true)
+					play_sfx(from, Sfx.Kind.TURRET)
 					break
 		e.update_visual()
 
@@ -891,6 +906,7 @@ func objectives_tick(dt: float) -> void:
 	for capture in match_state.captures:
 		var message := "%s acquired point %s" % ["HELIX" if capture[1] == 0 else "MONARCH", String.chr(65 + capture[0])]
 		announce(message)
+		play_sfx(points[capture[0]], Sfx.Kind.CAPTURE)
 		if multiplayer.get_peers().size() > 0:
 			remote_notice.rpc(message)
 
@@ -1033,6 +1049,7 @@ func hit_feedback(id: int, kind: int = 0) -> void:
 @rpc("authority", "call_remote", "unreliable")
 func hit_confirm(kind: int = 0) -> void:
 	hud.hit(kind)
+	Sfx.play_ui(self, [Sfx.Kind.HIT, Sfx.Kind.HEADSHOT, Sfx.Kind.KILL][clampi(kind, 0, 2)])
 
 @rpc("authority", "call_remote", "unreliable")
 func damage_taken(from_pos: Vector3) -> void:
@@ -1053,31 +1070,14 @@ func remote_notice(value: String) -> void:
 func announce(value: String) -> void:
 	hud.announce(value)
 
-func play_cue_at(pos: Vector3, frequency: float) -> void:
-	cue_visual(pos, frequency)
+func play_sfx(pos: Vector3, kind: int) -> void:
+	sfx_visual(pos, kind)
 	if authoritative and multiplayer.get_peers().size() > 0:
-		cue_visual.rpc(pos, frequency)
+		sfx_visual.rpc(pos, kind)
 
 @rpc("authority", "call_remote", "unreliable")
-func cue_visual(pos: Vector3, frequency: float) -> void:
-	if DisplayServer.get_name() == "headless":
-		return
-	var audio := AudioStreamPlayer3D.new()
-	var wave := AudioStreamWAV.new()
-	wave.format = AudioStreamWAV.FORMAT_16_BITS
-	wave.mix_rate = 22050
-	var bytes := PackedByteArray()
-	bytes.resize(4410)
-	for i in range(2205):
-		var value := int(sin(float(i) * frequency * TAU / 22050) * 6500 * (1.0 - float(i) / 2205))
-		bytes.encode_s16(i * 2, value)
-	wave.data = bytes
-	audio.stream = wave
-	audio.max_distance = 30
-	add_child(audio)
-	audio.global_position = pos + Vector3.UP
-	audio.finished.connect(audio.queue_free)
-	audio.play()
+func sfx_visual(pos: Vector3, kind: int) -> void:
+	Sfx.play_at(self, pos, kind)
 
 # Capture discs and beacons take the owner's colour; locked points are dimmed.
 func update_points() -> void:

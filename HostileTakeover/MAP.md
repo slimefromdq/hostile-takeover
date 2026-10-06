@@ -38,11 +38,18 @@ cut-throughs as soft chokes. Every route family is verified to reach B and C fro
 6. The east half exactly mirrors the west half; capture discs are flat street floor with no cover inside the 4.5 m radius.
 7. Authoritative out-of-bounds kill (|x| > 93.5, |z| > 61.5, y > 40) keeps grapples and launch pads inside the arena.
 
+## Movement reach (current tuning)
+
+Jump apex about 1.9 m, double jump about +2.1 m, dash about 6 m, wall kick 10.5 m/s up, mantle up to about 2.6 m. The street,
+gallery (3 m) and penthouses (2.8 m) are reachable on foot; 6 m roofs by wall-kick chains, grapple or ramps. Revisit parapet and
+ledge heights after playtests.
+
 ## Tooling
 
 - `tests/map_audit.gd` - geometry, clearance, connectivity, route diversity, sightline budgets.
 - `tests/map_walk.gd` - a real `Fighter` (Skyrunner and Enforcer) walks every route family from both depots to every point using the game's movement code, without jumping.
 - `tests/bot_routes.gd` - samples where bots are during a simulated match.
+- `tests/perf_probe.gd` and `tests/soak.gd` - draw/primitive/node counts and a long-match leak check.
 - `tests/render_map.gd` - top-down, isometric and eye-level shots into `docs/previews/`.
 - `tests/proving_ground.gd` - open-floor fixtures at z=300 for movement/weapon tests, independent of the real map.
 
