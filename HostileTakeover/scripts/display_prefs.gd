@@ -13,7 +13,13 @@ static func load_settings() -> void:
 		fullscreen = cfg.get_value("display", "fullscreen", false)
 	apply()
 
+# The editor's "Embed Game on Next Play" runs the game inside an editor panel, which cannot go fullscreen.
+static func embedded() -> bool:
+	return Engine.has_method("is_embedded_in_editor") and Engine.is_embedded_in_editor()
+
 static func set_fullscreen(value: bool) -> void:
+	if embedded():
+		return
 	fullscreen = value
 	apply()
 	var cfg := ConfigFile.new()
@@ -25,6 +31,6 @@ static func toggle() -> void:
 	set_fullscreen(not fullscreen)
 
 static func apply() -> void:
-	if DisplayServer.get_name() == "headless":
+	if DisplayServer.get_name() == "headless" or embedded():
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
