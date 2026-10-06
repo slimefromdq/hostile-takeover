@@ -1,0 +1,573 @@
+{
+ "format": 1,
+ "units": "m",
+ "mode": "replace",
+ "title": "Movement Course",
+ "source": "movement.py",
+ "settings": {
+  "bounds": [
+   -62,
+   -32,
+   124,
+   64
+  ],
+  "spawn_x": 57,
+  "spawn_z": -7,
+  "spawn_step": 2.8,
+  "depot_limit": 53
+ },
+ "features": [],
+ "objects": [
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -62.0,
+    -1.0,
+    -32.0
+   ],
+   "max": [
+    62.0,
+    0.0,
+    32.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_n",
+   "role": "tower",
+   "min": [
+    -62.0,
+    0.0,
+    -32.0
+   ],
+   "max": [
+    62.0,
+    8.0,
+    -30.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_s",
+   "role": "tower",
+   "min": [
+    -62.0,
+    0.0,
+    30.0
+   ],
+   "max": [
+    62.0,
+    8.0,
+    32.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_end",
+   "role": "tower",
+   "min": [
+    -62.0,
+    0.0,
+    -30.0
+   ],
+   "max": [
+    -60.0,
+    8.0,
+    30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_n0",
+   "role": "wall",
+   "min": [
+    -59.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -53.0,
+    6.0,
+    -8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_s0",
+   "role": "wall",
+   "min": [
+    -59.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    -53.0,
+    6.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_w0",
+   "role": "wall",
+   "min": [
+    -60.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -59.0,
+    6.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e0",
+   "role": "wall",
+   "min": [
+    -53.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -52.0,
+    6.0,
+    -3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e1",
+   "role": "wall",
+   "min": [
+    -53.0,
+    4.0,
+    -3.0
+   ],
+   "max": [
+    -52.0,
+    6.0,
+    3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e2",
+   "role": "wall",
+   "min": [
+    -53.0,
+    0.0,
+    3.0
+   ],
+   "max": [
+    -52.0,
+    6.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_roof",
+   "role": "tower",
+   "min": [
+    -60.0,
+    6.0,
+    -9.0
+   ],
+   "max": [
+    -52.0,
+    7.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "baffle_n",
+   "role": "wall",
+   "min": [
+    -49.0,
+    0.0,
+    -6.0
+   ],
+   "max": [
+    -47.0,
+    3.5,
+    -1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "baffle_s",
+   "role": "wall",
+   "min": [
+    -49.0,
+    0.0,
+    1.0
+   ],
+   "max": [
+    -47.0,
+    3.5,
+    6.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "slide_hill",
+   "role": "walk",
+   "min": [
+    -46.0,
+    0.0,
+    -16.0
+   ],
+   "max": [
+    -34.0,
+    3.0,
+    -10.0
+   ],
+   "dir": "+x",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 3.0
+  },
+  {
+   "kind": "block",
+   "tag": "slide_hill_top",
+   "role": "wall",
+   "min": [
+    -34.0,
+    0.0,
+    -16.0
+   ],
+   "max": [
+    -28.0,
+    3.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "gap_platform",
+   "role": "wall",
+   "min": [
+    -48.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -36.0,
+    1.0,
+    -21.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "gap_platform",
+   "role": "wall",
+   "min": [
+    -31.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -25.0,
+    1.0,
+    -21.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "gap_platform",
+   "role": "wall",
+   "min": [
+    -18.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -12.0,
+    1.0,
+    -21.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "gap_platform",
+   "role": "wall",
+   "min": [
+    -3.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    3.0,
+    1.0,
+    -21.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "ledge_6",
+   "role": "wall",
+   "min": [
+    6.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    10.0,
+    0.5,
+    12.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "ledge_12",
+   "role": "wall",
+   "min": [
+    12.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    16.0,
+    1.25,
+    12.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "ledge_18",
+   "role": "wall",
+   "min": [
+    18.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    22.0,
+    1.75,
+    12.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "ledge_24",
+   "role": "wall",
+   "min": [
+    24.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    28.0,
+    2.5,
+    12.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "ledge_30",
+   "role": "wall",
+   "min": [
+    30.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    34.0,
+    3.0,
+    12.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "hurdle",
+   "role": "cover",
+   "min": [
+    10.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    11.0,
+    1.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "hurdle",
+   "role": "cover",
+   "min": [
+    18.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    19.0,
+    1.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "hurdle",
+   "role": "cover",
+   "min": [
+    26.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    27.0,
+    1.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "hurdle",
+   "role": "cover",
+   "min": [
+    34.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    35.0,
+    1.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "hurdle",
+   "role": "cover",
+   "min": [
+    42.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    43.0,
+    1.0,
+    -10.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "run_wall_a",
+   "role": "tower",
+   "min": [
+    4.0,
+    0.0,
+    18.0
+   ],
+   "max": [
+    34.0,
+    8.0,
+    19.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "run_wall_b",
+   "role": "tower",
+   "min": [
+    4.0,
+    0.0,
+    26.0
+   ],
+   "max": [
+    34.0,
+    8.0,
+    27.0
+   ]
+  }
+ ],
+ "waypoints": [
+  {
+   "name": "S",
+   "pos": [
+    -57,
+    0,
+    0
+   ],
+   "mirror": true,
+   "spawn": true
+  },
+  {
+   "name": "g",
+   "pos": [
+    -52.5,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "A",
+   "pos": [
+    -40,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "B",
+   "pos": [
+    -20,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "C",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "point": true
+  }
+ ],
+ "links": [
+  [
+   "S",
+   "g",
+   "blv"
+  ],
+  [
+   "g",
+   "A",
+   "blv"
+  ],
+  [
+   "A",
+   "B",
+   "blv"
+  ],
+  [
+   "B",
+   "C",
+   "blv"
+  ]
+ ]
+}

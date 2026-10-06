@@ -24,6 +24,7 @@ godot --headless --path . --script res://tests/run_tests.gd        # behavioral 
 godot --headless --path . --script res://tests/map_audit.gd        # geometry / clearance / route / sightline audit
 godot --headless --path . --script res://tests/map_walk.gd         # real Fighter walks every route from both depots
 godot --headless --path . --script res://tests/verbs_test.gd             # map verbs with Skyrunner and Enforcer
+godot --headless --path . --script res://tests/movement_course.gd        # real Fighters on every Movement Course station (docs/MOVEMENT_COURSE.md)
 godot --headless --fixed-fps 60 --script res://tests/match_smoke.gd
 godot --headless --fixed-fps 60 --script res://tests/soak.gd -- minutes=10   # node/orphan leak check
 # network: start the server first, then the client (separate terminals)

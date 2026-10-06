@@ -49,6 +49,7 @@ func run() -> void:
 	check_overpass()
 	check_catalog()
 	check_canopy()
+	check_movement_course()
 	check_layout_dump()
 	print("blockout import: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -74,6 +75,23 @@ func check_yard() -> void:
 	check(errors.is_empty(), "yard builds without errors: %s" % [errors])
 	var bad := BlockoutImporter.resolve({"settings": {}, "waypoints": [], "links": []})
 	check(bad.errors.size() >= 2, "replace without points or spawns is refused (%d errors)" % bad.errors.size())
+
+# The Movement Course: a titled replace-mode map whose station heights match the mantle constants.
+func check_movement_course() -> void:
+	var data := BlockoutImporter.read("res://maps/movement.blockout.json")
+	check(data.get("mode", "") == "replace" and data.get("title", "") == "Movement Course", "movement course is a titled replace-mode blockout")
+	var r := BlockoutImporter.resolve(data)
+	check(r.errors.is_empty(), "movement course resolves without errors: %s" % [r.errors])
+	check(r.points.size() == 5, "movement course has five capture points (got %d)" % r.points.size())
+	var b := MapBuilder.new()
+	var errors := BlockoutImporter.build(b, data)
+	check(errors.is_empty(), "movement course builds without errors: %s" % [errors])
+	var tops := {}
+	for s in b.solids:
+		tops[s.tag] = s.aabb.end.y
+	check(tops.get("ledge_24", 0.0) < Fighter.MANTLE_HEAD_CLEARANCE and tops.get("ledge_30", 0.0) > Fighter.MANTLE_HEAD_CLEARANCE, "ledge ladder brackets the mantle limit (2.4 m in reach, 3.0 m out)")
+	check(tops.get("ledge_12", 9.0) <= Fighter.VAULT_MAX_HEIGHT and tops.get("ledge_18", 0.0) > Fighter.VAULT_MAX_HEIGHT, "ledge ladder brackets the vault limit")
+	check(tops.get("hurdle", 9.0) <= Fighter.VAULT_MAX_HEIGHT, "hurdles are vaultable")
 
 # When maps/layout.blockout.json exists (written by tools/export_layout.gd), importing it must rebuild the
 # built-in map exactly: same solids, same graph, same points. Skipped when the file is absent.

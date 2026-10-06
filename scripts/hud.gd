@@ -406,7 +406,7 @@ func _draw_feed() -> void:
 func _draw_help() -> void:
 	if not help_shown():
 		return
-	var lines := ["WASD move · SPACE jump, double jump, wall kick", "1 air dash · SHIFT slide · strafe to steer in the air", "Q / E / F abilities · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
+	var lines := ["WASD move · SPACE jump, double jump, wall kick · run along a wall to wall run", "1 air dash · SHIFT slide (SPACE out of it to slide-jump) · strafe to steer in the air", "Q / E / F abilities · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
 	for i in range(lines.size()):
 		text(Vector2(size.x - 420.0, size.y - 98.0 + i * 20.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 404.0)
 
