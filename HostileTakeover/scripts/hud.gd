@@ -250,7 +250,7 @@ func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)
 	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
 	var base_y := size.y - 24.0
-	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 300.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
+	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 344.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
 	draw_rect(Rect2(12, base_y - 88.0, 4, 76.0), team_color)
 	text(Vector2(24, base_y - 70), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
 	if p.reload_timer > 0.0:
@@ -272,7 +272,7 @@ func _draw_health_bar(p: Fighter) -> void:
 		return
 	var feet: Vector3 = p.global_position
 	var head: Vector3 = feet + Vector3.UP * 1.9
-	var side: Vector3 = camera.global_transform.basis.x * 0.65
+	var side: Vector3 = -camera.global_transform.basis.x * 0.65
 	if camera.is_position_behind(head + side):
 		return
 	var bottom := camera.unproject_position(feet + side)
