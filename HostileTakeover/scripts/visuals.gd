@@ -8,6 +8,18 @@ extends RefCounted
 const HELIX := Color("3fd0ff")
 const MONARCH := Color("ff8a4c")
 const NEUTRAL := Color("d8d6c0")
+# Art direction palette: bright day, white masses, one hot accent, cobalt secondary, yellow guidance.
+const PAL := {
+	"white": Color("eceef0"),
+	"grey": Color("b7bcc2"),
+	"dark": Color("3a4250"),
+	"accent": Color("ff6a2b"),
+	"cobalt": Color("2a5bd7"),
+	"guide": Color("ffc928"),
+	"sky_top": Color("2f63d8"),
+	"sky_horizon": Color("a9cdff"),
+}
+
 const ENEMY_OUTLINE := Color("ff3b3b")
 const ALLY_OUTLINE := Color("8fe3ff")
 
@@ -165,42 +177,56 @@ static func add_outline(material: BaseMaterial3D, color: Color, width: float = 0
 static func outline_color_for(side: int, local_side: int) -> Color:
 	return ALLY_OUTLINE if side == local_side else ENEMY_OUTLINE
 
-# Dusk city: procedural sky, depth fog for distance readability, warm key with cool fill.
+# Bright day: saturated blue sky, hard sun, bloomed whites. Forward+ adds SSAO/SSIL for contact shading;
+# on Compatibility those effects are skipped and the look falls back to flat ambient.
 static func build_environment(root: Node3D) -> void:
 	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color("1d2b4d")
-	sky_material.sky_horizon_color = Color("d98a5f")
-	sky_material.ground_horizon_color = Color("8a6a6a")
-	sky_material.ground_bottom_color = Color("2a2f3d")
-	sky_material.sun_angle_max = 25.0
+	sky_material.sky_top_color = PAL.sky_top
+	sky_material.sky_horizon_color = PAL.sky_horizon
+	sky_material.ground_horizon_color = PAL.sky_horizon
+	sky_material.ground_bottom_color = Color("6f7f94")
+	sky_material.sun_angle_max = 18.0
 	var sky := Sky.new()
 	sky.sky_material = sky_material
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.55
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.ambient_light_energy = 0.9
+	environment.tonemap_mode = Environment.TONE_MAPPER_ACES
+	environment.tonemap_white = 6.0
 	environment.fog_enabled = true
-	environment.fog_light_color = Color("a98d85")
-	environment.fog_density = 0.004
+	environment.fog_light_color = Color("bcd4ff")
+	environment.fog_density = 0.0025
 	environment.glow_enabled = true
-	environment.glow_intensity = 0.6
-	environment.glow_bloom = 0.05
+	environment.glow_intensity = 0.8
+	environment.glow_bloom = 0.12
+	environment.glow_hdr_threshold = 1.0
+	var forward := RenderingServer.get_current_rendering_method() == "forward_plus"
+	if forward:
+		environment.ssao_enabled = true
+		environment.ssao_radius = 1.6
+		environment.ssao_intensity = 2.0
+		environment.ssil_enabled = true
+		environment.ssil_intensity = 0.8
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment
 	root.add_child(world_env)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-60, -35, 0)
-	sun.light_color = Color("ffd8a8")
-	sun.light_energy = 1.0
+	sun.rotation_degrees = Vector3(-52, -40, 0)
+	sun.light_color = Color("fff3e0")
+	sun.light_energy = 1.7
 	sun.shadow_enabled = true
-	# One orthogonal cascade covers the arena view and keeps shadow-pass draw calls low.
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-	sun.directional_shadow_max_distance = 110.0
+	if forward:
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_max_distance = 140.0
+	else:
+		# One orthogonal cascade covers the arena view and keeps shadow-pass draw calls low.
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+		sun.directional_shadow_max_distance = 110.0
 	root.add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-30, 145, 0)
-	fill.light_color = Color("8fb4ff")
-	fill.light_energy = 0.35
+	fill.light_color = Color("9cc0ff")
+	fill.light_energy = 0.3
 	root.add_child(fill)

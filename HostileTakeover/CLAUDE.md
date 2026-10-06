@@ -6,7 +6,7 @@ The Godot project lives in `HostileTakeover/` (the repo root only contains that 
 
 ## What this is
 
-"Hostile Takeover": a Godot **4.7.x** (GL Compatibility) GDScript graybox prototype — four fighter classes, five-point "Acquisition" objective, offline 6v6 bots, LAN host/join. No plugins or external assets required; art, map and sound are generated in code. `README.md` has controls, class kits and balance numbers; `MAP.md` has map design and geometry rules; `VALIDATION.md` lists what the automated checks cover.
+"Hostile Takeover": a Godot **4.7.x** (Forward+) GDScript graybox prototype — four fighter classes, five-point "Acquisition" objective, offline 6v6 bots, LAN host/join. No plugins or external assets required; art, map and sound are generated in code. `README.md` has controls, class kits and balance numbers; `MAP.md` has map design and geometry rules; `VALIDATION.md` lists what the automated checks cover.
 
 ## Running and testing
 
