@@ -130,6 +130,7 @@ func _draw() -> void:
 		_draw_waypoint(p)
 		_draw_crosshair(p)
 		_draw_player_panel(p)
+		_draw_health_bar(p)
 		_draw_ability_bar(p)
 	_draw_notice()
 	_draw_feed()
@@ -249,21 +250,9 @@ func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)
 	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
 	var base_y := size.y - 24.0
-	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 372.0, 122.0), UiStyle.PANEL, Color(team_color, 0.85))
-	draw_rect(Rect2(12, base_y - 88.0, 4, 98.0), team_color)
+	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 300.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
+	draw_rect(Rect2(12, base_y - 88.0, 4, 76.0), team_color)
 	text(Vector2(24, base_y - 70), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
-	var segments := int(ceil(p.spec.health / 20.0))
-	var total_w := 280.0
-	var seg_w := (total_w - (segments - 1) * 2.0) / segments
-	var fraction: float = p.hp / p.spec.health
-	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
-	for i in range(segments):
-		var x := 24.0 + i * (seg_w + 2.0)
-		draw_rect(Rect2(x, base_y - 56, seg_w, 16), Color(1, 1, 1, 0.08))
-		var f := clampf((p.hp - i * 20.0) / 20.0, 0.0, 1.0)
-		if f > 0.0:
-			draw_rect(Rect2(x, base_y - 56, seg_w * f, 16), fill)
-	text(Vector2(24 + total_w + 10, base_y - 42), "%d" % int(ceil(p.hp)), 20)
 	if p.reload_timer > 0.0:
 		text(Vector2(24, base_y - 12), "RELOADING", 18, Color("ffe2a3"))
 	else:
@@ -275,6 +264,37 @@ func _draw_player_panel(p: Fighter) -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
 		centered(size.x / 2.0, size.y / 2.0 + 10.0, "Respawn in %.1fs  ·  Esc to change class" % maxf(0.0, p.dead_time), 20)
+
+# Vertical HP bar anchored beside the player's on-screen model (segments of 20 HP, bottom up).
+func _draw_health_bar(p: Fighter) -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null or p.hp <= 0:
+		return
+	var feet: Vector3 = p.global_position
+	var head: Vector3 = feet + Vector3.UP * 1.9
+	var side: Vector3 = camera.global_transform.basis.x * 0.65
+	if camera.is_position_behind(head + side):
+		return
+	var bottom := camera.unproject_position(feet + side)
+	var top := camera.unproject_position(head + side)
+	var h := clampf(bottom.y - top.y, 80.0, 360.0)
+	var mid := (bottom + top) * 0.5
+	var rect := Rect2(mid.x - 7.0, mid.y - h / 2.0, 14.0, h)
+	rect.position.x = clampf(rect.position.x, 40.0, size.x - 80.0)
+	rect.position.y = clampf(rect.position.y, 150.0, size.y - 160.0 - h)
+	var team_color := Visuals.team_color(p.team)
+	var fraction: float = clampf(p.hp / p.spec.health, 0.0, 1.0)
+	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
+	UiStyle.draw_panel(self, rect.grow(4.0), UiStyle.PANEL, Color(team_color, 0.85), 5.0, 1.5)
+	var segments := int(ceil(p.spec.health / 20.0))
+	var seg_h := (rect.size.y - (segments - 1) * 2.0) / segments
+	for i in range(segments):
+		var y := rect.end.y - (i + 1) * seg_h - i * 2.0
+		draw_rect(Rect2(rect.position.x, y, rect.size.x, seg_h), Color(1, 1, 1, 0.08))
+		var f := clampf((p.hp - i * 20.0) / 20.0, 0.0, 1.0)
+		if f > 0.0:
+			draw_rect(Rect2(rect.position.x, y + seg_h * (1.0 - f), rect.size.x, seg_h * f), fill)
+	text(Vector2(rect.position.x - 20.0, rect.position.y - 12.0), "%d" % int(ceil(p.hp)), 18, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 54.0)
 
 func _draw_ability_bar(p: Fighter) -> void:
 	var cx := size.x / 2.0
