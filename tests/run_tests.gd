@@ -182,13 +182,38 @@ func test_movement() -> void:
 	p.held = 0
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
-	p.velocity = Vector3(10, 0, 0)
+	p.yaw = 0.0
+	p.slide_cd = 0.0
+	p.velocity = Vector3(8, 0, 0)
+	p.movement = Vector2.ZERO
+	p.held = 8
+	var slide_start := p.global_position.x
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.sliding and p.velocity.x > 9.3 and p.velocity.x <= 9.5, "slide entry gives a small capped boost")
+	var slide_frames := 0
+	while p.sliding and slide_frames < 120:
+		p.simulate_movement(1.0 / 60, 0)
+		slide_frames += 1
+	var slide_distance := p.global_position.x - slide_start
+	check(not p.sliding and slide_distance > 3.5 and slide_distance < 5.5, "slide is short: %.2f m" % slide_distance)
+	p.simulate_movement(1.0 / 60, 0)
+	check(not p.sliding and p.slide_cd > 0.0, "slide cooldown stops back-to-back boosts")
+	p.held = 0
+	p.global_position = O + Vector3(-10, 0, -21)
+	p.velocity = Vector3.ZERO
+	p.slide_cd = 0.0
+	for i in range(20):
+		p.simulate_movement(1.0 / 60, 0)
+	p.velocity = Vector3(9, 0, 0)
 	p.movement = Vector2(0, -1)
 	p.held = 8
+	for i in range(18):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.sliding and p.velocity.z < -3.0 and Vector2(p.velocity.x, p.velocity.z).length() > 6.5, "slide steers toward the wish direction without bleeding extra speed")
+	p.held = 0
+	p.velocity = Vector3.ZERO
 	p.simulate_movement(1.0 / 60, 0)
-	var slide_speed := p.velocity.x
-	p.simulate_movement(1.0 / 60, 0)
-	check(p.velocity.x > 9 and slide_speed - p.velocity.x < 0.05, "slide preserves momentum")
+	check(not p.sliding, "releasing slide ends it")
 	p.global_position = O + Vector3(-5.2, 0.3, 5)
 	p.velocity = Vector3.ZERO
 	p.held = 0

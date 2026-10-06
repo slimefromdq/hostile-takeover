@@ -21,6 +21,15 @@ const AIR_CAP_HOT_LAP := 2.0
 const AIR_ACCEL := 60.0
 const AIR_ACCEL_HOT_LAP := 100.0
 const AIR_SPEED_SOFT_CAP := 15.0
+# Slide: a short, boosted burst that bleeds speed at a fixed rate and steers by rotating the velocity.
+const SLIDE_MIN_SPEED := 5.0
+const SLIDE_EXIT_SPEED := 4.5
+const SLIDE_ENTRY_SPEED := 9.5
+const SLIDE_ENTRY_BOOST_MAX := 1.5
+const SLIDE_FRICTION := 8.0
+const SLIDE_TURN_RATE := 2.5
+const SLIDE_COOLDOWN := 0.6
+const SLIDE_DOWNHILL := 16.0
 const MANTLE_SPEED := 8.5
 const MANTLE_HEAD_CLEARANCE := 2.6
 const MANTLE_REACH := 1.2
@@ -65,6 +74,8 @@ var rush_hit: Array[int] = []
 var air_dash: bool = true # dash ready; recharges on a timer, not on landing
 var air_jump: bool = true # double jump ready; restored only on landing
 var dash_cd: float = 0.0
+var sliding: bool = false
+var slide_cd: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
 var zip_id: int = -1
 var zip_t: float = 0.0
@@ -238,6 +249,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if hp <= 0:
 		zip_id = -1
 		climbing = false
+		sliding = false
 		return
 	idle_weapon += dt
 	if held & 3:
@@ -250,6 +262,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	brake_time = maxf(0, brake_time - dt)
 	rush_time = maxf(0, rush_time - dt)
 	dash_cd = maxf(0.0, dash_cd - dt)
+	slide_cd = maxf(0.0, slide_cd - dt)
 	if dash_cd <= 0.0:
 		air_dash = true
 	var grounded := is_on_floor()
@@ -259,6 +272,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		wall_normal = Vector3.ZERO
 	movement_edges = MapVerbs.pre_move(self, dt, movement_edges, grounded)
 	if zip_id >= 0:
+		sliding = false
 		MapVerbs.zip_move(self, dt, movement_edges)
 		move_and_slide()
 		MapVerbs.zip_after_slide(self)
@@ -268,13 +282,10 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	var speed := (8.0 if idle_weapon >= 1.25 else 6.0) * weapon.move_speed_mult
 	if class_id == 2 and held & 1:
 		speed *= 0.55
-	var sliding: bool = held & 8 != 0 and grounded and Vector2(velocity.x, velocity.z).length() > 5.0
+	_update_slide_state(grounded)
 	dash_time = maxf(0.0, dash_time - dt)
 	if sliding:
-		var downhill := Vector3.DOWN.slide(get_floor_normal())
-		velocity += downhill * 16.0 * dt
-		velocity.x = move_toward(velocity.x, desired.x * speed, 2.8 * dt)
-		velocity.z = move_toward(velocity.z, desired.z * speed, 2.8 * dt)
+		_slide_step(desired, dt)
 	elif grounded:
 		var rate := GROUND_ACCEL if desired.length() > 0.05 else GROUND_FRICTION
 		velocity.x = move_toward(velocity.x, desired.x * speed, rate * dt)
@@ -358,6 +369,39 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if global_position.y < -12.0 and game.authoritative:
 		game.damage_fighter(self, 10000, -1)
 	update_visual()
+
+# Slide starts on the ground above SLIDE_MIN_SPEED with a small entry boost, and ends on release,
+# leaving the ground, or dropping below SLIDE_EXIT_SPEED (hysteresis stops it flickering).
+func _update_slide_state(grounded: bool) -> void:
+	var planar := Vector2(velocity.x, velocity.z)
+	var wants: bool = held & 8 != 0 and grounded
+	if sliding:
+		if not wants or planar.length() < SLIDE_EXIT_SPEED:
+			sliding = false
+			slide_cd = SLIDE_COOLDOWN
+	elif wants and slide_cd <= 0.0 and planar.length() >= SLIDE_MIN_SPEED:
+		sliding = true
+		var boost := clampf(SLIDE_ENTRY_SPEED - planar.length(), 0.0, SLIDE_ENTRY_BOOST_MAX)
+		var boosted := planar + planar.normalized() * boost
+		velocity.x = boosted.x
+		velocity.z = boosted.y
+
+# Input turns the velocity toward the wish direction without losing speed; friction then sets the
+# slide's length. Pushing straight back neither steers nor brakes extra, and slopes add speed.
+func _slide_step(desired: Vector3, dt: float) -> void:
+	var planar := Vector2(velocity.x, velocity.z)
+	var wish := Vector2(desired.x, desired.z)
+	var wish_len := wish.length()
+	if wish_len > 0.05 and planar.length() > 0.01:
+		var angle := planar.angle_to(wish / wish_len)
+		if absf(angle) > PI / 2.0:
+			angle = signf(angle) * (PI - absf(angle))
+		var max_turn := SLIDE_TURN_RATE * wish_len * dt
+		planar = planar.rotated(clampf(angle, -max_turn, max_turn))
+	planar = planar.move_toward(Vector2.ZERO, SLIDE_FRICTION * dt)
+	velocity.x = planar.x
+	velocity.z = planar.y
+	velocity += Vector3.DOWN.slide(get_floor_normal()) * SLIDE_DOWNHILL * dt
 
 # Forgiving ledge probe: several heights and slightly fanned angles, so grazing a ledge still counts.
 func _can_mantle(heading: Vector3) -> bool:
@@ -480,7 +524,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"] or weapon_id != data.get("w", 0):
@@ -517,6 +561,7 @@ func unpack(data: Dictionary, local: bool) -> void:
 	spin = data.spin
 	gun_buff = data.gun_buff
 	melee_buff = data.melee_buff
+	sliding = data.get("sl", false)
 	zip_id = data.get("zip", -1)
 	zip_t = data.get("zt", 0.0)
 	zip_dir = data.get("zd", 1)
