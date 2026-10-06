@@ -4,7 +4,7 @@ A playable Godot 4.7 graybox prototype: four fighter classes, shared parkour, se
 
 ## Play
 
-Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Select a class and choose **Play offline**. No asset downloads or plugins are required.
+Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Select a class and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.
 
 For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping twelve fighters. Disconnected players are replaced by bots.
 

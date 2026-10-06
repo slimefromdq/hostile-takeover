@@ -4,6 +4,7 @@ const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://sce
 const PORT = 27847
 var authoritative := true
 var running := false
+var explore := false  # single-player free roam: no bots, no objective
 var local_id := 1
 var selected_class := 0
 var fighters: Dictionary = {}
@@ -171,14 +172,20 @@ func start_game(mode: String) -> void:
 		multiplayer.multiplayer_peer = server
 	authoritative = true
 	local_id = 1
+	explore = mode == "explore"
+	hud.explore = explore
 	spawn_fighter(1, 0, selected_class, false)
-	for i in range(11):
-		spawn_fighter(100 + i, 0 if i < 5 else 1, i % 4, true)
+	if not explore:
+		for i in range(11):
+			spawn_fighter(100 + i, 0 if i < 5 else 1, i % 4, true)
 	running = true
 	menu.hide()
 	hud.show()
 	local_player().camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if explore:
+		announce("EXPLORATION · Free roam. No objectives, no opposition.")
+		return
 	announce("ACQUISITION · The center is open for business.")
 
 func connected() -> void:
@@ -355,7 +362,8 @@ func _physics_process(dt: float) -> void:
 			player.edges = 0
 		if match_state.winner == -2:
 			entities_tick(dt)
-			objectives_tick(dt)
+			if not explore:
+				objectives_tick(dt)
 		snapshot_timer += dt
 		if snapshot_timer >= 0.05:
 			snapshot_timer = 0

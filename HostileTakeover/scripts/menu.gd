@@ -45,7 +45,7 @@ func setup(owner_game: Node3D) -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8)
 	column.add_child(grid)
-	for pair in [["Play offline · 6v6 bots", "offline"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
+	for pair in [["Play offline · 6v6 bots", "offline"], ["Explore map · free roam", "explore"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
 		var button := Button.new()
 		button.text = pair[0]
 		button.custom_minimum_size = Vector2(290, 38)
@@ -60,7 +60,7 @@ func setup(owner_game: Node3D) -> void:
 	address.add_theme_stylebox_override("focus", UiStyle.box(Color(UiStyle.SLOT, 0.95), UiStyle.ACCENT, 2))
 	grid.add_child(address)
 	status = _label("Godot 4.7 prototype", 15, Color(1, 1, 1, 0.7))
-	column.add_child(status)
+	grid.add_child(status)
 	var toggle := Button.new()
 	toggle.text = "Controls ▾"
 	toggle.flat = true
@@ -88,7 +88,7 @@ func _make_card(index: int, group: ButtonGroup) -> Button:
 	var card := Button.new()
 	card.toggle_mode = true
 	card.button_group = group
-	card.custom_minimum_size = Vector2(212, 384)
+	card.custom_minimum_size = Vector2(212, 352)
 	card.pressed.connect(func(): game.selected_class = index)
 	var chosen := UiStyle.box(Color(UiStyle.PANEL_RAISED, 0.95), UiStyle.ACCENT, 3, 0.0)
 	card.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.SLOT, 0.9), Color(UiStyle.ACCENT, 0.3), 1, 0.0))
@@ -102,7 +102,7 @@ func _make_card(index: int, group: ButtonGroup) -> Button:
 	card.add_child(box)
 	var container := SubViewportContainer.new()
 	container.stretch = true
-	container.custom_minimum_size = Vector2(196, 172)
+	container.custom_minimum_size = Vector2(196, 150)
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(container)
 	container.add_child(_make_portrait(index))

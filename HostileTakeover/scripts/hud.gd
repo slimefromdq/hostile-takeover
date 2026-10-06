@@ -23,6 +23,7 @@ var charge_time := 0.0
 var session_time := 0.0
 var help_hidden := false
 var help_pinned := false
+var explore := false
 
 func _init() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -123,11 +124,15 @@ func _draw() -> void:
 	if game == null:
 		return
 	var p: Fighter = game.local_player()
-	_draw_objective_bar()
+	if explore:
+		_draw_explore_tag()
+	else:
+		_draw_objective_bar()
 	if p != null:
 		_draw_vignette(p)
 		_draw_indicators(p)
-		_draw_waypoint(p)
+		if not explore:
+			_draw_waypoint(p)
 		_draw_crosshair(p)
 		_draw_player_panel(p)
 		_draw_health_bar(p)
@@ -137,8 +142,13 @@ func _draw() -> void:
 	_draw_help()
 	if game.match_state.winner != -2:
 		_draw_winner()
-	if Input.is_action_pressed("scoreboard") and not game.menu.visible:
+	if Input.is_action_pressed("scoreboard") and not game.menu.visible and not explore:
 		_draw_scoreboard(p)
+
+func _draw_explore_tag() -> void:
+	var rect := Rect2(size.x / 2.0 - 150.0, 16.0, 300.0, 44.0)
+	UiStyle.draw_panel(self, rect, Color(UiStyle.PANEL, 0.9), Color(UiStyle.ACCENT, 0.85))
+	text(Vector2(rect.position.x, rect.position.y + 29.0), "EXPLORATION  ·  FREE ROAM", 18, UiStyle.ACCENT, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
 
 func _draw_objective_bar() -> void:
 	var state: Acquisition = game.match_state
