@@ -11,10 +11,12 @@ var spinners: Array[Node3D] = []
 var controls_panel: Label
 var display_button: Button
 var map_button: Button
+var weapon_buttons: Array[Button] = []
+var weapon_blurb: Label
 
 func setup(owner_game: Node3D) -> void:
 	game = owner_game
-	size = Vector2(980, 672)
+	size = Vector2(980, 724)
 	# The cut-corner panel is drawn in _draw(); the stylebox only supplies padding.
 	var style := StyleBoxEmpty.new()
 	style.content_margin_left = 32
@@ -41,6 +43,27 @@ func setup(owner_game: Node3D) -> void:
 		row.add_child(card)
 		cards.append(card)
 	cards[game.selected_class].button_pressed = true
+	var weapon_row := HBoxContainer.new()
+	weapon_row.add_theme_constant_override("separation", 10)
+	column.add_child(weapon_row)
+	weapon_row.add_child(_label("WEAPON", 15, UiStyle.ACCENT))
+	var weapon_group := ButtonGroup.new()
+	for i in range(Fighter.WEAPONS.size()):
+		var button := Button.new()
+		button.toggle_mode = true
+		button.button_group = weapon_group
+		button.text = "Signature (class gun)" if i == 0 else Fighter.WEAPONS[i].title
+		button.tooltip_text = "Each class's own gun, with its special behaviour." if i == 0 else "%s\n%s" % [Fighter.WEAPONS[i].blurb, Fighter.WEAPONS[i].summary()]
+		button.custom_minimum_size = Vector2(150, 30)
+		UiStyle.style_button(button, false)
+		button.pressed.connect(func():
+			game.selected_weapon = i
+			weapon_blurb.text = _weapon_blurb(i))
+		weapon_row.add_child(button)
+		weapon_buttons.append(button)
+	weapon_buttons[game.selected_weapon].button_pressed = true
+	weapon_blurb = _label(_weapon_blurb(game.selected_weapon), 13, Color(1, 1, 1, 0.75))
+	column.add_child(weapon_blurb)
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 10)
@@ -158,6 +181,12 @@ func _label(value: String, font_size: int, color: Color = Color("eef0e5")) -> La
 	label.add_theme_color_override("font_color", color)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
+
+func _weapon_blurb(index: int) -> String:
+	if index == 0:
+		return "Each class keeps its own gun and its quirks."
+	var w: WeaponSpec = Fighter.WEAPONS[index]
+	return "%s  (%s)" % [w.blurb, w.summary()]
 
 func _make_card(index: int, group: ButtonGroup) -> Button:
 	var spec: ClassSpec = Fighter.SPECS[index]

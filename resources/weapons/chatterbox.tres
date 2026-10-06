@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Chatterbox"
+blurb = "Rapid-fire SMG. Strong up close, fades at range."
+damage = 5.5
+spread_deg = 1.8
+falloff_start = 10.0
+falloff_end = 30.0
+falloff_min = 0.55
+interval = 0.065
+magazine = 40
+reload_time = 1.6
+reach = 30.0
+headshot_mult = 1.25
+move_speed_mult = 1.05

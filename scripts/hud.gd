@@ -244,7 +244,7 @@ func _draw_crosshair(p: Fighter) -> void:
 	elif p.class_id == 3 and p.held & 2:
 		diamond(c + Vector2(0, -26), 4.5, Color("e1c7ff"))
 	if p.reload_timer > 0.0:
-		var total: float = p.spec.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+		var total: float = p.weapon.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
 		draw_arc(c, 28.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - clampf(p.reload_timer / total, 0.0, 1.0)), 32, Color(1, 1, 1, 0.9), 3.0)
 	_draw_dash_icon(p, c + Vector2(48.0, 0.0))
 	_draw_ammo(p, c + Vector2(0.0, 52.0))
@@ -280,7 +280,7 @@ func _draw_ammo(p: Fighter, c: Vector2) -> void:
 	if p.reload_timer > 0.0:
 		text(c + Vector2(-80, 0), "RELOADING", 18, UiStyle.HIGHLIGHT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
 		return
-	text(c + Vector2(-80, 0), "%d / %d" % [p.ammo, p.spec.magazine], 22, Color(UiStyle.DANGER) if p.ammo <= maxi(1, p.spec.magazine / 5) else UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
+	text(c + Vector2(-80, 0), "%d / %d" % [p.ammo, p.weapon.magazine], 22, Color(UiStyle.DANGER) if p.ammo <= maxi(1, p.weapon.magazine / 5) else UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
 
 func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)

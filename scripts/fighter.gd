@@ -2,6 +2,8 @@ class_name Fighter
 extends CharacterBody3D
 
 const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resources/engineer.tres"), preload("res://resources/enforcer.tres"), preload("res://resources/mirage.tres")]
+# Weapon ids: 0 is the class Signature gun (built from its ClassSpec); 1..3 are shared by every class.
+const WEAPONS = [null, preload("res://resources/weapons/breacher.tres"), preload("res://resources/weapons/longshot.tres"), preload("res://resources/weapons/chatterbox.tres")]
 # Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
 const GRAVITY := 26.0
 const JUMP_SPEED := 10.0
@@ -30,6 +32,8 @@ var team: int = 0
 @export var class_id: int = 0
 var bot: bool = false
 var spec: ClassSpec
+var weapon_id: int = 0
+var weapon: WeaponSpec
 var hp: float = 200.0
 var heal_left: float = 0.0  # health-pack regen still owed (server only); enemy hero damage cancels it
 var ammo: int = 0
@@ -117,15 +121,16 @@ func _process(dt: float) -> void:
 		var slide: bool = held & 8 != 0 and is_on_floor() and planar > 5.0
 		CharacterRig.animate(equipment, dt, class_id, planar, is_on_floor(), pitch, spin, slide)
 
-func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: bool) -> void:
+func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: bool, weapon_choice: int = 0) -> void:
 	game = owner_game
 	fighter_id = id
 	team = side
 	bot = is_bot
 	class_id = archetype
 	spec = SPECS[class_id]
+	equip_weapon(weapon_choice)
 	hp = spec.health
-	ammo = spec.magazine
+	ammo = weapon.magazine
 	name = "Fighter_%s" % id
 	collision_layer = 2
 	collision_mask = 1 | 2 | 4
@@ -177,7 +182,7 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 func build_rig() -> void:
 	outlines.clear()
 	outline_side = -1
-	equipment = CharacterRig.build(self, class_id, game.team_color(team), outlines)
+	equipment = CharacterRig.build(self, class_id, game.team_color(team), outlines, false, weapon_id)
 	if is_instance_valid(trail):
 		trail.queue_free()
 	trail = null
@@ -225,8 +230,9 @@ func aim_point() -> Vector3:
 	var back := basis * Vector3(0.65 * shoulder, 0, 3.6)
 	var wall: Dictionary = game.ray(origin, origin + back, [get_rid()], 1 | 4)
 	var cam: Vector3 = origin + back if wall.is_empty() else wall.position + wall.normal * 0.2
-	var hit: Dictionary = game.ray(cam, cam + direction() * spec.reach, [get_rid()], 1 | 2 | 4 | 8)
-	return cam + direction() * spec.reach if hit.is_empty() else hit.position
+	var aim_reach := maxf(spec.reach, weapon.reach)
+	var hit: Dictionary = game.ray(cam, cam + direction() * aim_reach, [get_rid()], 1 | 2 | 4 | 8)
+	return cam + direction() * aim_reach if hit.is_empty() else hit.position
 
 func simulate_movement(dt: float, movement_edges: int) -> void:
 	if hp <= 0:
@@ -259,7 +265,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		update_visual()
 		return
 	var desired := Basis(Vector3.UP, yaw) * Vector3(movement.x, 0, movement.y)
-	var speed := 8.0 if idle_weapon >= 1.25 else 6.0
+	var speed := (8.0 if idle_weapon >= 1.25 else 6.0) * weapon.move_speed_mult
 	if class_id == 2 and held & 1:
 		speed *= 0.55
 	var sliding: bool = held & 8 != 0 and grounded and Vector2(velocity.x, velocity.z).length() > 5.0
@@ -392,12 +398,17 @@ func _air_steer(desired: Vector3, dt: float) -> void:
 			velocity.x = limited.x
 			velocity.z = limited.y
 
-func change_class(value: int) -> void:
+func equip_weapon(value: int) -> void:
+	weapon_id = clampi(value, 0, WEAPONS.size() - 1)
+	weapon = WeaponSpec.from_class(spec, class_id) if weapon_id == 0 else WEAPONS[weapon_id]
+
+func change_class(value: int, weapon_choice: int = -1) -> void:
 	class_id = clampi(value, 0, 3)
 	spec = SPECS[class_id]
+	equip_weapon(weapon_id if weapon_choice < 0 else weapon_choice)
 	hp = spec.health
 	heal_left = 0.0
-	ammo = spec.magazine
+	ammo = weapon.magazine
 	cooldowns.assign([0.0, 0.0, 0.0])
 	dash_time = 0.0
 	dash_cd = 0.0
@@ -469,11 +480,11 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
-	if class_id != data["class"]:
-		change_class(data["class"])
+	if class_id != data["class"] or weapon_id != data.get("w", 0):
+		change_class(data["class"], data.get("w", 0))
 	var error := global_position.distance_to(data.pos)
 	if not local:
 		remote_target = data.pos

@@ -33,6 +33,18 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 - **Enforcer:** minigun with a 0.6-second spin-up; alternate fire swings a heavy melee attack. Q rushes forward; E places destructible cover; F slams a forward cone and pushes enemies. Melee hits improve spin-up; sustained gun hits improve melee recovery. Firing slows movement; frontal knockback is reduced while spun up. Health: 280.
 - **Mirage Agent:** accurate six-shot revolver that bounces once off geometry; alternate fire previews the bounce. Q places one physical double; Q again exchanges positions once, within 25 metres. The double lasts eight seconds, can be destroyed, cannot block fighters or capture points, and echoes harmless firing effects. E throws an arcing capsule (35 direct damage / 15 splash). F creates departure smoke and grants 2.5 seconds of concealment; attacks end it, damage briefly reveals the agent, and close opponents can see them. Swapping preserves velocity and facing, reloads one round, and enables sprint. Health: 180.
 
+## Weapons (experimental)
+
+Weapons are independent of class. The start menu has a **Weapon** row: pick **Signature** (each class's own gun, exactly as described above) or one of three shared guns that any class can carry. A weapon only replaces primary fire (LMB); class abilities and alternate fire stay with the class, and the Signature-only quirks (Enforcer spin-up, Skyrunner burst, Engineer aim assist, Mirage ricochet) do not apply to shared guns. The Skyrunner's charged shot ignores the equipped weapon. Like class, the weapon can be changed only in your depot or while dead. Bots rotate through all four loadouts.
+
+| Weapon | Role | Damage | Rate | Magazine / reload | Reach | Falloff | Spread | Headshot |
+|---|---|---|---|---|---|---|---|---|
+| Breacher | Close range pump shotgun | 9 pellets x 12 | 0.85 s | 6 / 2.2 s | 22 m | full to 6 m, 20% at 20 m | 5.5 deg | 1.2x |
+| Longshot | Mid to long range rifle | 42 | 0.55 s | 8 / 1.8 s | 80 m | full to 35 m, 70% at 80 m | none | 1.6x |
+| Chatterbox | Rapid-fire SMG | 5.5 | 0.065 s | 40 / 1.6 s | 30 m | full to 10 m, 55% at 30 m | 1.8 deg | 1.25x |
+
+Time to kill a 200-HP body-shot target, every pellet landing: Breacher 0.85 s at 3 m (but 2.55 s at 15 m, with a reload on the way at longer range); Longshot 2.20 s out to 35 m; Chatterbox 2.34 s up to 10 m, 5.05 s at 25 m. A shotgun blast against one target counts as one hit. Weapon data is `scripts/weapon_spec.gd` plus `resources/weapons/*.tres`; the loadout rides in the `join_request` / `class_request` RPCs and the snapshot (`"w"`).
+
 Aim placement abilities at a visible location; invalid placements do not consume cooldown. Failed or obstructed swaps do not consume the double's exchange. Friendly damage is disabled. Depot interiors protect spawning fighters from enemy damage.
 
 ## Health packs

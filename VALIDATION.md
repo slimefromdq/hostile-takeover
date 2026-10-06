@@ -5,7 +5,7 @@ below is automated; nothing here replaces human playtesting or measurement on re
 
 | Check | Command | Result |
 |---|---|---|
-| Behavioral suite | `--headless --script res://tests/run_tests.gd` | **109 checks, 0 failures**: acquisition rules, class specs and TTK, movement (jump, double jump, dash, air control, friction, wall kick, mantle, slide), weapons, abilities, deployables, authority and respawn, kills/deaths, kill feed, scoreboard, minimap, menu, effect cap, sound synthesis, shader pipeline |
+| Behavioral suite | `--headless --script res://tests/run_tests.gd` | **109 checks, 0 failures**: acquisition rules, class specs and TTK, movement (jump, double jump, dash, air control, friction, wall kick, mantle, slide), weapons (Signature and the three shared guns, falloff, pellets, loadout sync), abilities, deployables, authority and respawn, kills/deaths, kill feed, scoreboard, minimap, menu, effect cap, sound synthesis, shader pipeline |
 | Map audit | `--headless --script res://tests/map_audit.gd` | **26 checks, 0 failures**: containment, no overlaps / z-fighting / wedge or narrow gaps, 0.25 m grid, east-west mirror, waypoint ground and capsule clearance, edge sweeps, flat capture discs, four route families to B and C, sightline budgets, spawn dogleg |
 | Walker | `--headless --script res://tests/map_walk.gd` | **64 routes, 0 failures** (Skyrunner and Enforcer, 4 route families, both depots, every point, no jumping) |
 | Bot match | `--headless --fixed-fps 60 --script res://tests/match_smoke.gd` | PASS (20 fighters, bots advance, objective pressure) |

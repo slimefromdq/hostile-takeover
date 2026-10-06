@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Longshot"
+blurb = "Semi-auto rifle. Precise, rewards headshots, slow to follow up."
+damage = 42.0
+interval = 0.55
+magazine = 8
+reload_time = 1.8
+reach = 80.0
+falloff_start = 35.0
+falloff_end = 80.0
+falloff_min = 0.7
+headshot_mult = 1.6
+move_speed_mult = 0.95

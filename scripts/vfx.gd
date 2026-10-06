@@ -4,7 +4,7 @@ extends RefCounted
 # Cosmetic combat effects. Damage and hit detection stay hitscan on the authority;
 # these only change how shots, abilities and impacts are drawn.
 
-enum Style { LINE, SKYRUNNER, ARC, REPAIR, ENFORCER, MIRAGE, BOUNCE, CHARGED, SWOOSH, CAPSULE }
+enum Style { LINE, SKYRUNNER, ARC, REPAIR, ENFORCER, MIRAGE, BOUNCE, CHARGED, SWOOSH, CAPSULE, PELLET, RIFLE, SMG }
 
 const BOLT_SPEED := 140.0
 # Lifetime multiplier; tests raise it to hold effects still for screenshots.
@@ -214,6 +214,16 @@ static func tracer(root: Node3D, from: Vector3, to: Vector3, style: int, color: 
 			segment(root, from, to, 0.02, Color.WHITE, 0.14, 3.0)
 			ring(root, to, 0.8, color)
 			flash(root, from, 0.18, color)
+		Style.PELLET:
+			segment(root, from, to, 0.012, Color("ffd9a0"), 0.09, 1.5)
+			if from.distance_to(to) > 0.5 and _live(root) < MAX_EFFECT_NODES / 2:
+				flash(root, from, 0.16, Color("ffd9a0"))
+		Style.RIFLE:
+			segment(root, from, to, 0.02, color.lightened(0.3), 0.2, 2.5)
+			bolt(root, from, to, 3.0, 0.03, Color.WHITE)
+			flash(root, from, 0.1, color)
+		Style.SMG:
+			segment(root, from, to, 0.008, Color("fff2b8"), 0.06, 1.5)
 		Style.SWOOSH:
 			swoosh(root, from, to, 2.4, color)
 		Style.CAPSULE:

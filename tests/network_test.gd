@@ -14,6 +14,7 @@ func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.selected_class = 3
+	game.selected_weapon = 2
 	var server := "--server" in OS.get_cmdline_user_args()
 	game.start_game("host" if server else "join")
 	print("NETWORK START: ", "server" if server else "client", " running=", game.running, " status=", game.menu_status.text)
@@ -48,6 +49,7 @@ func run() -> void:
 			verify(not game.authoritative and game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "client is nonauthoritative and receives roster")
 			var p: Fighter = game.local_player()
 			verify(p.class_id == 3, "requested class assigned by server")
+			verify(p.weapon_id == 2 and p.weapon.title == "Longshot", "requested weapon assigned by server")
 			verify(p.global_position.distance_to(CivicDividend.test_lane) < 10, "client receives server relocation into clear test lane")
 			# Place and exchange with a nearby double on flat ground.
 			p.pitch = -0.25

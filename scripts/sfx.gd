@@ -4,7 +4,7 @@ extends RefCounted
 # Procedural sound effects: each cue is synthesised once from oscillators and noise, cached as an
 # AudioStreamWAV, and played through small fixed pools. Silent in headless runs.
 
-enum Kind { SHOT_SKYRUNNER, SHOT_ENGINEER, SHOT_ENFORCER, SHOT_MIRAGE, SHOT_CHARGED, IMPACT, STEP, SWAP, KICKOFF, BRAKE, BREACH, EVICT, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE }
+enum Kind { SHOT_SKYRUNNER, SHOT_ENGINEER, SHOT_ENFORCER, SHOT_MIRAGE, SHOT_CHARGED, SHOT_BREACHER, SHOT_LONGSHOT, SHOT_CHATTERBOX, IMPACT, STEP, SWAP, KICKOFF, BRAKE, BREACH, EVICT, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE }
 
 const MIX_RATE := 22050
 const POOL_3D := 16
@@ -17,6 +17,9 @@ const RECIPES := {
 	Kind.SHOT_ENFORCER: [0.10, 95.0, 60.0, "sine", 0.65, 14.0, 0.9],
 	Kind.SHOT_MIRAGE: [0.20, 700.0, 250.0, "sine", 0.2, 12.0, 0.55],
 	Kind.SHOT_CHARGED: [0.30, 2400.0, 200.0, "saw", 0.4, 8.0, 0.7],
+	Kind.SHOT_BREACHER: [0.22, 140.0, 45.0, "saw", 0.8, 11.0, 0.95],
+	Kind.SHOT_LONGSHOT: [0.26, 1100.0, 120.0, "saw", 0.35, 10.0, 0.8],
+	Kind.SHOT_CHATTERBOX: [0.06, 900.0, 500.0, "square", 0.4, 30.0, 0.4],
 	Kind.IMPACT: [0.08, 0.0, 0.0, "sine", 1.0, 40.0, 0.35],
 	Kind.STEP: [0.07, 60.0, 50.0, "sine", 0.5, 30.0, 0.3],
 	Kind.SWAP: [0.25, 300.0, 900.0, "sine", 0.0, 9.0, 0.5],

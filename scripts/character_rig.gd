@@ -95,7 +95,7 @@ static func pivot(parent: Node3D, node_name: String, pos: Vector3) -> Node3D:
 	return node
 
 # Builds the rig under `parent` and returns the "ClassEquipment" root.
-static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Array = [], ghost: bool = false) -> Node3D:
+static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Array = [], ghost: bool = false, weapon_id: int = 0) -> Node3D:
 	var root := Node3D.new()
 	root.name = "ClassEquipment"
 	parent.add_child(root)
@@ -118,6 +118,8 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 		1: _engineer(ctx, legs, body)
 		2: _enforcer(ctx, legs, body)
 		_: _mirage(ctx, legs, body)
+	if weapon_id > 0:
+		_swap_weapon(ctx, body, weapon_id)
 	# Only the body capsules and spheres cast shadows; small details would just double draw calls.
 	for part in root.find_children("*", "MeshInstance3D", true, false):
 		if not (part.mesh is CapsuleMesh or part.mesh is SphereMesh):
@@ -126,6 +128,29 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 	if ghost:
 		set_alpha(root, 0.55)
 	return root
+
+# Shared weapons replace the class's gun on the same "Weapon" pivot; the first child is the arm itself.
+static func _swap_weapon(ctx: Ctx, body: Node3D, weapon_id: int) -> void:
+	var weapon: Node3D = body.get_node_or_null("Weapon")
+	if weapon == null:
+		return
+	for i in range(weapon.get_child_count() - 1, 0, -1):
+		var gun := weapon.get_child(i)
+		weapon.remove_child(gun)
+		gun.queue_free()
+	match weapon_id:
+		1:  # Breacher: short, fat pump shotgun
+			box(weapon, Vector3(0, -0.03, -0.5), Vector3(0.1, 0.1, 0.56), ctx.lit(DARK))
+			cylinder(weapon, Vector3(0, -0.09, -0.52), 0.045, 0.045, 0.34, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
+			box(weapon, Vector3(0, 0.03, -0.78), Vector3(0.04, 0.04, 0.08), ctx.glow(Color("ff9a4a"), 2.0))
+		2:  # Longshot: long barrel and scope
+			box(weapon, Vector3(0, -0.03, -0.62), Vector3(0.06, 0.09, 0.95), ctx.lit(DARK))
+			box(weapon, Vector3(0, 0.06, -0.55), Vector3(0.07, 0.07, 0.32), ctx.lit(Color("3a4552")))
+			box(weapon, Vector3(0, 0.06, -0.72), Vector3(0.05, 0.05, 0.03), ctx.glow(Color("7ee8ff"), 2.4))
+		_:  # Chatterbox: compact SMG with a stick magazine
+			box(weapon, Vector3(0, -0.03, -0.42), Vector3(0.09, 0.13, 0.38), ctx.lit(DARK))
+			box(weapon, Vector3(0, -0.15, -0.38), Vector3(0.06, 0.18, 0.08), ctx.lit(Color("3a4552")))
+			box(weapon, Vector3(0, -0.02, -0.64), Vector3(0.03, 0.03, 0.08), ctx.glow(Color("ffe08a"), 2.0))
 
 static func _tint_team(node: Node, color: Color) -> void:
 	if node.name == "TeamTint":

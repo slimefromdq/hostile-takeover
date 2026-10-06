@@ -25,6 +25,7 @@ func capture(state: Acquisition, index: int, team: int) -> void:
 func run() -> void:
 	test_objectives()
 	test_specs()
+	test_weapon_specs()
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
@@ -37,6 +38,7 @@ func run() -> void:
 	await process_frame
 	await test_movement()
 	await test_weapons()
+	await test_shared_weapons()
 	await test_mirage()
 	await test_machinery()
 	test_healpack()
@@ -214,6 +216,7 @@ func aim_at(p: Fighter, target: Vector3) -> void:
 func test_weapons() -> void:
 	var p: Fighter = game.local_player()
 	var target: Fighter = game.fighters[105]
+	target.team = 1 - p.team  # with 10v10 rosters bot 105 starts as a teammate
 	for class_index in range(4):
 		p.change_class(class_index)
 		p.global_position = O + Vector3(-10, 0, -21)
@@ -391,6 +394,109 @@ func test_machinery() -> void:
 		game.apply_hit(p, {"collider": opponent, "position": opponent.global_position + Vector3.UP}, p.spec.damage)
 	check(p.gun_buff > 0, "sustained gun hits improve melee recovery")
 	p.held = 0
+
+func test_weapon_specs() -> void:
+	var breacher: WeaponSpec = Fighter.WEAPONS[1]
+	var longshot: WeaponSpec = Fighter.WEAPONS[2]
+	var chatterbox: WeaponSpec = Fighter.WEAPONS[3]
+	check(Fighter.WEAPONS[0] == null and Fighter.WEAPONS.size() == 4, "weapon table: signature plus three shared guns")
+	for i in range(4):
+		var signature := WeaponSpec.from_class(Fighter.SPECS[i], i)
+		check(absf(signature.body_ttk() - Fighter.SPECS[i].body_ttk()) < 0.001, "signature weapon mirrors class gun: " + Fighter.SPECS[i].title)
+	check(WeaponSpec.from_class(Fighter.SPECS[1], 1).headshot_mult == 1.0, "engineer signature cannot headshot")
+	# Falloff: flat inside the start range, linear to the floor, flat after.
+	check(is_equal_approx(breacher.falloff_at(3.0), 1.0), "shotgun full damage up close")
+	check(is_equal_approx(breacher.falloff_at(13.0), 0.6), "shotgun falloff is linear (13 m of 6..20)")
+	check(is_equal_approx(breacher.falloff_at(60.0), breacher.falloff_min), "shotgun falloff floors")
+	check(is_equal_approx(longshot.falloff_at(30.0), 1.0) and longshot.falloff_at(80.0) >= 0.7 - 0.001, "rifle barely falls off")
+	var last := 2.0
+	for d in range(0, 100, 5):
+		var f := chatterbox.falloff_at(float(d))
+		check(f <= last + 0.0001, "smg falloff never increases (%d m)" % d)
+		last = f
+	# Role ordering: the shotgun wins up close, the rifle at range, and reach grows shotgun < smg < rifle.
+	check(breacher.reach < chatterbox.reach and chatterbox.reach < longshot.reach, "reach order shotgun < smg < rifle")
+	check(breacher.body_ttk(200.0, 3.0) < chatterbox.body_ttk(200.0, 3.0), "shotgun kills fastest point blank")
+	check(longshot.body_ttk(200.0, 40.0) < chatterbox.body_ttk(200.0, 28.0), "rifle out-trades the smg at range")
+	check(breacher.body_ttk(200.0, 19.0) > 3.0 * breacher.body_ttk(200.0, 3.0), "shotgun collapses at range")
+	check(chatterbox.interval < 0.1 and chatterbox.magazine >= 30, "smg is rapid fire")
+	for w in [breacher, longshot, chatterbox]:
+		var t: float = w.body_ttk(200.0, 10.0)
+		check(t > 0.5 and t < 4.0, "weapon time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		print("WEAPON TTK %s: %.2fs at 3 m, %.2fs at 25 m" % [w.title, w.body_ttk(200.0, 3.0), w.body_ttk(200.0, 25.0)])
+
+func test_shared_weapons() -> void:
+	var p: Fighter = game.local_player()
+	var target: Fighter = game.fighters[105]
+	var cases := [[1, 3.0], [2, 20.0], [3, 10.0]]
+	for class_index in [0, 2]:
+		for entry in cases:
+			var weapon_id: int = entry[0]
+			var distance: float = entry[1]
+			p.change_class(class_index, weapon_id)
+			var w: WeaponSpec = p.weapon
+			check(p.weapon_id == weapon_id and p.ammo == w.magazine, "equip %s on %s" % [w.title, p.spec.title])
+			p.global_position = O + Vector3(-distance, 0, -21)
+			p.velocity = Vector3.ZERO
+			p.held = 1
+			p.spin = 0  # the Enforcer's spin-up belongs to its Signature gun only
+			target.change_class(1)
+			target.global_position = O + Vector3(0, 0, -21)
+			target.hp = 200
+			target.update_visual()
+			await physics_frame
+			await process_frame
+			aim_at(p, target.global_position + Vector3.UP * 1.1)
+			var elapsed := 0.0
+			var first_hit := -1.0
+			for frame in range(600):
+				game.combat_tick(p, 1.0 / 60.0)
+				if target.hp < 200 and first_hit < 0:
+					first_hit = elapsed
+				if target.hp <= 0:
+					break
+				elapsed += 1.0 / 60.0
+			var ttk := elapsed - first_hit
+			var label := "%s on %s" % [w.title, p.spec.title]
+			print("LIVE TTK %s: %.3fs at %.0f m" % [label, ttk, distance])
+			check(target.hp <= 0, "shared weapon kills: " + label)
+			check(absf(ttk - w.body_ttk(200.0, distance)) <= 0.15, "shared weapon cadence matches model: " + label)
+			p.held = 0
+	# One shotgun blast on one target is one hit: five pellets landing must not trip the Enforcer's five-hit buff.
+	p.change_class(2, 1)
+	p.consecutive_hits = 0
+	p.gun_buff = 0
+	p.global_position = O + Vector3(-3, 0, -21)
+	target.change_class(1)
+	target.global_position = O + Vector3(0, 0, -21)
+	target.hp = 200
+	await physics_frame
+	aim_at(p, target.global_position + Vector3.UP * 1.1)
+	game.fire_ray(p, p.weapon.damage, false)
+	check(p.consecutive_hits == 1 and p.gun_buff <= 0, "a shotgun blast counts as one hit")
+	check(target.hp < 200, "blast damaged the target")
+	# Out of range: falloff and reach both bite.
+	target.hp = 200
+	p.global_position = O + Vector3(-40, 0, -21)
+	aim_at(p, target.global_position + Vector3.UP * 1.1)
+	game.fire_ray(p, p.weapon.damage, false)
+	check(target.hp == 200, "shotgun cannot reach 40 m")
+	# Loadout survives the snapshot, respawn and class swaps.
+	p.change_class(0, 3)
+	var state := p.pack()
+	check(state["w"] == 3, "snapshot carries weapon id")
+	p.change_class(1, 0)
+	p.unpack(state, true)
+	check(p.weapon_id == 3 and p.class_id == 0, "snapshot restores class and weapon")
+	game.respawn(p)
+	check(p.weapon_id == 3 and p.ammo == p.weapon.magazine, "respawn keeps the weapon and refills it")
+	game.apply_class(p.fighter_id, 3, 2)
+	check(p.class_id == 3 and p.weapon_id == 2, "class request carries a weapon")
+	p.change_class(0, 99)
+	check(p.weapon_id == Fighter.WEAPONS.size() - 1, "weapon id is clamped")
+	p.change_class(0, 0)
+	p.held = 0
+	target.hp = 200
 
 func test_authority_and_respawn() -> void:
 	var p: Fighter = game.local_player()
