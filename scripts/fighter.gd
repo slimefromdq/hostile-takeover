@@ -54,6 +54,16 @@ const WALL_RUN_SPEED_CAP_HOT_LAP := 14.0
 const WALL_RUN_MAX_RISE := 1.0
 const WALL_RUN_ENTRY_FALL := 3.0
 const WALL_RUN_PROBE_ANGLES := [PI / 2.0, -PI / 2.0, PI / 4.0, -PI / 4.0]
+# Vault (low ledge: keep running) and ledge grab (high ledge in the air: brief hang, then pull-up).
+const VAULT_MAX_HEIGHT := 1.3
+const VAULT_MIN_SPEED := 4.5
+const VAULT_SPEED_CAP := 12.0
+const VAULT_CLEARANCE := 0.4
+const VAULT_TIME := 0.4
+const LEDGE_TOP_REACH := 0.8
+const LEDGE_HANG_TIME := 0.2
+const LEDGE_HANG_COOLDOWN := 0.8
+const LEDGE_DROP_COOLDOWN := 0.5
 const MANTLE_SPEED := 8.5
 const MANTLE_HEAD_CLEARANCE := 2.6
 const MANTLE_REACH := 1.2
@@ -105,6 +115,11 @@ var wall_running: bool = false
 var wall_run_time: float = 0.0
 var wall_run_normal: Vector3 = Vector3.ZERO
 var wall_run_cd: float = 0.0
+var vault_time: float = 0.0
+var vault_velocity: Vector3 = Vector3.ZERO
+var hang_time: float = 0.0
+var hang_cd: float = 0.0
+var ledge_cd: float = 0.0
 var coyote_time: float = 0.0
 var jump_buffer: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
@@ -282,6 +297,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		climbing = false
 		sliding = false
 		wall_running = false
+		vault_time = 0.0
+		hang_time = 0.0
 		return
 	idle_weapon += dt
 	if held & 3:
@@ -306,6 +323,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if zip_id >= 0:
 		sliding = false
 		wall_running = false
+		vault_time = 0.0
+		hang_time = 0.0
 		MapVerbs.zip_move(self, dt, movement_edges)
 		move_and_slide()
 		MapVerbs.zip_after_slide(self)
@@ -348,12 +367,16 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if fresh_press or jump_buffer > 0.0:
 		if _try_jump(desired, grounded, fresh_press):
 			jump_buffer = 0.0
+			vault_time = 0.0
+			hang_time = 0.0
 		elif fresh_press:
 			jump_buffer = JUMP_BUFFER
 	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
 		dash_cd = DASH_COOLDOWN
 		_end_wall_run()
+		vault_time = 0.0
+		hang_time = 0.0
 		var dash_dir := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
 		dash_time = DASH_TIME
 		dash_velocity = dash_dir * DASH_SPEED
@@ -375,11 +398,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		velocity.x = rush.x
 		velocity.z = rush.z
 	MapVerbs.post_move(self, dt)
-	# Mantle automatically when moving into a low ledge with clear headroom (or while jump is held).
-	if not climbing and velocity.y <= 4.0 and (movement.length() > 0.1 or held & 16 != 0):
-		var heading := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
-		if _can_mantle(heading):
-			velocity.y = MANTLE_SPEED
+	_ledge_step(desired, grounded, dt)
 	move_and_slide()
 	step_timer -= dt
 	if game.authoritative and is_on_floor() and Vector2(velocity.x, velocity.z).length() > 2 and step_timer <= 0:
@@ -527,6 +546,8 @@ func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
 		if wall_running:
 			velocity += wall.normal * WALL_RUN_STICK # cancel the contact push so the kick is full strength
 		_end_wall_run()
+		hang_time = 0.0
+		hang_cd = LEDGE_HANG_COOLDOWN
 		velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
 		velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
 		dash_time = 0.0
@@ -545,6 +566,61 @@ func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
 		velocity.z += desired.z * 1.5
 		return true
 	return false
+
+# Ledges: low ones are vaulted at speed, high ones reached in the air are grabbed for a moment, and
+# anything else in reach is popped over as before. Skipped while wall running or climbing.
+func _ledge_step(desired: Vector3, grounded: bool, dt: float) -> void:
+	ledge_cd = maxf(0.0, ledge_cd - dt)
+	hang_cd = maxf(0.0, hang_cd - dt)
+	if grounded:
+		hang_time = 0.0
+	if vault_time > 0.0:
+		vault_time -= dt
+		if vault_time > 0.0 and not wall_running and not climbing and not (grounded and vault_time < VAULT_TIME - 0.1):
+			velocity.x = vault_velocity.x
+			velocity.z = vault_velocity.z
+			return
+		vault_time = 0.0
+	var heading := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
+	if hang_time > 0.0:
+		if climbing or wall_running or movement.y > 0.5 or held & 8 != 0:
+			hang_time = 0.0
+			ledge_cd = LEDGE_DROP_COOLDOWN
+			return
+		hang_time -= dt
+		if hang_time > 0.0:
+			velocity = Vector3.ZERO
+			return
+		hang_cd = LEDGE_HANG_COOLDOWN
+		velocity.y = MANTLE_SPEED
+		return
+	if ledge_cd > 0.0 or climbing or wall_running or velocity.y > 4.0 or not (movement.length() > 0.1 or held & 16 != 0):
+		return
+	var height := _ledge_height(heading)
+	if height < 0.0:
+		return
+	if height <= VAULT_MAX_HEIGHT:
+		var speed := clampf(maxf(velocity.dot(heading), VAULT_MIN_SPEED), VAULT_MIN_SPEED, VAULT_SPEED_CAP)
+		vault_velocity = heading * speed
+		vault_time = VAULT_TIME
+		velocity.y = maxf(MANTLE_SPEED, sqrt(2.0 * GRAVITY * (height + VAULT_CLEARANCE)))
+	elif not grounded and hang_cd <= 0.0:
+		hang_time = LEDGE_HANG_TIME
+		velocity = Vector3.ZERO
+	else:
+		velocity.y = MANTLE_SPEED
+
+# Ledge top height above the feet in the probed direction, or -1.0 when there is nothing to mantle.
+func _ledge_height(heading: Vector3) -> float:
+	if not _can_mantle(heading):
+		return -1.0
+	for angle in MANTLE_PROBE_ANGLES:
+		var dir := heading.rotated(Vector3.UP, angle)
+		var top_origin := global_position + Vector3.UP * MANTLE_HEAD_CLEARANCE + dir * LEDGE_TOP_REACH
+		var hit: Dictionary = game.ray(top_origin, top_origin + Vector3.DOWN * (MANTLE_HEAD_CLEARANCE + 0.2), [get_rid()], 1 | 4)
+		if not hit.is_empty() and hit.normal.y > 0.7:
+			return hit.position.y - global_position.y
+	return MANTLE_HEAD_CLEARANCE
 
 # Forgiving ledge probe: several heights and slightly fanned angles, so grazing a ledge still counts.
 func _can_mantle(heading: Vector3) -> bool:
@@ -606,6 +682,10 @@ func change_class(value: int, weapon_choice: int = -1) -> void:
 	jump_buffer = 0.0
 	wall_running = false
 	wall_run_cd = 0.0
+	vault_time = 0.0
+	hang_time = 0.0
+	hang_cd = 0.0
+	ledge_cd = 0.0
 	air_dash = true
 	air_jump = true
 	reload_timer = 0
@@ -674,7 +754,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"] or weapon_id != data.get("w", 0):
@@ -715,6 +795,9 @@ func unpack(data: Dictionary, local: bool) -> void:
 	wall_running = data.get("wr", false)
 	wall_run_time = data.get("wrt", 0.0)
 	wall_run_normal = data.get("wrn", Vector3.ZERO)
+	vault_time = data.get("vt", 0.0)
+	vault_velocity = data.get("vv", Vector3.ZERO)
+	hang_time = data.get("ht", 0.0)
 	zip_id = data.get("zip", -1)
 	zip_t = data.get("zt", 0.0)
 	zip_dir = data.get("zd", 1)

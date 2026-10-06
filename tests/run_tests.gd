@@ -229,6 +229,7 @@ func test_movement() -> void:
 	await test_input_forgiveness()
 	await test_slide_jump()
 	await test_wall_run()
+	await test_ledges()
 	test_visual_pipeline()
 	test_effect_pool()
 	test_sfx()
@@ -809,6 +810,65 @@ func test_wall_run() -> void:
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.wall_running and p.wall_run_time > 1.2, "Hot Lap extends the wall run (%.2f s)" % p.wall_run_time)
 	p.change_class(1)
+	await physics_frame
+
+func test_ledges() -> void:
+	await physics_frame
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.held = 0
+	# Vault: running into the 1.2 m crate (x -4.5..-1.5) carries you over without stopping.
+	p.yaw = -PI / 2
+	p.movement = Vector2(0, -1)
+	p.global_position = O + Vector3(-10, 0, 5)
+	p.velocity = Vector3(8, 0, 0)
+	var vaulted := false
+	var crossed_at := -1
+	for i in range(150):
+		p.simulate_movement(1.0 / 60, 0)
+		vaulted = vaulted or p.vault_time > 0.0
+		if crossed_at < 0 and p.global_position.x > O.x - 1.0:
+			crossed_at = i
+	check(vaulted and crossed_at >= 0 and crossed_at < 120, "running into a low crate vaults over it (crossed at frame %d)" % crossed_at)
+	await physics_frame
+	# Ledge grab: reaching a 2.4 m ledge (x from 20) in the air hangs briefly, then pulls up.
+	var ledge_start := O + Vector3(19.5, 0.9, 6.0)
+	p.global_position = ledge_start
+	p.velocity = Vector3(2, 0, 0)
+	p.movement = Vector2(0, -1)
+	p.hang_cd = 0.0
+	p.ledge_cd = 0.0
+	p.simulate_movement(1.0 / 60, 0)
+	check(p.hang_time > 0.0 and p.velocity.length() < 0.01, "a high ledge reached in the air is grabbed")
+	var peak := -99.0
+	for i in range(30):
+		p.simulate_movement(1.0 / 60, 0)
+		peak = maxf(peak, p.velocity.y)
+	check(peak > 8.0 and p.hang_time == 0.0, "the hang ends in a pull-up (peak vy %.1f)" % peak)
+	await physics_frame
+	# Jump during a hang kicks off the ledge face.
+	p.global_position = ledge_start
+	p.velocity = Vector3(2, 0, 0)
+	p.hang_cd = 0.0
+	p.ledge_cd = 0.0
+	p.wall_normal = Vector3.ZERO
+	p.wall_repeats = 0
+	p.simulate_movement(1.0 / 60, 0)
+	var hung := p.hang_time > 0.0
+	p.simulate_movement(1.0 / 60, 1)
+	check(hung and p.hang_time == 0.0 and p.velocity.x < -5.0 and p.velocity.y > 9.5, "jump kicks off a ledge hang (%s)" % p.velocity)
+	await physics_frame
+	# Back or slide drops from the ledge without being pulled up again.
+	p.global_position = ledge_start
+	p.velocity = Vector3(2, 0, 0)
+	p.hang_cd = 0.0
+	p.ledge_cd = 0.0
+	p.simulate_movement(1.0 / 60, 0)
+	var hung_again := p.hang_time > 0.0
+	p.movement = Vector2(0, 1)
+	p.simulate_movement(1.0 / 60, 0)
+	check(hung_again and p.hang_time == 0.0 and p.velocity.y < 4.0 and p.ledge_cd > 0.0, "holding back drops from a ledge hang")
+	p.movement = Vector2.ZERO
 	await physics_frame
 
 func test_air_movement() -> void:
