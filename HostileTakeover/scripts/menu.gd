@@ -9,10 +9,10 @@ var address: LineEdit
 var cards: Array[Button] = []
 var spinners: Array[Node3D] = []
 var controls_panel: Label
+var display_button: Button
 
 func setup(owner_game: Node3D) -> void:
 	game = owner_game
-	position = Vector2(150, 24)
 	size = Vector2(980, 672)
 	# The cut-corner panel is drawn in _draw(); the stylebox only supplies padding.
 	var style := StyleBoxEmpty.new()
@@ -61,19 +61,42 @@ func setup(owner_game: Node3D) -> void:
 	grid.add_child(address)
 	status = _label("Godot 4.7 prototype", 15, Color(1, 1, 1, 0.7))
 	grid.add_child(status)
+	var options := HBoxContainer.new()
+	options.add_theme_constant_override("separation", 16)
+	column.add_child(options)
 	var toggle := Button.new()
 	toggle.text = "Controls ▾"
 	toggle.flat = true
 	toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	toggle.add_theme_color_override("font_color", UiStyle.ACCENT)
 	toggle.add_theme_color_override("font_hover_color", UiStyle.TEXT)
-	column.add_child(toggle)
-	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, hold at a ledge to mantle\nSHIFT air dash (shares a charge with the double jump; sprint is automatic) · strafe to steer in the air · CTRL slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
+	options.add_child(toggle)
+	display_button = Button.new()
+	display_button.flat = true
+	display_button.add_theme_color_override("font_color", UiStyle.ACCENT)
+	display_button.add_theme_color_override("font_hover_color", UiStyle.TEXT)
+	display_button.pressed.connect(func():
+		DisplayPrefs.toggle()
+		refresh_display_button())
+	options.add_child(display_button)
+	refresh_display_button()
+	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, hold at a ledge to mantle\nSHIFT air dash (shares a charge with the double jump; sprint is automatic) · strafe to steer in the air · CTRL slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
 	toggle.pressed.connect(func():
 		controls_panel.visible = not controls_panel.visible
 		toggle.text = "Controls ▴" if controls_panel.visible else "Controls ▾")
+
+func _ready() -> void:
+	get_viewport().size_changed.connect(_center)
+	_center()
+
+# Keep the panel centred whatever the window or fullscreen aspect ratio is.
+func _center() -> void:
+	position = ((get_viewport_rect().size - size) / 2.0).round()
+
+func refresh_display_button() -> void:
+	display_button.text = "Display: %s · F11" % ("Fullscreen" if DisplayPrefs.fullscreen else "Windowed")
 
 func _label(value: String, font_size: int, color: Color = Color("eef0e5")) -> Label:
 	var label := Label.new()

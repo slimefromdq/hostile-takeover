@@ -34,6 +34,7 @@ var last_world_tick := -1
 func _ready() -> void:
 	rng.seed = 47
 	Visuals.load_settings()
+	DisplayPrefs.load_settings()
 	setup_inputs()
 	points = CivicDividend.build(self)
 	bot_graph = MapGraph.from_layout()
@@ -294,6 +295,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		Visuals.set_colorblind(not Visuals.colorblind)
 		announce("Colour-blind palette %s · applies as fighters respawn." % ("on" if Visuals.colorblind else "off"))
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_F11 or (event.keycode == KEY_ENTER and event.alt_pressed)):
+		DisplayPrefs.toggle()
+		menu.refresh_display_button()
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		menu.visible = not menu.visible
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if menu.visible else Input.MOUSE_MODE_CAPTURED
