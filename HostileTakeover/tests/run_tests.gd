@@ -41,6 +41,7 @@ func run() -> void:
 	await test_machinery()
 	test_authority_and_respawn()
 	await test_hud()
+	await test_explore()
 	print("RESULT: %d checks, %d failures" % [checks, failures])
 	game.queue_free()
 	await process_frame
@@ -514,3 +515,17 @@ func test_air_movement() -> void:
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.velocity.x > 5.0, "ground friction is weighty, not instant (%.1f after 0.17 s)" % p.velocity.x)
 	p.movement = Vector2.ZERO
+
+func test_explore() -> void:
+	var g = load("res://scenes/main.tscn").instantiate()
+	root.add_child(g)
+	g.start_game("explore")
+	check(g.explore and g.fighters.size() == 1, "explore mode spawns only the local player")
+	var before: Array = g.match_state.progress.duplicate()
+	g.local_player().global_position = g.points[2] + Vector3.UP * 0.1
+	for i in range(30):
+		await physics_frame
+	check(g.match_state.progress == before and g.match_state.winner == -2, "explore mode never ticks the objective")
+	check(g.hud.explore, "HUD switches to the exploration layout")
+	g.queue_free()
+	await process_frame
