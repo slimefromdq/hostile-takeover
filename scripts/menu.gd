@@ -46,7 +46,7 @@ func setup(owner_game: Node3D) -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8)
 	column.add_child(grid)
-	for pair in [["Play offline · 6v6 bots", "offline"], ["Explore map · free roam", "explore"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
+	for pair in [["Play offline · 10v10 bots", "offline"], ["Explore map · free roam", "explore"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
 		var button := Button.new()
 		button.text = pair[0]
 		button.custom_minimum_size = Vector2(290, 38)

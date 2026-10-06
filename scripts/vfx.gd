@@ -11,7 +11,7 @@ const BOLT_SPEED := 140.0
 static var time_scale := 1.0
 static var _materials: Dictionary = {}
 static var _segment_mesh: CylinderMesh
-# Hard cap on live effect nodes under one root: a 12-fighter firefight cannot spike the node count.
+# Hard cap on live effect nodes under one root: a 20-fighter firefight cannot spike the node count.
 const MAX_EFFECT_NODES := 220
 
 static func glow_material(color: Color, energy: float = 2.0) -> StandardMaterial3D:

@@ -8,6 +8,18 @@ const PACK_REGEN := 150.0
 const PACK_REGEN_TIME := 5.0
 const PACK_RESPAWN := 25.0
 const PACK_RADIUS := 1.5
+# Bot roles (see assign_bot_role). Capture speed stops growing at three capturers; a fourth covers contest fights.
+const BOT_MAX_ATTACKERS := 4
+const BOT_ROAM_CHANCE := 0.3  # chance an attacker slot rotates to a roam/defend role anyway
+const BOT_DEFEND_SHARE := 0.3  # share of non-attack roles that patrol an owned point instead of flanking
+const BOT_ROLE_MIN := 6.0
+const BOT_ROLE_MAX := 11.0
+const BOT_ROAM_RADIUS := 55.0
+const BOT_DEFEND_RADIUS := 24.0
+const BOT_POINT_RING := 3.4  # attackers hold spots inside the 4.5 m capture radius
+const BOT_PAUSE_MIN := 0.8
+const BOT_PAUSE_MAX := 2.5
+const BOT_SIGHT := 30.0
 var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
@@ -19,6 +31,7 @@ var entity_next := 1
 var match_state := Acquisition.new()
 var points: Array[Vector3] = []
 var bot_graph: MapGraph
+var bot_enemies: Array = [[], []]  # per team: living, visible fighters; rebuilt each physics tick for bot target search
 var point_meshes: Array[MeshInstance3D] = []
 var beacon_meshes: Array[MeshInstance3D] = []
 var snapshot_timer := 0.0
@@ -177,7 +190,7 @@ func start_game(mode: String) -> void:
 		return
 	if mode == "host":
 		var server := ENetMultiplayerPeer.new()
-		var err := server.create_server(PORT, 11)
+		var err := server.create_server(PORT, CivicDividend.TEAM_SIZE * 2 - 1)
 		if err != OK:
 			menu_status.text = "Host failed: %s" % error_string(err)
 			return
@@ -188,8 +201,8 @@ func start_game(mode: String) -> void:
 	hud.explore = explore
 	spawn_fighter(1, 0, selected_class, false)
 	if not explore:
-		for i in range(11):
-			spawn_fighter(100 + i, 0 if i < 5 else 1, i % 4, true)
+		for i in range(CivicDividend.TEAM_SIZE * 2 - 1):
+			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, i % 4, true)
 	spawn_pickups()
 	running = true
 	menu.hide()
@@ -258,14 +271,27 @@ func join_request(class_choice: int) -> void:
 	spawn_fighter(id, side, clampi(class_choice, 0, 3), false)
 	initial_sync.rpc_id(id, encode_world())
 
-func spawn_position(side: int, id: int) -> Vector3:
-	return Vector3(-CivicDividend.spawn_x if side == 0 else CivicDividend.spawn_x, 0.2, CivicDividend.spawn_z + (abs(id) % 6) * CivicDividend.spawn_step)
+# Lowest depot slot on the team that no teammate holds, so a full team never shares a spawn (peer ids are arbitrary).
+func free_spawn_slot(side: int) -> int:
+	var taken := {}
+	for other in fighters.values():
+		if other.team == side:
+			taken[other.spawn_slot] = true
+	for slot in range(CivicDividend.TEAM_SIZE):
+		if not taken.has(slot):
+			return slot
+	return fighters.size() % CivicDividend.TEAM_SIZE
+
+func spawn_position(p: Fighter) -> Vector3:
+	return CivicDividend.spawn_slot_position(p.team, p.spawn_slot)
 
 func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool) -> Fighter:
 	var p: Fighter = CLASS_SCENES[archetype].instantiate()
 	p.configure(self, id, side, archetype, is_bot)
+	p.bot_think = rng.randf_range(0.0, 0.5)
 	add_child(p)
-	p.global_position = spawn_position(side, id)
+	p.spawn_slot = free_spawn_slot(side)
+	p.global_position = spawn_position(p)
 	p.yaw = -PI / 2 if side == 0 else PI / 2
 	fighters[id] = p
 	return p
@@ -295,7 +321,7 @@ func apply_class(id: int, index: int) -> void:
 	p.double_id = -1
 	p.change_class(index)
 	p.dead_time = 0
-	p.global_position = spawn_position(p.team, id)
+	p.global_position = spawn_position(p)
 	p.velocity = Vector3.ZERO
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -365,6 +391,7 @@ func _physics_process(dt: float) -> void:
 				p.simulate_movement(dt, input_edges)
 		input_edges = 0
 	if authoritative:
+		refresh_bot_enemies()
 		for player in fighters.values():
 			if player.bot:
 				bot_input(player, dt)
@@ -527,8 +554,12 @@ func respawn(p: Fighter) -> void:
 	p.double_id = -1
 	p.bot_path.clear()
 	p.bot_bias.clear()
+	p.bot_role_until = 0.0
+	p.bot_pause_until = 0.0
+	p.bot_roam_node = -1
+	p.bot_think = rng.randf_range(0.0, 0.5)
 	p.change_class(p.class_id)
-	p.global_position = spawn_position(p.team, p.fighter_id)
+	p.global_position = spawn_position(p)
 	p.velocity = Vector3.ZERO
 	p.idle_weapon = 2
 	p.air_dash = true
@@ -982,34 +1013,124 @@ func objectives_tick(dt: float) -> void:
 		if multiplayer.get_peers().size() > 0:
 			remote_notice.rpc(message)
 
+# Bots on one team split into attackers (capture the frontier point), roamers (flank and intercept around it) and
+# defenders (patrol a point the team already owns). Capture speed stops growing at three capturers (acquisition.gd), so
+# surplus bots stay mobile instead of standing on the point.
+func refresh_bot_enemies() -> void:
+	bot_enemies = [[], []]
+	for f in fighters.values():
+		if f.hp > 0 and not (f.conceal > 0 and f.reveal <= 0):
+			bot_enemies[f.team].append(f)
+
+func frontier_point(p: Fighter) -> int:
+	var objective := 2
+	var closest := INF
+	for i in range(5):
+		if match_state.unlocked[i] and match_state.owners[i] != p.team:
+			var distance := p.global_position.distance_to(points[i])
+			if distance < closest:
+				closest = distance
+				objective = i
+	return objective
+
+func assign_bot_role(p: Fighter, objective: int) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	p.bot_role_until = now + rng.randf_range(BOT_ROLE_MIN, BOT_ROLE_MAX)
+	p.bot_pause_until = 0.0
+	var attackers := 0
+	for other in fighters.values():
+		if other != p and other.bot and other.team == p.team and other.hp > 0 and other.bot_role == Fighter.BotRole.ATTACK and other.bot_goal == objective:
+			attackers += 1
+	var role := Fighter.BotRole.ATTACK
+	if attackers >= BOT_MAX_ATTACKERS or rng.randf() < BOT_ROAM_CHANCE:
+		role = Fighter.BotRole.DEFEND if rng.randf() < BOT_DEFEND_SHARE else Fighter.BotRole.ROAM
+	p.bot_role = role
+	p.bot_roam_node = -1
+	if role == Fighter.BotRole.ATTACK:
+		roll_bot_offset(p)
+
+func roll_bot_offset(p: Fighter) -> void:
+	var angle := rng.randf() * TAU
+	var radius := rng.randf_range(0.8, BOT_POINT_RING)
+	p.bot_offset = Vector3(cos(angle), 0, sin(angle)) * radius
+
+# Random graph node within a ring around a point; the bot walks there, lingers briefly, then picks another.
+func pick_roam_node(p: Fighter, center: Vector3, min_range: float, max_range: float) -> int:
+	var candidates: Array[int] = []
+	for i in range(bot_graph.positions.size()):
+		if CivicDividend.spawn_nodes.has(bot_graph.names[i]):
+			continue
+		var d := Vector2(bot_graph.positions[i].x - center.x, bot_graph.positions[i].z - center.z).length()
+		if d >= min_range and d <= max_range:
+			candidates.append(i)
+	if candidates.is_empty():
+		return -1
+	return candidates[rng.randi() % candidates.size()]
+
+func choose_bot_roam(p: Fighter, objective: int) -> void:
+	var center := points[objective]
+	var min_range := 8.0
+	var max_range := BOT_ROAM_RADIUS
+	if p.bot_role == Fighter.BotRole.DEFEND:
+		var owned := -1
+		var closest := INF
+		for i in range(5):
+			if match_state.unlocked[i] and match_state.owners[i] == p.team:
+				var distance := p.global_position.distance_to(points[i])
+				if distance < closest:
+					closest = distance
+					owned = i
+		if owned >= 0:
+			center = points[owned]
+			min_range = 0.0
+			max_range = BOT_DEFEND_RADIUS
+	var node := pick_roam_node(p, center, min_range, max_range)
+	if node < 0:
+		# Nothing suitable near the point: attack instead of idling.
+		p.bot_role = Fighter.BotRole.ATTACK
+		roll_bot_offset(p)
+		return
+	p.bot_roam_node = node
+	p.bot_target = bot_graph.positions[node]
+	plan_bot_path(p, objective, node)
+
 func bot_input(p: Fighter, dt: float) -> void:
 	if p.hp <= 0:
 		return
 	p.bot_think -= dt
 	if p.bot_think <= 0:
 		p.bot_think = rng.randf_range(0.25, 0.5)
-		var objective := 2
-		var closest := INF
-		for i in range(5):
-			if match_state.unlocked[i] and match_state.owners[i] != p.team:
-				var distance := p.global_position.distance_to(points[i])
-				if distance < closest:
-					closest = distance
-					objective = i
-		p.bot_target = points[objective] + Vector3(rng.randf_range(-2, 2), 0, rng.randf_range(-2, 2))
-		if objective != p.bot_goal or p.bot_path.is_empty():
-			plan_bot_path(p, objective)
+		var now := Time.get_ticks_msec() / 1000.0
+		var objective := frontier_point(p)
+		if now >= p.bot_role_until or objective != p.bot_goal and p.bot_role == Fighter.BotRole.ATTACK:
+			assign_bot_role(p, objective)
+		if p.bot_role == Fighter.BotRole.ATTACK:
+			if p.bot_goal == objective and p.global_position.distance_to(points[objective]) < 6.0 and rng.randf() < 0.15:
+				roll_bot_offset(p)
+			p.bot_target = points[objective] + p.bot_offset
+			if objective != p.bot_goal or p.bot_path.is_empty() or p.bot_goal_node >= 0:
+				plan_bot_path(p, objective)
+		else:
+			var arrived := p.bot_roam_node >= 0 and Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 3.0
+			if arrived and p.bot_pause_until <= 0.0:
+				p.bot_pause_until = now + rng.randf_range(BOT_PAUSE_MIN, BOT_PAUSE_MAX)
+			if p.bot_roam_node < 0 or p.bot_pause_until > 0.0 and now >= p.bot_pause_until:
+				p.bot_pause_until = 0.0
+				choose_bot_roam(p, objective)
+			p.bot_goal = objective
 		p.aim_target = -1
-		closest = 30
-		for target in fighters.values():
-			if target.team == p.team or target.hp <= 0 or target.conceal > 0 and target.reveal <= 0:
-				continue
-			var distance := p.global_position.distance_to(target.global_position)
-			if distance < closest:
-				var hit := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
-				if not hit.is_empty() and hit.collider == target:
-					closest = distance
-					p.aim_target = target.fighter_id
+		var candidates: Array = []
+		for target in bot_enemies[1 - p.team]:
+			var distance_sq := p.global_position.distance_squared_to(target.global_position)
+			if distance_sq < BOT_SIGHT * BOT_SIGHT:
+				candidates.append([distance_sq, target])
+		candidates.sort_custom(func(a, b): return a[0] < b[0])
+		for i in range(mini(candidates.size(), 2)):
+			var target: Fighter = candidates[i][1]
+			var hit := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
+			if not hit.is_empty() and hit.collider == target:
+				p.aim_target = target.fighter_id
+				break
 	var destination := bot_waypoint(p, dt)
 	var target: Fighter = fighters.get(p.aim_target)
 	var diff := destination - p.global_position
@@ -1030,6 +1151,8 @@ func bot_input(p: Fighter, dt: float) -> void:
 	var local_move := Basis(Vector3.UP, -p.yaw) * diff.normalized()
 	var stopping_distance := 2.0 if p.bot_path_i >= p.bot_path.size() - 1 else 0.4
 	p.movement = Vector2(local_move.x, local_move.z) if diff.length() > stopping_distance else Vector2.ZERO
+	if p.bot_pause_until > 0.0 and target == null:
+		p.movement = Vector2.ZERO
 	if p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1:
 		p.edges |= 1
 	if p.class_id == 1 and absf(p.global_position.x) < 75 and rng.randf() < dt * 0.25:
@@ -1062,9 +1185,12 @@ func bot_weights(p: Fighter) -> Dictionary:
 			p.bot_bias[tag] = (0.4 if tag == chosen else 2.0) * rng.randf_range(0.9, 1.1)
 	return p.bot_bias.duplicate()
 
-func plan_bot_path(p: Fighter, objective: int) -> void:
+# `goal_node` >= 0 routes to that graph node (roaming); otherwise to the objective's own node.
+func plan_bot_path(p: Fighter, objective: int, goal_node: int = -1) -> void:
 	p.bot_goal = objective
-	p.bot_path = bot_graph.path(bot_graph.nearest(p.global_position), bot_graph.node(CivicDividend.goal_names[objective]), bot_weights(p))
+	p.bot_goal_node = goal_node
+	var destination := goal_node if goal_node >= 0 else bot_graph.node(CivicDividend.goal_names[objective])
+	p.bot_path = bot_graph.path(bot_graph.nearest(p.global_position), destination, bot_weights(p))
 	p.bot_path_i = 0
 	p.bot_progress_pos = p.global_position
 	p.bot_progress_time = 0.0
@@ -1085,7 +1211,7 @@ func bot_waypoint(p: Fighter, dt: float) -> Vector3:
 		var moved := Vector2(p.global_position.x - p.bot_progress_pos.x, p.global_position.z - p.bot_progress_pos.z).length()
 		if moved < 0.8 and p.bot_path_i < p.bot_path.size() - 1:
 			p.bot_bias.clear()
-			plan_bot_path(p, p.bot_goal)
+			plan_bot_path(p, p.bot_goal, p.bot_goal_node)
 			p.edges |= 1
 		p.bot_progress_pos = p.global_position
 		p.bot_progress_time = 0.0

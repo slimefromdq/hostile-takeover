@@ -206,12 +206,13 @@ func audit_clearance() -> void:
 	check(bad == 0, "every waypoint stands on ground with capsule clearance (%d bad)" % bad)
 	bad = 0
 	for side in [0, 1]:
-		for id in range(6):
-			var sp := Vector3(-CivicDividend.spawn_x if side == 0 else CivicDividend.spawn_x, 0.0, CivicDividend.spawn_z + id * CivicDividend.spawn_step)
+		for id in range(CivicDividend.TEAM_SIZE):
+			var sp := CivicDividend.spawn_slot_position(side, id)
+			sp.y = 0.0
 			if capsule_blocked(sp):
 				bad += 1
 				printerr("  spawn blocked: ", sp)
-	check(bad == 0, "all twelve spawn positions are clear")
+	check(bad == 0, "all spawn slots are clear")
 	bad = 0
 	for p in CivicDividend.capture_points:
 		for k in range(12):
@@ -420,9 +421,9 @@ func audit_spawn_and_points() -> void:
 	if sight is Dictionary:
 		sight_xs = range(int(sight.xs[0]), int(sight.xs[1]) + 1, int(sight.xs[2]))
 		sight_zs = sight.zs
-	for spawn_index in range(6):
-		var sp_z := CivicDividend.spawn_z + spawn_index * CivicDividend.spawn_step
-		var from := Vector3(-CivicDividend.spawn_x, HEAD, sp_z)
+	for spawn_index in range(CivicDividend.TEAM_SIZE):
+		var slot_pos := CivicDividend.spawn_slot_position(0, spawn_index)
+		var from := Vector3(slot_pos.x, HEAD, slot_pos.z)
 		if sight is bool and not sight:
 			break
 		for tx in sight_xs:

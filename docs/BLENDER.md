@@ -75,7 +75,7 @@ back to the built-in map).
 
 - `"mode": "add"` layers the blockout on top of the built-in map. Use it to prototype a new area.
 - `"mode": "replace"` skips `MapLayout.build` and takes everything else from the file:
-  - **Bounds**, `spawn_x/z/step` (six spawns per team at x = -spawn_x and +spawn_x), `depot_limit` (spawn protection
+  - **Bounds**, `spawn_x/z/step` (ten spawn slots per team (two rows of five) at x = -spawn_x and +spawn_x), `depot_limit` (spawn protection
     ends beyond it), `test_lane` (defaults to the middle capture point).
   - **Capture points**: waypoints with `point`; mirrored ones count twice. Exactly five are required and they are ordered
     west to east (Helix owns the west end), so the usual shape is A and B mirrored plus C on x = 0.

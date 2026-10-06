@@ -8,7 +8,7 @@ Authored for the west half and mirrored across x = 0 (Helix west, Monarch east).
 
 ## Game mode (assumption: ask me to change it)
 
-The map is built for the game's existing mode: **6v6 team objective, five capture points, bots fill empty slots**.
+The map is built for the game's existing mode: **10v10 team objective, five capture points, bots fill empty slots**.
 The objective unlocks from the centre outward, so the contest starts at C (the rail yard) and teams push toward A or A'.
 Depots sit at both ends and nothing in a depot can see the street. **Explore mode** (single-player free roam, no bots) is the sandbox
 for learning the verbs. A free-for-all would want more spawn points spread across districts instead of two sealed depots, and

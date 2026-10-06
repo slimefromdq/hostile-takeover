@@ -74,6 +74,14 @@ var wall_normal: Vector3 = Vector3.ZERO
 var wall_repeats: int = 0
 var double_id: int = -1
 var alt_timer: float = 0.0
+enum BotRole { ATTACK, ROAM, DEFEND }
+var spawn_slot: int = 0
+var bot_role: int = BotRole.ATTACK
+var bot_role_until: float = 0.0
+var bot_pause_until: float = 0.0
+var bot_roam_node: int = -1
+var bot_goal_node: int = -1
+var bot_offset: Vector3 = Vector3.ZERO
 var bot_think: float = 0.0
 var bot_target: Vector3 = Vector3.ZERO
 var bot_path: Array[Vector3] = []

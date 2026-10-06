@@ -41,6 +41,7 @@ func run() -> void:
 	await test_machinery()
 	test_healpack()
 	test_authority_and_respawn()
+	test_roster_and_roles()
 	await test_hud()
 	await test_explore()
 	print("RESULT: %d checks, %d failures" % [checks, failures])
@@ -418,6 +419,43 @@ func test_authority_and_respawn() -> void:
 	check(game.match_state.winner == -2 and game.match_state.remaining == 720, "host restart resets round")
 	check(game.entities.is_empty() and p.hp == p.spec.health, "restart clears deployables and restores fighters")
 
+func test_roster_and_roles() -> void:
+	check(game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "full roster of %d fighters" % (CivicDividend.TEAM_SIZE * 2))
+	var slots: Array = [{}, {}]
+	for p in game.fighters.values():
+		slots[p.team][p.spawn_slot] = true
+	check(slots[0].size() == CivicDividend.TEAM_SIZE and slots[1].size() == CivicDividend.TEAM_SIZE, "every teammate holds a distinct spawn slot")
+	var spawns := {}
+	for side in range(2):
+		for slot in range(CivicDividend.TEAM_SIZE):
+			spawns[CivicDividend.spawn_slot_position(side, slot)] = true
+	check(spawns.size() == CivicDividend.TEAM_SIZE * 2, "spawn slot positions never overlap")
+	game.refresh_bot_enemies()
+	for p in game.fighters.values():
+		if p.bot:
+			p.hp = p.spec.health
+			p.bot_think = 0.0
+			p.bot_role_until = 0.0
+			p.bot_goal = -1
+			p.bot_role = Fighter.BotRole.ATTACK
+	for p in game.fighters.values():
+		if p.bot:
+			game.bot_input(p, 0.1)
+	var attackers := [0, 0]
+	var roamers := 0
+	var valid_roam := true
+	for p in game.fighters.values():
+		if not p.bot:
+			continue
+		if p.bot_role == Fighter.BotRole.ATTACK:
+			attackers[p.team] += 1
+		else:
+			roamers += 1
+			valid_roam = valid_roam and p.bot_roam_node >= 0 and not p.bot_path.is_empty()
+	check(attackers[0] <= game.BOT_MAX_ATTACKERS + 1 and attackers[1] <= game.BOT_MAX_ATTACKERS + 1, "attackers per team stay near the capture cap (%s)" % [attackers])
+	check(roamers >= 4, "surplus bots roam or defend instead of stacking on the point (%d)" % roamers)
+	check(valid_roam, "every roaming bot has a graph node and a route")
+
 func test_hud() -> void:
 	game.set_physics_process(false)
 	var victim: Fighter = game.fighters[100]
@@ -441,7 +479,7 @@ func test_hud() -> void:
 		game.hud.add_kill("A", 0, "B", 1)
 	check(game.hud.feed.size() == 5, "kill feed keeps at most five entries")
 	var rows: Array = Hud.scoreboard_rows(game)
-	check(rows[0].size() == 6 and rows[1].size() == 6, "scoreboard lists six fighters per team")
+	check(rows[0].size() == CivicDividend.TEAM_SIZE and rows[1].size() == CivicDividend.TEAM_SIZE, "scoreboard lists a full team per side")
 	check(rows[1][0].k >= rows[1][-1].k, "scoreboard sorts by kills")
 	var mini: Minimap = game.hud.minimap
 	check(mini.to_map(CivicDividend.bounds.position.x, CivicDividend.bounds.position.y).is_zero_approx(), "minimap maps bounds origin to its corner")

@@ -1,12 +1,12 @@
 # Hostile Takeover
 
-A playable Godot 4.7 graybox prototype: four fighter classes, shared parkour, server-authoritative combat, five-point Acquisition, offline 6v6 bots, and LAN host/join.
+A playable Godot 4.7 graybox prototype: four fighter classes, shared parkour, server-authoritative combat, five-point Acquisition, offline 10v10 bots, and LAN host/join.
 
 ## Play
 
 Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Select a class and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.
 
-For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping twelve fighters. Disconnected players are replaced by bots.
+For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping a full twenty-fighter roster. Disconnected players are replaced by bots.
 
 | Input | Action |
 |---|---|
@@ -90,6 +90,6 @@ Art is generated primitive geometry (class rigs, effects and the map are code-bu
 
 ## Performance notes
 
-`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 12-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Character meshes are low-poly (about 10x fewer triangles than the first pass), the sun uses a single shadow cascade, small character details do not cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
+`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 20-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Character meshes are low-poly (about 10x fewer triangles than the first pass), the sun uses a single shadow cascade, small character details do not cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.

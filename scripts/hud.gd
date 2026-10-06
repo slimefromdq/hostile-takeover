@@ -458,6 +458,6 @@ func _draw_scoreboard(p: Fighter) -> void:
 			text(Vector2(x + 190, row_y), row["class"], 14, Color(1, 1, 1, alpha))
 			text(Vector2(x + 290, row_y), "%d" % row.k, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
 			text(Vector2(x + 330, row_y), "%d" % row.d, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
-			row_y += 30.0
+			row_y += 24.0
 	if p != null:
 		text(Vector2(panel.position.x + 20, panel.end.y - 16), p.spec.passive, 14, Color(1, 1, 1, 0.8))

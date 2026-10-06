@@ -28,7 +28,7 @@ func run() -> void:
 				break
 			await create_timer(0.1).timeout
 		verify(humans == 2, "server admits a second human")
-		verify(game.fighters.size() == 12, "joining human replaces bot, keeping 6v6")
+		verify(game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "joining human replaces bot, keeping a full roster")
 		verify(game.match_state.unlocked.count(true) <= 2, "server frontier remains valid")
 		# Test movement and swaps in a clear lane, independent of random spawn traffic.
 		for p in game.fighters.values():
@@ -45,7 +45,7 @@ func run() -> void:
 		verify(game.local_player() != null, "client receives fighter snapshot")
 		if game.local_player() != null:
 			await create_timer(0.5).timeout
-			verify(not game.authoritative and game.fighters.size() == 12, "client is nonauthoritative and receives roster")
+			verify(not game.authoritative and game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "client is nonauthoritative and receives roster")
 			var p: Fighter = game.local_player()
 			verify(p.class_id == 3, "requested class assigned by server")
 			verify(p.global_position.distance_to(CivicDividend.test_lane) < 10, "client receives server relocation into clear test lane")

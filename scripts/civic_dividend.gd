@@ -3,6 +3,11 @@ extends RefCounted
 
 # Facade over MapLayout/MapBuilder so existing callers (game.gd, minimap, tests) keep one entry point.
 
+# Fighters per team. Depot spawn slots are laid out in rows of SPAWN_ROW slots (see spawn_slot_position).
+const TEAM_SIZE := 10
+const SPAWN_ROW := 5
+const SPAWN_ROW_GAP := 2.5
+
 static var footprints: Array[Rect2] = []
 static var sunken: Array[Rect2] = []
 static var builder: MapBuilder
@@ -24,6 +29,15 @@ static var graph_data: Dictionary = {}
 # Optional audit profile from the blockout (sightline lanes, route families, spawn sight); {} means the built-in map's.
 static var audit_profile: Dictionary = {}
 static var replaced := false
+
+# Depot position for a team slot (0..TEAM_SIZE-1): rows of SPAWN_ROW across z, centered where the old single row of six
+# was, later rows stepping back from the gate so a full team fits the depot (the audit checks every slot is clear).
+static func spawn_slot_position(side: int, slot: int) -> Vector3:
+	var row := slot / SPAWN_ROW
+	var column := slot % SPAWN_ROW
+	var x := spawn_x + row * SPAWN_ROW_GAP
+	var z := spawn_z + spawn_step * 0.5 + column * spawn_step
+	return Vector3(-x if side == 0 else x, 0.2, z)
 
 static func reset_settings() -> void:
 	bounds = MapLayout.BOUNDS

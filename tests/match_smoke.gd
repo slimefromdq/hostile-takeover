@@ -15,7 +15,7 @@ func run() -> void:
 			advancing += 1
 		finite = finite and p.global_position.is_finite() and p.velocity.is_finite()
 	var objective_pressure: bool = game.match_state.owners[2] != -1 or game.match_state.progress[2] > 0
-	var passed: bool = game.fighters.size() == 12 and advancing >= 4 and finite and objective_pressure and game.match_state.unlocked.count(true) <= 2
+	var passed: bool = game.fighters.size() == CivicDividend.TEAM_SIZE * 2 and advancing >= 6 and finite and objective_pressure and game.match_state.unlocked.count(true) <= 2
 	print("MATCH SMOKE: roster=%d advancing=%d center_owner=%d center_progress=%.2f finite=%s" % [game.fighters.size(), advancing, game.match_state.owners[2], game.match_state.progress[2], finite])
 	print("MATCH RESULT: ", "PASS" if passed else "FAIL")
 	if not passed:
