@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-The Godot project lives in `HostileTakeover/` (the repo root only contains that folder). All paths and commands below are relative to it.
+The Godot project is the repo root (`project.godot` is at the top level). All paths and commands below are relative to it.
 
 ## What this is
 
