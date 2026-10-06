@@ -12,8 +12,8 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 |---|---|
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire |
-| Space | Jump; press again in the air to double jump, or against a wall to wall-kick; hold near a ledge (up to about 2.6 m) to mantle |
-| 1 | Air dash (about 4.5 m, shares its single charge with the double jump; restored on landing or a wall kick) — **not sprint** |
+| Space | Jump; press again in the air to double jump (one per landing or wall kick), or against a wall to wall-kick; walk into a ledge (up to about 2.6 m) to mantle automatically |
+| 1 | Air dash (about 4.5 m, independent of the double jump; 3 second cooldown) — **not sprint** |
 | Shift | Slide while moving on ground |
 | Q / E / F | Three class abilities |
 | R | Reload |

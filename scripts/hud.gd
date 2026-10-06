@@ -267,7 +267,7 @@ func reticle_zone() -> Rect2:
 	var c := size / 2.0
 	return Rect2(c.x - 90.0, c.y - 44.0, 180.0, 100.0)
 
-# Double chevron: white while the air dash / double jump charge is available, red once spent.
+# Double chevron: white while the dash is ready (3 s cooldown), red once spent.
 func _draw_dash_icon(p: Fighter, c: Vector2) -> void:
 	var color := Color.WHITE if p.air_dash else UiStyle.DANGER
 	for k in range(2):

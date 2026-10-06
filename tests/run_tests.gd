@@ -157,7 +157,10 @@ func test_movement() -> void:
 	p.velocity = Vector3.ZERO
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
-	check(p.air_dash, "landing restores air dash")
+	check(not p.air_dash and p.dash_cd > 2.0, "landing does not restore the dash; 3 s cooldown applies")
+	for i in range(190):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.air_dash, "dash recharges after its 3 s cooldown")
 	for archetype in range(4):
 		p.change_class(archetype)
 		p.global_position = O + Vector3(88.8, 3, 20)
@@ -473,12 +476,12 @@ func test_air_movement() -> void:
 	p.global_position = O + Vector3(-30, 6.0, -20)
 	p.velocity = Vector3(0, -2, 0)
 	p.simulate_movement(1.0 / 60, 0)
+	p.air_jump = true
 	p.air_dash = true
 	p.simulate_movement(1.0 / 60, 1)
-	check(p.velocity.y > 8.0 and not p.air_dash, "double jump lifts and consumes the air charge")
-	var before := p.velocity
+	check(p.velocity.y > 9.0 and not p.air_jump and p.air_dash, "double jump lifts and leaves the dash charge alone")
 	p.simulate_movement(1.0 / 60, 2)
-	check(p.velocity.x == before.x and p.velocity.z == before.z, "no dash after a double jump")
+	check(p.dash_time > 0.0 and not p.air_dash, "dash is still available after a double jump")
 	await physics_frame
 	# Dash covers a long horizontal distance and is exclusive with the double jump.
 	p.global_position = O + Vector3(-30, 8.0, -20)

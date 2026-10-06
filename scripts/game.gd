@@ -517,6 +517,8 @@ func respawn(p: Fighter) -> void:
 	p.velocity = Vector3.ZERO
 	p.idle_weapon = 2
 	p.air_dash = true
+	p.air_jump = true
+	p.dash_cd = 0.0
 	p.held = 0
 	p.edges = 0
 

@@ -5,12 +5,13 @@ const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resourc
 # Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
 const GRAVITY := 26.0
 const JUMP_SPEED := 10.0
-const DOUBLE_JUMP_SPEED := 12.5
+const DOUBLE_JUMP_SPEED := 13.5
 const WALL_KICK_UP := 10.5
 const WALL_KICK_PUSH := 7.5
 const WALL_KICK_PUSH_SKYRUNNER := 9.0
 const DASH_SPEED := 19.0
 const DASH_TIME := 0.24
+const DASH_COOLDOWN := 3.0
 const GROUND_ACCEL := 20.0
 const GROUND_FRICTION := 14.0
 const AIR_CAP := 1.2
@@ -20,6 +21,9 @@ const AIR_ACCEL_HOT_LAP := 100.0
 const AIR_SPEED_SOFT_CAP := 15.0
 const MANTLE_SPEED := 8.5
 const MANTLE_HEAD_CLEARANCE := 2.6
+const MANTLE_REACH := 1.2
+const MANTLE_PROBE_HEIGHTS := [0.45, 1.0, 1.5]
+const MANTLE_PROBE_ANGLES := [0.0, 0.5, -0.5]
 var game: Node3D
 var fighter_id: int = 0
 var team: int = 0
@@ -53,7 +57,9 @@ var grapple_time: float = 0.0
 var brake_time: float = 0.0
 var rush_time: float = 0.0
 var rush_hit: Array[int] = []
-var air_dash: bool = true
+var air_dash: bool = true # dash ready; recharges on a timer, not on landing
+var air_jump: bool = true # double jump ready; restored on landing, wall kicks and map verbs
+var dash_cd: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
 var zip_id: int = -1
 var zip_t: float = 0.0
@@ -228,9 +234,12 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		hot_lap = 2.0
 	brake_time = maxf(0, brake_time - dt)
 	rush_time = maxf(0, rush_time - dt)
+	dash_cd = maxf(0.0, dash_cd - dt)
+	if dash_cd <= 0.0:
+		air_dash = true
 	var grounded := is_on_floor()
 	if grounded:
-		air_dash = true
+		air_jump = true
 		wall_repeats = 0
 		wall_normal = Vector3.ZERO
 	movement_edges = MapVerbs.pre_move(self, dt, movement_edges, grounded)
@@ -300,6 +309,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 				velocity.z += desired.z * 1.5
 	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
+		dash_cd = DASH_COOLDOWN
 		var dash_dir := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
 		dash_time = DASH_TIME
 		dash_velocity = dash_dir * DASH_SPEED
@@ -321,11 +331,10 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		velocity.x = rush.x
 		velocity.z = rush.z
 	MapVerbs.post_move(self, dt)
-	# Held jump requests a mantle only against a low wall with clear headroom.
-	if held & 16 and not grounded and velocity.y <= 4.0:
-		var low: Dictionary = game.ray(global_position + Vector3.UP * 0.7, global_position + Vector3.UP * 0.7 + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
-		var high: Dictionary = game.ray(global_position + Vector3.UP * MANTLE_HEAD_CLEARANCE, global_position + Vector3.UP * MANTLE_HEAD_CLEARANCE + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
-		if not low.is_empty() and high.is_empty():
+	# Mantle automatically when moving into a low ledge with clear headroom (or while jump is held).
+	if not climbing and velocity.y <= 4.0 and (movement.length() > 0.1 or held & 16 != 0):
+		var heading := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
+		if _can_mantle(heading):
 			velocity.y = MANTLE_SPEED
 	move_and_slide()
 	step_timer -= dt
@@ -335,6 +344,24 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if global_position.y < -12.0 and game.authoritative:
 		game.damage_fighter(self, 10000, -1)
 	update_visual()
+
+# Forgiving ledge probe: several heights and slightly fanned angles, so grazing a ledge still counts.
+func _can_mantle(heading: Vector3) -> bool:
+	var origin := global_position
+	var blocked := false
+	for angle in MANTLE_PROBE_ANGLES:
+		var dir := heading.rotated(Vector3.UP, angle)
+		var high: Dictionary = game.ray(origin + Vector3.UP * MANTLE_HEAD_CLEARANCE, origin + Vector3.UP * MANTLE_HEAD_CLEARANCE + dir * MANTLE_REACH, [get_rid()], 1 | 4)
+		if not high.is_empty():
+			continue
+		for h in MANTLE_PROBE_HEIGHTS:
+			var low: Dictionary = game.ray(origin + Vector3.UP * h, origin + Vector3.UP * h + dir * MANTLE_REACH, [get_rid()], 1 | 4)
+			if not low.is_empty() and absf(low.normal.y) < 0.3:
+				blocked = true
+				break
+		if blocked:
+			return true
+	return false
 
 # Source-style air control: input only adds speed along the wish direction up to a small cap, so
 # holding forward does nothing at speed and steering comes from strafing while turning the view.
@@ -364,6 +391,9 @@ func change_class(value: int) -> void:
 	ammo = spec.magazine
 	cooldowns.assign([0.0, 0.0, 0.0])
 	dash_time = 0.0
+	dash_cd = 0.0
+	air_dash = true
+	air_jump = true
 	reload_timer = 0
 	shot_timer = 0
 	burst_left = 0
@@ -430,7 +460,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"]:
@@ -457,6 +487,8 @@ func unpack(data: Dictionary, local: bool) -> void:
 	double_id = data.double
 	idle_weapon = data.idle
 	air_dash = data.dash
+	air_jump = data.aj
+	dash_cd = data.dcd
 	hot_lap = data.hot
 	grapple = data.grapple
 	grapple_time = data.grapple_time
