@@ -5,7 +5,7 @@ const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resourc
 # Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
 const GRAVITY := 26.0
 const JUMP_SPEED := 10.0
-const DOUBLE_JUMP_SPEED := 10.5
+const DOUBLE_JUMP_SPEED := 12.5
 const WALL_KICK_UP := 10.5
 const WALL_KICK_PUSH := 7.5
 const WALL_KICK_PUSH_SKYRUNNER := 9.0

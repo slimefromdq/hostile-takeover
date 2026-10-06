@@ -259,10 +259,11 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	var hip_y := 0.9
 	if sliding:
 		# Seated slide: hips drop, front leg extends, rear leg tucks, torso leans back, free arm braces.
-		left_x = -1.3
-		right_x = 0.6
+		# Positive x rotation swings limbs toward the front (-Z) and tips the torso backward.
+		left_x = 1.3
+		right_x = -0.6
 		arm_x = 0.9
-		lean = 0.9
+		lean = 1.1
 		hip_y = 0.5
 	# Legs ease in and out of the slide pose; otherwise they follow the run cycle directly.
 	var easing: bool = sliding or absf(legs.position.y - 0.9) > 0.02
