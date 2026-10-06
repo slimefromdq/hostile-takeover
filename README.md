@@ -35,6 +35,10 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 
 Aim placement abilities at a visible location; invalid placements do not consume cooldown. Failed or obstructed swaps do not consume the double's exchange. Friendly damage is disabled. Depot interiors protect spawning fighters from enemy damage.
 
+## Health packs
+
+Concrete Canopy has 20 mirrored health packs on every tier, including the dead ends (foundation pit, pump hall). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy hero cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
+
 ## Acquisition
 
 Points form A–B–C–D–E. Helix starts with A/B and Monarch with D/E. Only neutral C starts unlocked. After capture, only the two points on the ownership boundary unlock. Take the opposing final point to win.

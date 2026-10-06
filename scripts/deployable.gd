@@ -37,6 +37,8 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		box.size = Vector3(2.0, 0.15, 2.0)
 	elif kind == "smoke":
 		box.size = Vector3(3.0, 2.5, 3.0)
+	elif kind == "healpack":
+		box.size = Vector3(0.7, 0.4, 0.7)
 	mesh.mesh = box
 	mesh.position.y = box.size.y / 2
 	if kind == "double":
@@ -111,6 +113,12 @@ func build_model() -> void:
 				arrow.rotation.y = 0.0
 				CharacterRig.box(arrow, Vector3(-0.3, 0, 0.1), Vector3(0.4, 0.03, 0.12), mat, Vector3(0, 0.6, 0))
 				CharacterRig.box(arrow, Vector3(0.3, 0, 0.1), Vector3(0.4, 0.03, 0.12), mat, Vector3(0, -0.6, 0))
+		"healpack":
+			var green := Color("3dff7a")
+			var case := CharacterRig.box(model, Vector3(0, 0.25, 0), Vector3(0.7, 0.4, 0.7), Visuals.solid(Color("e8eef0")))
+			Visuals.add_outline(case.material_override, green, 0.025)
+			CharacterRig.box(model, Vector3(0, 0.46, 0), Vector3(0.44, 0.06, 0.14), Visuals.glow(green, 2.0))
+			CharacterRig.box(model, Vector3(0, 0.46, 0), Vector3(0.14, 0.06, 0.44), Visuals.glow(green, 2.0))
 		"cover":
 			var slab := CharacterRig.box(model, Vector3(0, 0.9, 0), Vector3(3.5, 1.8, 0.3), Visuals.solid(dark.lightened(0.15)))
 			Visuals.add_outline(slab.material_override, team_col.lightened(0.4), 0.02)
@@ -146,6 +154,13 @@ func build_model() -> void:
 			model.add_child(puffs)
 
 func update_visual() -> void:
+	if kind == "healpack":
+		# A taken pack hides until it respawns.
+		var model := get_node_or_null("Model")
+		if model != null:
+			model.visible = not used
+		display.visible = false
+		return
 	display.visible = true
 	display.modulate = game.team_color(team)
 	display.text = kind.to_upper()

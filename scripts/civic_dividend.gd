@@ -6,6 +6,7 @@ extends RefCounted
 static var footprints: Array[Rect2] = []
 static var sunken: Array[Rect2] = []
 static var builder: MapBuilder
+static var pickups: Array = []  # blockout "pickup" features (health packs), mirrors already expanded
 
 # Active map settings. They default to MapLayout and are overridden when a blockout in "replace" mode is loaded.
 static var bounds: Rect2 = MapLayout.BOUNDS
@@ -100,8 +101,13 @@ static func build(root: Node3D) -> Array[Vector3]:
 		push_warning("Blockout: " + message)
 	builder.finalize(root)
 	MapVerbs.clear()
+	pickups.clear()
 	if not blockout.is_empty():
-		MapVerbs.configure(BlockoutImporter.features(blockout), root)
+		var features := BlockoutImporter.features(blockout)
+		MapVerbs.configure(features, root)
+		for f in features:
+			if f.get("type", "") == "pickup":
+				pickups.append(f)
 	footprints = builder.footprints()
 	sunken = builder.sunken
 	if not replaced:

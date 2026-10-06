@@ -63,6 +63,7 @@ def build(b):
     stage_industrial(b)
     stage_verbs(b)
     stage_vertical(b)
+    stage_healpacks(b)
     stage_graph(b)
 
 
@@ -465,6 +466,23 @@ def stage_verbs(b):
     b.block(-80, 52, -70, 56, 17.5, 18, "walk", "billboard_deck", mirror=True, color=PERCH)
     b.block(-86, 52, -84.5, 56, ROOF, ROOF + 0.3, "accent", "billboard_pad", mirror=True, color=BOUNCE)
     b.bounce(-86, 52, -84.5, 56, ROOF + 0.3, ROOF + 1.0, power=24, kick=(3.5, 0, 0), mirror=True, tag="billboard_launch")
+
+
+# ---- health packs: (x, y, z) on the floor, west half, mirrored ---------------------------------------
+# Spread over every tier, with the dead ends (foundation pit, pump hall) as rewards for going there.
+# Kept clear of capture discs, the tram and hoist paths and the depots.
+
+HEALPACKS = [
+    (-60, 0, 7), (-50, 0, -30), (-12, 0, -40), (-12, 0, 40),      # street
+    (-30, TUNNEL_Y, 0), (-40, TUNNEL_Y, -50),                      # tunnel and foundation pit
+    (-84, SUMP_Y, 0), (-6, SUMP_Y, 0),                             # pump hall and cistern
+    (-75, ROOF, 24), (-70, 18, 54),                                # roof bridge and billboard deck
+]
+
+
+def stage_healpacks(b):
+    for x, y, z in HEALPACKS:
+        b.pickup(x, y, z, mirror=True)
 
 
 # ---- bot graph (walk and ramp edges only; verbs are for players) ------------------------------------

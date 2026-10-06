@@ -31,6 +31,7 @@ var team: int = 0
 var bot: bool = false
 var spec: ClassSpec
 var hp: float = 200.0
+var heal_left: float = 0.0  # health-pack regen still owed (server only); enemy hero damage cancels it
 var ammo: int = 0
 var yaw: float = 0.0
 var pitch: float = 0.0
@@ -387,6 +388,7 @@ func change_class(value: int) -> void:
 	class_id = clampi(value, 0, 3)
 	spec = SPECS[class_id]
 	hp = spec.health
+	heal_left = 0.0
 	ammo = spec.magazine
 	cooldowns.assign([0.0, 0.0, 0.0])
 	dash_time = 0.0

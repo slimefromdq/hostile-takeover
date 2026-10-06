@@ -179,6 +179,10 @@ class Blockout:
                              period=period or None, phase=phase or None, ease=None if ease else False,
                              mirror=True if mirror else None)
 
+    def pickup(self, x, y, z, mirror=False, tag="healpack", kind="health"):
+        """Health pack on the floor at (x, y, z): 60 HP at once, then 150 HP over 5 s until an enemy hero hurts you."""
+        return self._feature(type="pickup", tag=tag, kind=kind, pos=[x, y, z], mirror=True if mirror else None)
+
     def event(self, time, text):
         """Announcement at match time `time` seconds."""
         return self._feature(type="event", time=time, text=text)

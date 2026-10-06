@@ -2,6 +2,12 @@ extends Node3D
 
 const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://scenes/field_engineer.tscn"), preload("res://scenes/enforcer.tscn"), preload("res://scenes/mirage_agent.tscn")]
 const PORT = 27847
+# Health packs (blockout "pickup" features): an instant heal, then a regen that enemy hero damage cancels.
+const PACK_HEAL := 60.0
+const PACK_REGEN := 150.0
+const PACK_REGEN_TIME := 5.0
+const PACK_RESPAWN := 25.0
+const PACK_RADIUS := 1.5
 var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
@@ -141,6 +147,7 @@ func start_game(mode: String) -> void:
 		map_clock = 0.0
 		for e in entities.values():
 			remove_entity(e.entity_id)
+		spawn_pickups()
 		for p in fighters.values():
 			respawn(p)
 		apply_class(local_id, selected_class)
@@ -183,6 +190,7 @@ func start_game(mode: String) -> void:
 	if not explore:
 		for i in range(11):
 			spawn_fighter(100 + i, 0 if i < 5 else 1, i % 4, true)
+	spawn_pickups()
 	running = true
 	menu.hide()
 	hud.show()
@@ -373,6 +381,12 @@ func _physics_process(dt: float) -> void:
 			if match_state.winner == -2:
 				player.simulate_movement(dt, player.edges)
 				combat_tick(player, dt)
+				if player.heal_left > 0:
+					var step := minf(player.heal_left, PACK_REGEN / PACK_REGEN_TIME * dt)
+					player.heal_left -= step
+					player.hp = minf(player.spec.health, player.hp + step)
+					if player.hp >= player.spec.health:
+						player.heal_left = 0
 			player.edges = 0
 		if match_state.winner == -2:
 			entities_tick(dt)
@@ -662,6 +676,8 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 	target.hp = maxf(0, target.hp - amount)
 	target.reveal = 0.65
 	var source: Fighter = fighters.get(attacker)
+	if source != null and source != target and source.team != target.team:
+		target.heal_left = 0
 	if source != null and not target.bot:
 		if target.fighter_id == local_id:
 			hud.damaged(source.global_position)
@@ -868,6 +884,14 @@ func create_entity_from(data: Dictionary) -> void:
 	entities[data.id] = e
 	e.update_visual()
 
+# Health packs belong to nobody (owner -1) so class swaps and deaths never clear them.
+func spawn_pickups() -> void:
+	for f in CivicDividend.pickups:
+		var at: Array = f.pos
+		var data := {"id": entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": Vector3(at[0], at[1], at[2]), "yaw": 0.0, "used": false}
+		entity_next += 1
+		create_entity_from(data)
+
 func remove_entity(id: int) -> void:
 	if entities.has(id):
 		var e: Deployable = entities[id]
@@ -894,7 +918,22 @@ func entities_tick(dt: float) -> void:
 			e.hp = minf(e.max_hp, e.hp + 8 * dt)
 		if e.kind == "double" and owner != null:
 			e.rotation.y = owner.yaw
-		if e.kind == "pad" and e.timer <= 0:
+		if e.kind == "healpack":
+			if e.used and e.timer <= 0:
+				e.used = false
+				e.update_visual()
+			elif not e.used:
+				for p in fighters.values():
+					if p.hp > 0 and p.hp < p.spec.health and p.global_position.distance_to(e.global_position) < PACK_RADIUS:
+						p.hp = minf(p.spec.health, p.hp + PACK_HEAL)
+						p.heal_left = PACK_REGEN
+						e.used = true
+						e.timer = PACK_RESPAWN
+						e.update_visual()
+						show_ring(e.global_position, PACK_RADIUS, Color("3dff7a"))
+						play_sfx(e.global_position, Sfx.Kind.PAD)
+						break
+		elif e.kind == "pad" and e.timer <= 0:
 			for p in fighters.values():
 				if p.hp > 0 and p.global_position.distance_to(e.global_position) < 1.7:
 					p.velocity.y = 14.5

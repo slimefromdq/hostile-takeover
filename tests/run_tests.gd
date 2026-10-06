@@ -39,6 +39,7 @@ func run() -> void:
 	await test_weapons()
 	await test_mirage()
 	await test_machinery()
+	test_healpack()
 	test_authority_and_respawn()
 	await test_hud()
 	await test_explore()
@@ -303,6 +304,33 @@ func test_mirage() -> void:
 	game.activate(p, 1)
 	check(p.conceal == 0, "Dead Drop ends concealment")
 	await create_timer(0.2).timeout
+
+func test_healpack() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	p.change_class(2)
+	p.global_position = O + Vector3(30, 0, 30)
+	var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": p.global_position, "yaw": 0.0, "used": false}
+	game.entity_next += 1
+	game.create_entity_from(data)
+	var pack: Deployable = game.entities[data.id]
+	game.entities_tick(0.1)
+	check(not pack.used and p.hp == p.spec.health, "health pack ignores a fighter at full health")
+	p.hp = 100.0
+	game.entities_tick(0.1)
+	check(is_equal_approx(p.hp, 160.0) and pack.used, "health pack heals 60 at once and is taken")
+	check(is_equal_approx(p.heal_left, game.PACK_REGEN), "health pack queues 150 HP of regen")
+	p.hp = 50.0
+	game.entities_tick(0.1)
+	check(p.hp == 50.0, "a taken pack heals nobody until it respawns")
+	p.heal_left = game.PACK_REGEN
+	game.damage_fighter(p, 5.0, p.fighter_id)
+	check(p.heal_left > 0, "self damage does not interrupt regen")
+	game.damage_fighter(p, 5.0, foe.fighter_id if foe.team != p.team else 100)
+	check(p.heal_left == 0.0, "enemy hero damage interrupts regen")
+	game.entities_tick(game.PACK_RESPAWN + 1.0)
+	check(not pack.used, "health pack respawns after its cooldown")
+	game.remove_entity(data.id)
 
 func test_machinery() -> void:
 	var p: Fighter = game.local_player()

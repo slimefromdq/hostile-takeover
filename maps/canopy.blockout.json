@@ -1623,6 +1623,116 @@
     14
    ],
    "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -60,
+    0,
+    7
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -50,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -12,
+    0,
+    -40
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -12,
+    0,
+    40
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -30,
+    -6.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -40,
+    -6.0,
+    -50
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -84,
+    -11.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -6,
+    -11.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -75,
+    12.0,
+    24
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -70,
+    18,
+    54
+   ],
+   "mirror": true
   }
  ],
  "objects": [

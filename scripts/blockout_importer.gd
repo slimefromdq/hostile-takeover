@@ -161,6 +161,8 @@ static func _mirror_feature(f: Dictionary) -> Dictionary:
 	m.erase("mirror")
 	if m.has("tag"):
 		m.tag = str(m.tag) + "_e"
+	if m.has("pos"):
+		m.pos = _flip(f.pos)
 	if m.has("min"):
 		var lo: Array = f.min
 		var hi: Array = f.max
