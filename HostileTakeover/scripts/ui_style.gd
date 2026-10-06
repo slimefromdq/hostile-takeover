@@ -34,3 +34,29 @@ static func draw_tag(ci: CanvasItem, rect: Rect2, fill: Color, slant: float = 5.
 	ci.draw_colored_polygon(PackedVector2Array([
 		Vector2(rect.position.x + slant, rect.position.y), Vector2(rect.end.x, rect.position.y),
 		Vector2(rect.end.x - slant, rect.end.y), Vector2(rect.position.x, rect.end.y)]), fill)
+
+# ---- Control styling (menus) -------------------------------------------------
+
+static func box(fill: Color, border: Color = Color(0, 0, 0, 0), border_width: int = 0, margin: float = 10.0) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.content_margin_left = margin
+	style.content_margin_right = margin
+	style.content_margin_top = margin * 0.6
+	style.content_margin_bottom = margin * 0.6
+	return style
+
+# Flat button: raised navy, cyan hairline, cyan fill when `primary` or pressed.
+static func style_button(button: Button, primary: bool = false) -> void:
+	var normal := box(ACCENT if primary else Color(PANEL_RAISED, 0.9), Color(ACCENT, 0.9 if primary else 0.45), 1)
+	var hover := box(ACCENT.lightened(0.2) if primary else PANEL_RAISED.lightened(0.12), ACCENT, 2)
+	var pressed := box(ACCENT.darkened(0.15) if primary else Color(ACCENT, 0.25), ACCENT, 2)
+	button.add_theme_stylebox_override("normal", normal)
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", pressed)
+	button.add_theme_stylebox_override("focus", box(Color(0, 0, 0, 0), HIGHLIGHT, 2))
+	var ink := SLOT if primary else TEXT
+	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(key, ink)

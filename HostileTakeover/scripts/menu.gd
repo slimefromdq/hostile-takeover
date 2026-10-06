@@ -14,20 +14,23 @@ func setup(owner_game: Node3D) -> void:
 	game = owner_game
 	position = Vector2(150, 24)
 	size = Vector2(980, 672)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.04, 0.065, 0.1, 0.96)
-	style.border_color = Color(1, 1, 1, 0.15)
-	style.set_border_width_all(1)
-	style.content_margin_left = 28
-	style.content_margin_right = 28
-	style.content_margin_top = 20
-	style.content_margin_bottom = 20
+	# The cut-corner panel is drawn in _draw(); the stylebox only supplies padding.
+	var style := StyleBoxEmpty.new()
+	style.content_margin_left = 32
+	style.content_margin_right = 32
+	style.content_margin_top = 18
+	style.content_margin_bottom = 14
 	add_theme_stylebox_override("panel", style)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 8)
 	add_child(column)
-	column.add_child(_label("HOSTILE TAKEOVER", 38))
-	column.add_child(_label("CIVIC DIVIDEND  /  ACQUISITION  ·  Four classes. Five points. Questionable employment.", 15, Color(1, 1, 1, 0.7)))
+	column.add_child(_label("HOSTILE TAKEOVER", 40))
+	var rule := ColorRect.new()
+	rule.color = UiStyle.ACCENT
+	rule.custom_minimum_size = Vector2(120, 3)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(rule)
+	column.add_child(_label("CIVIC DIVIDEND  /  ACQUISITION  ·  Four classes. Five points. Questionable employment.", 15, UiStyle.TEXT_MUTED))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	column.add_child(row)
@@ -45,13 +48,16 @@ func setup(owner_game: Node3D) -> void:
 	for pair in [["Play offline · 6v6 bots", "offline"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
 		var button := Button.new()
 		button.text = pair[0]
-		button.custom_minimum_size = Vector2(290, 36)
+		button.custom_minimum_size = Vector2(290, 38)
+		UiStyle.style_button(button, pair[1] == "offline")
 		grid.add_child(button)
 		button.pressed.connect(game.start_game.bind(pair[1]))
 	address = LineEdit.new()
 	address.text = "127.0.0.1"
 	address.placeholder_text = "Server IP"
-	address.custom_minimum_size = Vector2(290, 36)
+	address.custom_minimum_size = Vector2(290, 38)
+	address.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.SLOT, 0.95), Color(UiStyle.ACCENT, 0.45), 1))
+	address.add_theme_stylebox_override("focus", UiStyle.box(Color(UiStyle.SLOT, 0.95), UiStyle.ACCENT, 2))
 	grid.add_child(address)
 	status = _label("Godot 4.7 prototype", 15, Color(1, 1, 1, 0.7))
 	column.add_child(status)
@@ -59,6 +65,8 @@ func setup(owner_game: Node3D) -> void:
 	toggle.text = "Controls ▾"
 	toggle.flat = true
 	toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	toggle.add_theme_color_override("font_color", UiStyle.ACCENT)
+	toggle.add_theme_color_override("font_hover_color", UiStyle.TEXT)
 	column.add_child(toggle)
 	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, hold at a ledge to mantle\nSHIFT air dash (shares a charge with the double jump; sprint is automatic) · strafe to steer in the air · CTRL slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
@@ -80,25 +88,25 @@ func _make_card(index: int, group: ButtonGroup) -> Button:
 	var card := Button.new()
 	card.toggle_mode = true
 	card.button_group = group
-	card.custom_minimum_size = Vector2(212, 392)
+	card.custom_minimum_size = Vector2(212, 384)
 	card.pressed.connect(func(): game.selected_class = index)
-	var chosen := StyleBoxFlat.new()
-	chosen.bg_color = Color(0.1, 0.16, 0.24, 0.95)
-	chosen.border_color = Visuals.team_color(0)
-	chosen.set_border_width_all(2)
+	var chosen := UiStyle.box(Color(UiStyle.PANEL_RAISED, 0.95), UiStyle.ACCENT, 3, 0.0)
+	card.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.SLOT, 0.9), Color(UiStyle.ACCENT, 0.3), 1, 0.0))
+	card.add_theme_stylebox_override("hover", UiStyle.box(Color(UiStyle.PANEL_RAISED, 0.7), Color(UiStyle.ACCENT, 0.7), 1, 0.0))
 	card.add_theme_stylebox_override("pressed", chosen)
 	card.add_theme_stylebox_override("hover_pressed", chosen)
+	card.add_theme_stylebox_override("focus", UiStyle.box(Color(0, 0, 0, 0), UiStyle.HIGHLIGHT, 2, 0.0))
 	var box := VBoxContainer.new()
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(box)
 	var container := SubViewportContainer.new()
 	container.stretch = true
-	container.custom_minimum_size = Vector2(196, 190)
+	container.custom_minimum_size = Vector2(196, 172)
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(container)
 	container.add_child(_make_portrait(index))
-	box.add_child(_label(spec.title.to_upper(), 18, Visuals.team_color(0).lightened(0.2)))
+	box.add_child(_label(spec.title.to_upper(), 18, UiStyle.ACCENT))
 	box.add_child(_label("HP %d  ·  %.1fs to kill" % [int(spec.health), spec.body_ttk()], 13, Color(1, 1, 1, 0.8)))
 	var keys := ["Q", "E", "F"]
 	for i in range(3):
@@ -141,6 +149,9 @@ func _make_portrait(index: int) -> SubViewport:
 	camera.position = Vector3(0, 1.05, 3.7)
 	camera.look_at_from_position(camera.position, Vector3(0, 0.95, 0))
 	return viewport
+
+func _draw() -> void:
+	UiStyle.draw_panel(self, Rect2(Vector2.ZERO, size), Color(UiStyle.PANEL, 0.97), Color(UiStyle.ACCENT, 0.85), 18.0, 2.0)
 
 func _process(dt: float) -> void:
 	if not visible:
