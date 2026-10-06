@@ -25,6 +25,5 @@ window/stretch/aspect="expand"
 
 [rendering]
 
-renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="forward_plus"
 environment/defaults/default_clear_color=Color(0.055, 0.075, 0.11, 1)
