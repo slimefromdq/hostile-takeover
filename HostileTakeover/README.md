@@ -18,6 +18,8 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | Q / E / F | Three class abilities |
 | R | Reload |
 | V | Switch camera shoulder |
+| Tab | Hold for the scoreboard |
+| F1 / F2 / F3 | Toggle control hints / colour-blind palette / mute |
 | Escape | Class selector / resume menu |
 
 Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m.
@@ -80,6 +82,10 @@ The development flags delay outgoing movement/actions/snapshots by 80 millisecon
 
 ## Prototype limits
 
-Art is generated primitive geometry (class rigs, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized placeholder cues. Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level kit use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
+Art is generated primitive geometry (class rigs, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized per-class cues generated at runtime (`scripts/sfx.gd`; F3 mutes). Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level kit use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
+
+## Performance notes
+
+`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 12-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Character meshes are low-poly (about 10x fewer triangles than the first pass), the sun uses a single shadow cascade, small character details do not cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.

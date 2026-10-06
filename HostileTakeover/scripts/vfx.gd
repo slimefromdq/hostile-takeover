@@ -10,6 +10,9 @@ const BOLT_SPEED := 140.0
 # Lifetime multiplier; tests raise it to hold effects still for screenshots.
 static var time_scale := 1.0
 static var _materials: Dictionary = {}
+static var _segment_mesh: CylinderMesh
+# Hard cap on live effect nodes under one root: a 12-fighter firefight cannot spike the node count.
+const MAX_EFFECT_NODES := 220
 
 static func glow_material(color: Color, energy: float = 2.0) -> StandardMaterial3D:
 	var key := "%s:%s" % [color.to_html(), energy]
@@ -29,23 +32,51 @@ static func _fade(root: Node3D, node: Node3D, life: float, shrink: Vector3) -> v
 	tween.tween_property(node, "scale", shrink, life * time_scale)
 	tween.tween_callback(node.queue_free)
 
+# Segments are pooled: a unit-radius cylinder scaled per use, returned to the pool when it fades.
 static func segment(root: Node3D, a: Vector3, b: Vector3, radius: float, color: Color, life: float, energy: float = 2.0) -> void:
 	var length := a.distance_to(b)
-	if length < 0.01:
+	if length < 0.01 or _live(root) > MAX_EFFECT_NODES:
 		return
-	var node := MeshInstance3D.new()
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = radius
-	mesh.bottom_radius = radius
-	mesh.height = 1.0
-	mesh.radial_segments = 6
-	mesh.rings = 1
-	node.mesh = mesh
+	var node := _take_segment(root)
 	node.material_override = glow_material(color, energy)
+	node.visible = true
+	node.global_transform = Transform3D(orient((b - a) / length) * Basis.from_scale(Vector3(radius, length, radius)), (a + b) * 0.5)
+	var tween := root.create_tween()
+	tween.tween_property(node, "scale", Vector3(0.001, length, 0.001), life * time_scale)
+	tween.tween_callback(_release_segment.bind(root, node))
+
+# The pool lives on the root node, so it is freed with the root and never shared between roots.
+static func _pool(root: Node3D) -> Array:
+	if not root.has_meta("fx_pool"):
+		root.set_meta("fx_pool", [])
+	return root.get_meta("fx_pool")
+
+static func _live(root: Node3D) -> int:
+	return root.get_child_count() - _pool(root).size()
+
+static func _take_segment(root: Node3D) -> MeshInstance3D:
+	var pool := _pool(root)
+	while not pool.is_empty():
+		var pooled = pool.pop_back()
+		if is_instance_valid(pooled):
+			return pooled
+	if _segment_mesh == null:
+		_segment_mesh = CylinderMesh.new()
+		_segment_mesh.top_radius = 1.0
+		_segment_mesh.bottom_radius = 1.0
+		_segment_mesh.height = 1.0
+		_segment_mesh.radial_segments = 6
+		_segment_mesh.rings = 1
+	var node := MeshInstance3D.new()
+	node.mesh = _segment_mesh
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(node)
-	node.global_transform = Transform3D(orient((b - a) / length) * Basis.from_scale(Vector3(1, length, 1)), (a + b) * 0.5)
-	_fade(root, node, life, Vector3(0.0, length, 0.0).max(Vector3(0.001, length, 0.001)))
+	return node
+
+static func _release_segment(root: Node3D, node: MeshInstance3D) -> void:
+	if is_instance_valid(node) and is_instance_valid(root):
+		node.visible = false
+		_pool(root).append(node)
 
 # Jittering electric arc between two points.
 static func arc(root: Node3D, a: Vector3, b: Vector3, jitter: float, radius: float, color: Color, life: float) -> void:
@@ -68,6 +99,8 @@ static func bolt(root: Node3D, a: Vector3, b: Vector3, length: float, radius: fl
 	var mesh := CapsuleMesh.new()
 	mesh.radius = radius
 	mesh.height = length
+	mesh.radial_segments = 8
+	mesh.rings = 2
 	node.mesh = mesh
 	node.material_override = glow_material(color.lightened(0.5), 3.0)
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -93,6 +126,7 @@ static func flash(root: Node3D, pos: Vector3, radius: float, color: Color, life:
 	_fade(root, node, life, Vector3.ONE * 0.05)
 
 static func impact(root: Node3D, pos: Vector3, color: Color) -> void:
+	Sfx.play_at(root, pos, Sfx.Kind.IMPACT)
 	flash(root, pos, 0.14, color, 0.08)
 	var sparks := CPUParticles3D.new()
 	sparks.one_shot = true
@@ -154,7 +188,7 @@ static func swoosh(root: Node3D, a: Vector3, b: Vector3, width: float, color: Co
 	_fade(root, node, 0.18, Vector3(1.2, 0.2, 1.0))
 
 static func tracer(root: Node3D, from: Vector3, to: Vector3, style: int, color: Color, with_impact: bool) -> void:
-	if from.distance_to(to) < 0.01:
+	if from.distance_to(to) < 0.01 or _live(root) > MAX_EFFECT_NODES:
 		return
 	match style:
 		Style.SKYRUNNER:

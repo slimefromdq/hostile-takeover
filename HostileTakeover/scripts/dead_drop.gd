@@ -17,6 +17,8 @@ func configure(g: Node3D, p: Fighter) -> void:
 	var pod := CapsuleMesh.new()
 	pod.radius = 0.14
 	pod.height = 0.5
+	pod.radial_segments = 12
+	pod.rings = 3
 	visual.mesh = pod
 	visual.rotation.x = PI / 2
 	visual.material_override = Visuals.glow(Color("ffe2a3"), 2.5)
@@ -26,6 +28,7 @@ func configure(g: Node3D, p: Fighter) -> void:
 	band_mesh.top_radius = 0.16
 	band_mesh.bottom_radius = 0.16
 	band_mesh.height = 0.06
+	band_mesh.radial_segments = 12
 	band.mesh = band_mesh
 	band.rotation.x = PI / 2
 	band.material_override = Visuals.glow(Visuals.team_color(source_team), 3.0)
@@ -53,5 +56,5 @@ func _physics_process(dt: float) -> void:
 				game.damage_fighter(target, 35 if direct else 15, source_id)
 		game.show_ring(global_position, 2.5, Color("ffde8d"))
 		game.show_trace(global_position, global_position + Vector3.UP * 2.5, Color.WHITE, Vfx.Style.LINE, true)
-		game.play_cue_at(global_position, 150)
+		game.play_sfx(global_position, Sfx.Kind.EXPLODE)
 		queue_free()

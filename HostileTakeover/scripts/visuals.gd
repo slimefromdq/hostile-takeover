@@ -93,9 +93,6 @@ static func team_color(side: int) -> Color:
 		return HELIX_CB if side == 0 else MONARCH_CB
 	return HELIX if side == 0 else MONARCH
 
-static func team_color_dark(side: int) -> Color:
-	return team_color(side).darkened(0.5)
-
 # Role-based world material. Shared per (role, colour) so the map stays cheap to draw.
 static func surface(role: String, color: Color) -> Material:
 	var key := "%s:%s" % [role, color.to_html()]
@@ -197,6 +194,9 @@ static func build_environment(root: Node3D) -> void:
 	sun.light_color = Color("ffd8a8")
 	sun.light_energy = 1.0
 	sun.shadow_enabled = true
+	# One orthogonal cascade covers the arena view and keeps shadow-pass draw calls low.
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 110.0
 	root.add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-30, 145, 0)
