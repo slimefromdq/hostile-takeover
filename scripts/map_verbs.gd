@@ -228,7 +228,6 @@ static func pre_move(f: Fighter, dt: float, edges: int, grounded: bool) -> int:
 	if f.climbing and edges & 1:
 		f.velocity = -f.horizontal_direction() * CLIMB_KICK + Vector3.UP * 8.0
 		f.climbing = false
-		f.air_jump = true
 		f.climb_cd = CLIMB_COOLDOWN
 		edges &= ~1
 	return edges
@@ -256,7 +255,6 @@ static func post_move(f: Fighter, _dt: float) -> void:
 			if b.box.has_point(feet):
 				f.velocity.y = b.power
 				f.velocity += b.kick
-				f.air_jump = true
 				f.bounce_cd = BOUNCE_COOLDOWN
 				if f.game.authoritative:
 					f.game.play_sfx(f.global_position, Sfx.Kind.PAD)
@@ -296,7 +294,6 @@ static func detach(f: Fighter, hop: bool) -> void:
 	var c: Dictionary = cables[f.zip_id]
 	var along: Vector3 = (c.b - c.a).normalized() * f.zip_dir
 	f.velocity = along * f.zip_speed + (Vector3.UP * 8.5 if hop else Vector3.UP * 2.0)
-	f.air_jump = true
 	f.zip_id = -1
 	f.zip_cd = ZIP_COOLDOWN
 

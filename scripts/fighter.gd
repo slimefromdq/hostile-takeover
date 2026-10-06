@@ -58,7 +58,7 @@ var brake_time: float = 0.0
 var rush_time: float = 0.0
 var rush_hit: Array[int] = []
 var air_dash: bool = true # dash ready; recharges on a timer, not on landing
-var air_jump: bool = true # double jump ready; restored on landing, wall kicks and map verbs
+var air_jump: bool = true # double jump ready; restored only on landing
 var dash_cd: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
 var zip_id: int = -1
