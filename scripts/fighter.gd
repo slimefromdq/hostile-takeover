@@ -30,6 +30,12 @@ const SLIDE_FRICTION := 8.0
 const SLIDE_TURN_RATE := 2.5
 const SLIDE_COOLDOWN := 0.6
 const SLIDE_DOWNHILL := 16.0
+# Slide-jump: jumping out of a slide (or just after one) adds speed up to a cap, so chains cannot run away.
+const SLIDE_JUMP_GRACE := 0.15
+const SLIDE_JUMP_BOOST := 1.5
+const SLIDE_JUMP_SPEED_CAP := 12.0
+const SLIDE_JUMP_BOOST_HOT_LAP := 3.0
+const SLIDE_JUMP_SPEED_CAP_HOT_LAP := 14.0
 # Input forgiveness windows (seconds) and wall-kick probe length (m, was 0.85).
 const COYOTE_TIME := 0.12
 const JUMP_BUFFER := 0.12
@@ -80,6 +86,7 @@ var air_jump: bool = true # double jump ready; restored only on landing
 var dash_cd: float = 0.0
 var sliding: bool = false
 var slide_cd: float = 0.0
+var slide_grace: float = 0.0
 var coyote_time: float = 0.0
 var jump_buffer: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
@@ -288,7 +295,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	var speed := (8.0 if idle_weapon >= 1.25 else 6.0) * weapon.move_speed_mult
 	if class_id == 2 and held & 1:
 		speed *= 0.55
-	_update_slide_state(grounded)
+	_update_slide_state(grounded, dt)
 	dash_time = maxf(0.0, dash_time - dt)
 	if sliding:
 		_slide_step(desired, dt)
@@ -355,7 +362,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 
 # Slide starts on the ground above SLIDE_MIN_SPEED with a small entry boost, and ends on release,
 # leaving the ground, or dropping below SLIDE_EXIT_SPEED (hysteresis stops it flickering).
-func _update_slide_state(grounded: bool) -> void:
+func _update_slide_state(grounded: bool, dt: float) -> void:
+	slide_grace = SLIDE_JUMP_GRACE if sliding else maxf(0.0, slide_grace - dt)
 	var planar := Vector2(velocity.x, velocity.z)
 	var wants: bool = held & 8 != 0 and grounded
 	if sliding:
@@ -386,6 +394,20 @@ func _slide_step(desired: Vector3, dt: float) -> void:
 	velocity.z = planar.y
 	velocity += Vector3.DOWN.slide(get_floor_normal()) * SLIDE_DOWNHILL * dt
 
+# Jumping out of a slide keeps the slide's speed and adds a little, up to a cap. Consumes the slide.
+func _slide_jump_boost() -> void:
+	var hot := hot_lap > 0.0
+	var planar := Vector2(velocity.x, velocity.z)
+	var boost := clampf((SLIDE_JUMP_SPEED_CAP_HOT_LAP if hot else SLIDE_JUMP_SPEED_CAP) - planar.length(), 0.0, SLIDE_JUMP_BOOST_HOT_LAP if hot else SLIDE_JUMP_BOOST)
+	if planar.length() > 0.1:
+		planar += planar.normalized() * boost
+		velocity.x = planar.x
+		velocity.z = planar.y
+	slide_grace = 0.0
+	if sliding:
+		sliding = false
+		slide_cd = SLIDE_COOLDOWN
+
 # One jump press: ground jump (including coyote time), else wall kick, else the double jump.
 # Returns false when nothing was available so the caller can buffer the press. Buffered presses
 # never spend the double jump, which only a fresh press may use.
@@ -393,6 +415,8 @@ func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
 	if grounded or (coyote_time > 0.0 and velocity.y <= 0.0):
 		velocity.y = JUMP_SPEED
 		coyote_time = 0.0
+		if slide_grace > 0.0:
+			_slide_jump_boost()
 		if game.authoritative:
 			game.play_sfx(global_position, Sfx.Kind.JUMP)
 		return true

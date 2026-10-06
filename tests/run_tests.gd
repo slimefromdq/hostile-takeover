@@ -227,6 +227,7 @@ func test_movement() -> void:
 	await process_frame
 	await test_air_movement()
 	await test_input_forgiveness()
+	await test_slide_jump()
 	test_visual_pipeline()
 	test_effect_pool()
 	test_sfx()
@@ -708,6 +709,39 @@ func test_input_forgiveness() -> void:
 		best = maxf(best, p.velocity.y)
 		await physics_frame
 	check(best < 1.0 and p.jump_buffer == 0.0, "an early press expires instead of jumping on landing (peak vy %.1f)" % best)
+	await physics_frame
+
+func test_slide_jump() -> void:
+	await physics_frame
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.movement = Vector2.ZERO
+	p.yaw = 0.0
+	var base := O + Vector3(-30, 0.01, -20)
+	var speeds := []
+	# Cases: jump from mid-slide, jump just after releasing the slide, jump from a slide already at the cap.
+	for variant in range(3):
+		p.held = 0
+		p.global_position = base
+		p.velocity = Vector3.ZERO
+		p.slide_cd = 0.0
+		p.slide_grace = 0.0
+		for i in range(20):
+			p.simulate_movement(1.0 / 60, 0)
+			await physics_frame
+		p.velocity = Vector3(11.8 if variant == 2 else 8.0, 0, 0)
+		p.held = 8
+		p.simulate_movement(1.0 / 60, 0)
+		if variant == 1:
+			p.held = 0
+			p.simulate_movement(1.0 / 60, 0)
+		p.simulate_movement(1.0 / 60, 1)
+		speeds.append(Vector2(p.velocity.x, p.velocity.z).length())
+		check(p.velocity.y > 9.5 and not p.sliding, "slide-jump %d jumps and ends the slide" % variant)
+		await physics_frame
+	check(speeds[0] > 10.3 and speeds[0] < 12.1, "jumping from a slide adds speed (%.2f)" % speeds[0])
+	check(speeds[1] > 10.0, "jumping just after a slide still gets the boost (%.2f)" % speeds[1])
+	check(speeds[2] < 12.1, "slide-jump boost stops at the speed cap (%.2f)" % speeds[2])
 	await physics_frame
 
 func test_air_movement() -> void:
