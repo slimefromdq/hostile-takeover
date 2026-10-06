@@ -53,6 +53,7 @@ static func configure(features: Array, root: Node3D) -> void:
 		match f.get("type", ""):
 			"climb":
 				climbs.append({"box": box_of(f)})
+				_add_climb_visual(f, root)
 			"bounce":
 				bounces.append({"box": box_of(f), "power": float(f.get("power", 15.0)), "kick": vec(f.get("kick", [0, 0, 0]))})
 			"cable":
@@ -61,6 +62,56 @@ static func configure(features: Array, root: Node3D) -> void:
 				_add_mover(f, root)
 			"event":
 				events.append({"time": float(f.get("time", 0.0)), "text": str(f.get("text", "")), "fired": false})
+
+# Every climb lane draws its own ladder (two rails and rungs on the wall side), so the verb reads the same everywhere.
+static func _add_climb_visual(f: Dictionary, root: Node3D) -> void:
+	var face := str(f.get("face", ""))
+	if face == "":
+		return
+	var box := box_of(f)
+	var along_x := face == "+z" or face == "-z"          # the ladder's width runs along x when you face along z
+	var lo := box.position
+	var hi := box.end
+	var plane := 0.0
+	match face:
+		"-z":
+			plane = lo.z + 0.06
+		"+z":
+			plane = hi.z - 0.06
+		"-x":
+			plane = lo.x + 0.06
+		"+x":
+			plane = hi.x - 0.06
+	var w0 := (lo.x if along_x else lo.z) + 0.15
+	var w1 := (hi.x if along_x else hi.z) - 0.15
+	var y0 := lo.y + 0.3
+	var y1 := hi.y - 0.7
+	if y1 <= y0 or w1 <= w0:
+		return
+	var transforms: Array[Transform3D] = []
+	var rail_h := y1 - y0
+	for w in [w0, w1]:
+		var centre := Vector3(w, (y0 + y1) * 0.5, plane) if along_x else Vector3(plane, (y0 + y1) * 0.5, w)
+		transforms.append(Transform3D(Basis.from_scale(Vector3(0.1, rail_h, 0.1)), centre))
+	var y := y0
+	while y <= y1:
+		var centre := Vector3((w0 + w1) * 0.5, y, plane) if along_x else Vector3(plane, y, (w0 + w1) * 0.5)
+		var size := Vector3(w1 - w0, 0.07, 0.07) if along_x else Vector3(0.07, 0.07, w1 - w0)
+		transforms.append(Transform3D(Basis.from_scale(size), centre))
+		y += 0.5
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3.ONE
+	mesh.material = Visuals.glow(Color(f.get("color", "#3fd96b")), 1.3)
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = transforms.size()
+	for i in range(transforms.size()):
+		multi.set_instance_transform(i, transforms[i])
+	var node := MultiMeshInstance3D.new()
+	node.multimesh = multi
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(node)
 
 static func _add_cable(f: Dictionary, root: Node3D) -> void:
 	var a := vec(f["from"])

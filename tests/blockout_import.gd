@@ -47,6 +47,8 @@ func run() -> void:
 	check(BlockoutImporter.read("res://maps/does_not_exist.json").is_empty(), "missing file reads as empty")
 	check_yard()
 	check_overpass()
+	check_catalog()
+	check_canopy()
 	check_layout_dump()
 	print("blockout import: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -124,3 +126,41 @@ func check_overpass() -> void:
 	var errors := BlockoutImporter.build(b, data)
 	check(errors.is_empty(), "overpass builds without errors: %s" % [errors])
 	check(b.solids.size() > 100, "overpass builds its solids (%d)" % b.solids.size())
+
+# The menu's map list: titled maps only, built-in first, and the saved choice drives active_path().
+func check_catalog() -> void:
+	var maps := BlockoutImporter.catalog()
+	var titles: Array = []
+	for m in maps:
+		titles.append(m.title)
+	check(maps[0].path == "" and maps[0].title.begins_with("Civic Dividend"), "built-in map is listed first")
+	check(titles.has("Concrete Canopy") and titles.has("Overpass District"), "titled maps are listed: %s" % [titles])
+	check(not titles.has("Test Yard"), "untitled fixtures are not offered in the menu")
+	var saved := BlockoutImporter.selected_path()
+	BlockoutImporter.select("res://maps/canopy.blockout.json")
+	check(BlockoutImporter.selected_path() == "res://maps/canopy.blockout.json", "choosing a map saves it")
+	if not FileAccess.file_exists(BlockoutImporter.ACTIVE_PATH):
+		check(BlockoutImporter.active_path() == "res://maps/canopy.blockout.json", "the saved choice becomes the active map")
+	BlockoutImporter.select("res://maps/does_not_exist.json")
+	check(BlockoutImporter.selected_path() == "", "a missing map falls back to the built-in map")
+	BlockoutImporter.select(saved)
+
+# Concrete Canopy: replace-mode settings, the feature list and its mirror expansion.
+func check_canopy() -> void:
+	var data := BlockoutImporter.read("res://maps/canopy.blockout.json")
+	check(data.get("mode", "") == "replace" and data.get("title", "") == "Concrete Canopy", "canopy is a titled replace-mode map")
+	var r := BlockoutImporter.resolve(data)
+	check(r.errors.is_empty(), "canopy resolves without errors: %s" % [r.errors])
+	check(r.goal_names == ["A", "B", "C", "e_B", "e_A"] and r.spawn_nodes == ["S", "e_S"], "canopy points and spawn nodes")
+	check(r.bounds == Rect2(-96, -64, 192, 128) and is_equal_approx(r.ceiling, 80.0), "canopy bounds and ceiling read from the file")
+	check(not r.audit.is_empty() and r.audit.lanes.size() >= 4, "canopy carries its own audit profile")
+	var reach := _reachable(r.graph, "S")
+	check(reach.size() == r.graph.nodes.size(), "canopy depot reaches every waypoint (%d/%d)" % [reach.size(), r.graph.nodes.size()])
+	var features := BlockoutImporter.features(data)
+	var kinds := {}
+	for f in features:
+		kinds[f.type] = kinds.get(f.type, 0) + 1
+	check(kinds.get("climb", 0) >= 20 and kinds.get("bounce", 0) >= 10 and kinds.get("cable", 0) >= 6 and kinds.get("mover", 0) >= 10 and kinds.get("event", 0) == 3, "canopy has every verb: %s" % [kinds])
+	for f in features:
+		if f.type == "climb":
+			check(f.has("face"), "climb lane %s names the direction you face" % f.get("tag", ""))

@@ -25,8 +25,9 @@ def snap(v):
 
 
 class Blockout:
-    def __init__(self, mode="add"):
+    def __init__(self, mode="add", title=None):
         self.mode = mode
+        self.title = title
         self.objects = []
         self.waypoints = []
         self.links = []
@@ -154,7 +155,7 @@ class Blockout:
     def bounce(self, x0, z0, x1, z1, y0, y1, power=15.0, kick=None, mirror=False, tag="bounce"):
         """Trigger box that launches anyone landing in it. Put it just above a solid slab (the awning)."""
         return self._feature(type="bounce", tag=tag, min=[min(x0, x1), min(y0, y1), min(z0, z1)],
-                             max=[max(x0, x1), max(y0, y1), max(z0, z1)], power=power, kick=kick,
+                             max=[max(x0, x1), max(y0, y1), max(z0, z1)], power=power, kick=list(kick) if kick else None,
                              mirror=True if mirror else None)
 
     def climb(self, x0, z0, x1, z1, y0, y1, mirror=False, tag="climb", face=None):
@@ -194,6 +195,7 @@ class Blockout:
             "format": FORMAT,
             "units": "m",
             "mode": self.mode,
+            **({"title": self.title} if self.title else {}),
             "source": source,
             "settings": self.settings,
             "features": self.features,

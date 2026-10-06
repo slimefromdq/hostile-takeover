@@ -91,11 +91,28 @@ back to the built-in map).
 | File | What it is |
 |---|---|
 | `tools/blender/maps/yard.py` | Small test map (replace mode) used by the round-trip test |
+| `tools/blender/maps/canopy.py` | **Concrete Canopy**: the jungle gym (`docs/JUNGLE_GYM.md`), 192 x 128 m, four tiers, five districts, climb/bounce/cable/mover verbs and three timed events |
 | `tools/blender/maps/overpass.py` | **Overpass District**: a full 164 x 96 m replace-mode map built from the reference set. Highway deck with gas stations over a service lane, terraced park with plazas and a bridge, offset barrier chicanes on the boulevard |
-| `maps/overpass.blockout.json` | Its generated output. Copy to `maps/blockout.json` to play it |
+| `maps/*.blockout.json` | Generated output. Maps with a `title` appear in the start menu (**Map: ... click to switch**); copying one to `maps/blockout.json` overrides the menu |
 
 `python3 tools/blender/blockout_check.py maps/overpass.blockout.json` checks navigation (waypoint ground and clearance,
 walkable edges, depot reachability, spawns, capture discs) in seconds without Godot. `tests/map_audit.gd` stays the authority.
+
+## Map features, titles and the audit profile
+
+Besides geometry a blockout can carry `features` (the traversal verbs of `scripts/map_verbs.gd`), a `title` and extra settings.
+The kit exposes them as `b.bounce`, `b.climb`, `b.cable`, `b.mover`, `b.event`, `b.audit` and `b.configure(ceiling=...)`;
+`TITLE = "..."` in a generator script names the map. Features and the audit profile are stored on the Blender scene as JSON
+(`ht_features`, `ht_audit`) and written back unchanged by the exporter.
+
+- `climb` takes a `face` (the direction you look to climb); each lane draws its own ladder.
+- `mover` keys are `(seconds, (x, y, z), (rx, ry, rz) optional)`; `period > 0` loops. Mirrored movers reflect position and yaw/roll.
+- `settings.audit` gives the audit its own sightline lanes (`azimuths` `along`, `across` or `ns`), route families and spawn-sight
+  targets, so a new map is judged by its own layout instead of the built-in map's.
+- `settings.ceiling` raises the kill height (default 40 m) for tall landmarks.
+
+`tests/verbs_map.gd` drives every feature of the active map with Skyrunner and Enforcer: climb lanes must top out onto solid ground,
+bounce pads reach their apex, cables catch and land within 10 m of the far end, movers carry a rider.
 
 ## Previewing without Godot
 

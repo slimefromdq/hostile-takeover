@@ -127,6 +127,8 @@ def build_scene(doc, clear=True):
     scene = bpy.context.scene
     scene.unit_settings.system = "METRIC"
     scene["ht_mode"] = doc.get("mode", "add")
+    if doc.get("title"):
+        scene["ht_title"] = doc["title"]
     for key, prop in SETTING_PROPS.items():
         if key in doc.get("settings", {}):
             scene[prop] = doc["settings"][key]

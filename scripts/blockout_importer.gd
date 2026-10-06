@@ -10,6 +10,44 @@ extends RefCounted
 const FORMAT := 1
 const ACTIVE_PATH := "res://maps/blockout.json"
 const RAMP_DIRS := ["+x", "-x", "+z", "-z"]
+const SETTINGS_PATH := "user://settings.cfg"
+const MAPS_DIR := "res://maps"
+
+# The blockout in use: a developer override file (maps/blockout.json) wins, then the menu's choice, else none
+# (the built-in map).
+static func active_path() -> String:
+	if FileAccess.file_exists(ACTIVE_PATH):
+		return ACTIVE_PATH
+	return selected_path()
+
+static func selected_path() -> String:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) != OK:
+		return ""
+	var path: String = cfg.get_value("map", "path", "")
+	return path if path != "" and FileAccess.file_exists(path) else ""
+
+static func select(path: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("map", "path", path)
+	cfg.save(SETTINGS_PATH)
+
+# Menu entries: the built-in map first, then every maps/*.blockout.json that names itself with a "title".
+static func catalog() -> Array:
+	var out: Array = [{"path": "", "title": "Civic Dividend (built-in)"}]
+	var dir := DirAccess.open(MAPS_DIR)
+	if dir == null:
+		return out
+	var names: PackedStringArray = dir.get_files()
+	names.sort()
+	for file_name in names:
+		if not file_name.ends_with(".blockout.json"):
+			continue
+		var data := read("%s/%s" % [MAPS_DIR, file_name])
+		if not data.is_empty() and data.has("title"):
+			out.append({"path": "%s/%s" % [MAPS_DIR, file_name], "title": str(data.title)})
+	return out
 
 # Parsed document, or {} when the file is missing or not a supported format.
 static func read(path: String) -> Dictionary:

@@ -84,7 +84,7 @@ static func build(root: Node3D) -> Array[Vector3]:
 	Visuals.build_environment(root)
 	builder = MapBuilder.new()
 	reset_settings()
-	var blockout := BlockoutImporter.read(BlockoutImporter.ACTIVE_PATH)
+	var blockout := BlockoutImporter.read(BlockoutImporter.active_path())
 	if blockout.get("mode", "add") == "replace":
 		var resolved := BlockoutImporter.resolve(blockout)
 		if resolved.errors.is_empty():

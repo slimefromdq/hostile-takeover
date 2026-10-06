@@ -12,6 +12,7 @@ Flooded Industrial (south inner). Authored for the west half and mirrored across
 import math
 
 MODE = "replace"
+TITLE = "Concrete Canopy"
 
 TUNNEL_Y = -6.0          # top of the tunnel floor
 MID = 6.0

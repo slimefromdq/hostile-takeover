@@ -123,7 +123,7 @@ def parse_links(text):
     return out
 
 
-def build_document(objects, waypoints, mode="add", source="", settings=None, features=None):
+def build_document(objects, waypoints, mode="add", source="", settings=None, features=None, title=None):
     wps, links = [], []
     for w in waypoints:
         rec = {"name": w["name"], "pos": w["pos"]}
@@ -136,6 +136,7 @@ def build_document(objects, waypoints, mode="add", source="", settings=None, fea
         "format": FORMAT,
         "units": "m",
         "mode": mode,
+        **({"title": title} if title else {}),
         "source": source,
         "settings": settings or {},
         "features": features or [],
@@ -196,7 +197,7 @@ def export_scene(path, mode=None):
             objects.append(rec)
     mode = mode or str(scene.get("ht_mode", "add"))
     features = json.loads(scene["ht_features"]) if "ht_features" in scene.keys() else []
-    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath), scene_settings(scene), features)
+    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath), scene_settings(scene), features, scene.get("ht_title"))
     with open(path, "w") as f:
         json.dump(doc, f, indent=1)
         f.write("\n")

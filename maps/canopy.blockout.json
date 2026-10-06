@@ -2,6 +2,7 @@
  "format": 1,
  "units": "m",
  "mode": "replace",
+ "title": "Concrete Canopy",
  "source": "canopy.py",
  "settings": {
   "bounds": [
