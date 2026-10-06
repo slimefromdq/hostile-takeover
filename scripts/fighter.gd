@@ -294,14 +294,13 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 				velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
 				velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
 				dash_time = 0.0
-				air_dash = true
 				if game.authoritative:
 					game.play_sfx(global_position, Sfx.Kind.JUMP)
 				if class_id == 0:
 					hot_lap = 2.0
-			elif air_dash:
-				# Double jump shares its charge with the air dash (one air action per landing or wall kick).
-				air_dash = false
+			elif air_jump:
+				# One double jump per landing, independent of the dash cooldown.
+				air_jump = false
 				velocity.y = DOUBLE_JUMP_SPEED
 				if game.authoritative:
 					game.play_sfx(global_position, Sfx.Kind.JUMP)
