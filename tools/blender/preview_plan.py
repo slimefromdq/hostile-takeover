@@ -2,7 +2,7 @@
 
     python3 tools/blender/preview_plan.py maps/blockout.json docs/previews/blockout   # writes _plan.png, _iso.png
 
-Mirrored halves are drawn. Colours follow the role palette; waypoints and capture points are overlaid on the plan.
+Mirrored halves are drawn. The isometric view is a cutaway (no perimeter walls, masses clipped to 14 m). Colours follow the role palette; waypoints and capture points are overlaid on the plan.
 """
 import json
 import math
@@ -10,6 +10,7 @@ import sys
 
 COLORS = {"walk": "#c9cfd4", "wall": "#e4e6e8", "tower": "#b9c7d8", "cover": "#ff6a2b", "accent": "#ff6a2b",
           "hazard": "#ffc928", "glass": "#bfe9ff"}
+CUT_HEIGHT = 14.0
 MIRROR_DIR = {"+x": "-x", "-x": "+x", "+z": "+z", "-z": "-z"}
 
 
@@ -98,6 +99,15 @@ def main(json_path, prefix):
     fig = plt.figure(figsize=(14, 8))
     ax = fig.add_subplot(111, projection="3d")
     polys, cols = [], []
+    # Cutaway: drop the perimeter walls and clip tall masses so the interior is visible.
+    shown = []
+    for r in objs:
+        if r["tag"].startswith("wall_"):
+            continue
+        if r["max"][1] > CUT_HEIGHT:
+            r = dict(r, max=[r["max"][0], CUT_HEIGHT, r["max"][2]])
+        shown.append(r)
+    objs = shown
     for r in objs:
         for poly in faces(r):
             polys.append([(x, z, y) for x, y, z in poly])  # plot x, z (depth), y (up)
@@ -107,9 +117,9 @@ def main(json_path, prefix):
     zs = [v for r in objs for v in (r["min"][2], r["max"][2])]
     ax.set_xlim(min(xs), max(xs))
     ax.set_ylim(max(zs), min(zs))
-    ax.set_zlim(0, max(r["max"][1] for r in objs) * 3)
+    ax.set_zlim(0, max(r["max"][1] for r in objs) * 2.2)
     ax.set_box_aspect((max(xs) - min(xs), max(zs) - min(zs), (max(xs) - min(xs)) * 0.35))
-    ax.view_init(elev=38, azim=-62)
+    ax.view_init(elev=48, azim=-62)
     ax.set_axis_off()
     fig.tight_layout()
     fig.savefig(prefix + "_iso.png", dpi=110)

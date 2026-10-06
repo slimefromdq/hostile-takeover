@@ -35,6 +35,6 @@ def build(b):
     b.waypoint("A", -40, 0, 0, "B:blv", mirror=True, point=True)
     b.waypoint("B", -20, 0, 0, "C:blv", mirror=True, point=True)
     b.waypoint("C", 0, 0, 0, point=True)
-    b.waypoint("rb", -40, 0, 21, "A:roof,rt:roof", mirror=True)
+    b.waypoint("rb", -43, 0, 21, "A:roof,rt:roof", mirror=True)
     b.waypoint("rt", -28, 3, 21, "dk:roof", mirror=True)
-    b.waypoint("dk", -20, 3, 22, "B:roof", mirror=True)
+    b.waypoint("dk", -20, 3, 22, "", mirror=True)

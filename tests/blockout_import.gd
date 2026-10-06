@@ -46,6 +46,7 @@ func run() -> void:
 	check(bad.size() == 3, "three malformed objects are reported (got %d)" % bad.size())
 	check(BlockoutImporter.read("res://maps/does_not_exist.json").is_empty(), "missing file reads as empty")
 	check_yard()
+	check_overpass()
 	check_layout_dump()
 	print("blockout import: %d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -107,3 +108,19 @@ func _reachable(graph: Dictionary, start: String) -> Dictionary:
 				seen[m] = true
 				queue.append(m)
 	return seen
+
+# The Overpass District replace-mode map (tools/blender/maps/overpass.py).
+func check_overpass() -> void:
+	var data := BlockoutImporter.read("res://maps/overpass.blockout.json")
+	check(data.get("mode", "") == "replace", "overpass is a replace-mode blockout")
+	var r := BlockoutImporter.resolve(data)
+	check(r.errors.is_empty(), "overpass resolves without errors: %s" % [r.errors])
+	check(r.goal_names == ["A", "B", "C", "e_B", "e_A"], "overpass capture points ordered west to east: %s" % [r.goal_names])
+	check(r.spawn_nodes == ["S", "e_S"], "overpass spawn nodes: %s" % [r.spawn_nodes])
+	check(r.bounds == Rect2(-82, -48, 164, 96), "overpass bounds read from file")
+	var reach := _reachable(r.graph, "S")
+	check(reach.size() == r.graph.nodes.size(), "overpass depot reaches every waypoint (%d/%d)" % [reach.size(), r.graph.nodes.size()])
+	var b := MapBuilder.new()
+	var errors := BlockoutImporter.build(b, data)
+	check(errors.is_empty(), "overpass builds without errors: %s" % [errors])
+	check(b.solids.size() > 100, "overpass builds its solids (%d)" % b.solids.size())

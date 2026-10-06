@@ -1,0 +1,2181 @@
+{
+ "format": 1,
+ "units": "m",
+ "mode": "replace",
+ "source": "overpass.py",
+ "settings": {
+  "bounds": [
+   -82,
+   -48,
+   164,
+   96
+  ],
+  "spawn_x": 76,
+  "spawn_z": -7,
+  "spawn_step": 2.8,
+  "depot_limit": 72,
+  "test_lane": [
+   -42,
+   0.05,
+   0
+  ]
+ },
+ "objects": [
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -82.0,
+    -1.0,
+    -48.0
+   ],
+   "max": [
+    82.0,
+    0.0,
+    48.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_n",
+   "role": "tower",
+   "min": [
+    -82.0,
+    0.0,
+    -48.0
+   ],
+   "max": [
+    82.0,
+    30.0,
+    -46.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_s",
+   "role": "tower",
+   "min": [
+    -82.0,
+    0.0,
+    46.0
+   ],
+   "max": [
+    82.0,
+    30.0,
+    48.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_end",
+   "role": "tower",
+   "min": [
+    -82.0,
+    0.0,
+    -46.0
+   ],
+   "max": [
+    -80.0,
+    30.0,
+    46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_n",
+   "role": "tower",
+   "min": [
+    -80.0,
+    0.0,
+    -46.0
+   ],
+   "max": [
+    -62.0,
+    30.0,
+    -36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_n",
+   "role": "tower",
+   "min": [
+    -50.0,
+    0.0,
+    -46.0
+   ],
+   "max": [
+    -34.0,
+    38.0,
+    -36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_n",
+   "role": "tower",
+   "min": [
+    -22.0,
+    0.0,
+    -46.0
+   ],
+   "max": [
+    -6.0,
+    26.0,
+    -36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_s",
+   "role": "tower",
+   "min": [
+    -80.0,
+    0.0,
+    36.0
+   ],
+   "max": [
+    -62.0,
+    26.0,
+    46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_s",
+   "role": "tower",
+   "min": [
+    -50.0,
+    0.0,
+    36.0
+   ],
+   "max": [
+    -34.0,
+    34.0,
+    46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "rear_s",
+   "role": "tower",
+   "min": [
+    -22.0,
+    0.0,
+    36.0
+   ],
+   "max": [
+    -6.0,
+    30.0,
+    46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "end_mass_n",
+   "role": "tower",
+   "min": [
+    -80.0,
+    0.0,
+    -36.0
+   ],
+   "max": [
+    -74.0,
+    12.0,
+    -9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "end_mass_s",
+   "role": "tower",
+   "min": [
+    -80.0,
+    0.0,
+    9.0
+   ],
+   "max": [
+    -74.0,
+    12.0,
+    36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_n0",
+   "role": "wall",
+   "min": [
+    -80.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -72.0,
+    6.0,
+    -8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_s0",
+   "role": "wall",
+   "min": [
+    -80.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    -72.0,
+    6.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_w0",
+   "role": "wall",
+   "min": [
+    -80.0,
+    0.0,
+    -8.0
+   ],
+   "max": [
+    -79.0,
+    6.0,
+    8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e0",
+   "role": "wall",
+   "min": [
+    -73.0,
+    0.0,
+    -8.0
+   ],
+   "max": [
+    -72.0,
+    6.0,
+    -3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e1",
+   "role": "wall",
+   "min": [
+    -73.0,
+    4.0,
+    -3.0
+   ],
+   "max": [
+    -72.0,
+    6.0,
+    3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_e2",
+   "role": "wall",
+   "min": [
+    -73.0,
+    0.0,
+    3.0
+   ],
+   "max": [
+    -72.0,
+    6.0,
+    8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_roof",
+   "role": "tower",
+   "min": [
+    -80.0,
+    6.0,
+    -9.0
+   ],
+   "max": [
+    -72.0,
+    7.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "baffle",
+   "role": "wall",
+   "min": [
+    -70.0,
+    0.0,
+    -2.5
+   ],
+   "max": [
+    -68.0,
+    3.5,
+    2.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "deck_ramp_w",
+   "role": "walk",
+   "min": [
+    -74.0,
+    0.0,
+    -30.0
+   ],
+   "max": [
+    -62.0,
+    6.0,
+    -12.0
+   ],
+   "mirror": true,
+   "dir": "-z",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 6.0
+  },
+  {
+   "kind": "block",
+   "tag": "deck_landing",
+   "role": "wall",
+   "min": [
+    -74.0,
+    0.0,
+    -36.0
+   ],
+   "max": [
+    -62.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "deck",
+   "role": "walk",
+   "min": [
+    -62.0,
+    4.5,
+    -36.0
+   ],
+   "max": [
+    -6.0,
+    6.0,
+    -24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "deck_bridge_c",
+   "role": "walk",
+   "min": [
+    -6.0,
+    4.5,
+    -36.0
+   ],
+   "max": [
+    6.0,
+    6.0,
+    -24.0
+   ]
+  },
+  {
+   "kind": "ramp",
+   "tag": "deck_ramp_mid",
+   "role": "walk",
+   "min": [
+    -42.0,
+    0.0,
+    -24.0
+   ],
+   "max": [
+    -36.0,
+    6.0,
+    -6.0
+   ],
+   "mirror": true,
+   "dir": "-z",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 6.0
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -59.0,
+    0.0,
+    -35.0
+   ],
+   "max": [
+    -57.0,
+    4.5,
+    -33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -53.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -51.0,
+    4.5,
+    -25.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -45.0,
+    0.0,
+    -35.0
+   ],
+   "max": [
+    -43.0,
+    4.5,
+    -33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -33.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -31.0,
+    4.5,
+    -25.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -25.0,
+    0.0,
+    -35.0
+   ],
+   "max": [
+    -23.0,
+    4.5,
+    -33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -17.0,
+    0.0,
+    -27.0
+   ],
+   "max": [
+    -15.0,
+    4.5,
+    -25.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pier",
+   "role": "wall",
+   "min": [
+    -11.0,
+    0.0,
+    -35.0
+   ],
+   "max": [
+    -9.0,
+    4.5,
+    -33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "parapet_s1",
+   "role": "wall",
+   "min": [
+    -62.0,
+    6.0,
+    -24.5
+   ],
+   "max": [
+    -43.0,
+    7.0,
+    -24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "parapet_s2",
+   "role": "wall",
+   "min": [
+    -35.0,
+    6.0,
+    -24.5
+   ],
+   "max": [
+    -6.0,
+    7.0,
+    -24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "deck_edge_strip",
+   "role": "accent",
+   "min": [
+    -62,
+    5.0,
+    -24.04
+   ],
+   "max": [
+    -6,
+    5.25,
+    -24
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "station_pillar",
+   "role": "wall",
+   "min": [
+    -48.5,
+    6.0,
+    -34.5
+   ],
+   "max": [
+    -47.5,
+    11.0,
+    -33.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_pillar",
+   "role": "wall",
+   "min": [
+    -48.5,
+    6.0,
+    -26.5
+   ],
+   "max": [
+    -47.5,
+    11.0,
+    -25.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_pillar",
+   "role": "wall",
+   "min": [
+    -37.5,
+    6.0,
+    -34.5
+   ],
+   "max": [
+    -36.5,
+    11.0,
+    -33.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_pillar",
+   "role": "wall",
+   "min": [
+    -37.5,
+    6.0,
+    -26.5
+   ],
+   "max": [
+    -36.5,
+    11.0,
+    -25.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_canopy",
+   "role": "accent",
+   "min": [
+    -49.5,
+    11.0,
+    -35.5
+   ],
+   "max": [
+    -36.5,
+    11.75,
+    -25.5
+   ],
+   "mirror": true,
+   "color": "#d9342b"
+  },
+  {
+   "kind": "block",
+   "tag": "pump",
+   "role": "cover",
+   "min": [
+    -45.5,
+    6.0,
+    -30.5
+   ],
+   "max": [
+    -44.5,
+    7.5,
+    -29.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump",
+   "role": "cover",
+   "min": [
+    -42.0,
+    6.0,
+    -30.5
+   ],
+   "max": [
+    -41.0,
+    7.5,
+    -29.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "kiosk",
+   "role": "wall",
+   "min": [
+    -44.0,
+    6.0,
+    -35.5
+   ],
+   "max": [
+    -40.5,
+    9.0,
+    -32.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "deck_vent",
+   "role": "cover",
+   "min": [
+    -27.0,
+    6.0,
+    -33.0
+   ],
+   "max": [
+    -25.0,
+    8.5,
+    -29.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frontage",
+   "role": "wall",
+   "min": [
+    -48.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    -44.0,
+    2.5,
+    -15.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frontage",
+   "role": "wall",
+   "min": [
+    -20.0,
+    0.0,
+    -18.0
+   ],
+   "max": [
+    -16.0,
+    2.5,
+    -15.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "ramp_foot_w",
+   "role": "hazard",
+   "min": [
+    -74,
+    0,
+    -11.5
+   ],
+   "max": [
+    -62,
+    0.04,
+    -11
+   ],
+   "mirror": true,
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "ramp_foot_mid",
+   "role": "hazard",
+   "min": [
+    -42,
+    0,
+    -5.5
+   ],
+   "max": [
+    -36,
+    0.04,
+    -5
+   ],
+   "mirror": true,
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_a1",
+   "role": "walk",
+   "min": [
+    -44.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    -34.0,
+    1.5,
+    17.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_b1",
+   "role": "walk",
+   "min": [
+    -22.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    -12.0,
+    1.5,
+    17.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_a2",
+   "role": "walk",
+   "min": [
+    -44.0,
+    0.0,
+    17.0
+   ],
+   "max": [
+    -34.0,
+    3.0,
+    22.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_b2",
+   "role": "walk",
+   "min": [
+    -22.0,
+    0.0,
+    17.0
+   ],
+   "max": [
+    -12.0,
+    3.0,
+    22.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_a3",
+   "role": "walk",
+   "min": [
+    -44.0,
+    0.0,
+    22.0
+   ],
+   "max": [
+    -34.0,
+    4.5,
+    27.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "terrace_b3",
+   "role": "walk",
+   "min": [
+    -22.0,
+    0.0,
+    22.0
+   ],
+   "max": [
+    -12.0,
+    4.5,
+    27.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "plaza_a",
+   "role": "walk",
+   "min": [
+    -44.0,
+    0.0,
+    27.0
+   ],
+   "max": [
+    -34.0,
+    6.0,
+    34.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "plaza_b",
+   "role": "walk",
+   "min": [
+    -22.0,
+    0.0,
+    27.0
+   ],
+   "max": [
+    -12.0,
+    6.0,
+    34.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "bridge_b",
+   "role": "walk",
+   "min": [
+    -34.0,
+    4.5,
+    28.0
+   ],
+   "max": [
+    -22.0,
+    6.0,
+    33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "park_ramp_a",
+   "role": "walk",
+   "min": [
+    -50.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    -44.0,
+    6.0,
+    30.0
+   ],
+   "mirror": true,
+   "dir": "+z",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 6.0
+  },
+  {
+   "kind": "block",
+   "tag": "park_landing_a",
+   "role": "wall",
+   "min": [
+    -50.0,
+    0.0,
+    30.0
+   ],
+   "max": [
+    -44.0,
+    6.0,
+    34.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "park_ramp_b",
+   "role": "walk",
+   "min": [
+    -12.0,
+    0.0,
+    12.0
+   ],
+   "max": [
+    -6.0,
+    6.0,
+    30.0
+   ],
+   "mirror": true,
+   "dir": "+z",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 6.0
+  },
+  {
+   "kind": "block",
+   "tag": "park_landing_b",
+   "role": "wall",
+   "min": [
+    -12.0,
+    0.0,
+    30.0
+   ],
+   "max": [
+    -6.0,
+    6.0,
+    34.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter",
+   "role": "cover",
+   "min": [
+    -40.0,
+    1.5,
+    13.5
+   ],
+   "max": [
+    -38.0,
+    2.75,
+    15.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter",
+   "role": "cover",
+   "min": [
+    -18.0,
+    3.0,
+    18.5
+   ],
+   "max": [
+    -16.0,
+    4.25,
+    20.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "plaza_rail_a",
+   "role": "wall",
+   "min": [
+    -44.0,
+    6.0,
+    33.5
+   ],
+   "max": [
+    -34.0,
+    7.0,
+    34.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "plaza_strip_a",
+   "role": "accent",
+   "min": [
+    -44.04,
+    5.0,
+    27
+   ],
+   "max": [
+    -44,
+    5.25,
+    34
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "ramp_foot_a",
+   "role": "hazard",
+   "min": [
+    -50,
+    0,
+    11.5
+   ],
+   "max": [
+    -44,
+    0.04,
+    12
+   ],
+   "mirror": true,
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "ramp_foot_b",
+   "role": "hazard",
+   "min": [
+    -12,
+    0,
+    11.5
+   ],
+   "max": [
+    -6,
+    0.04,
+    12
+   ],
+   "mirror": true,
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "bench",
+   "role": "wall",
+   "min": [
+    -70.0,
+    0.0,
+    20.0
+   ],
+   "max": [
+    -66.0,
+    1.0,
+    22.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "tree",
+   "role": "cover",
+   "min": [
+    -69.25,
+    0.0,
+    26.75
+   ],
+   "max": [
+    -66.75,
+    3.5,
+    29.25
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "tree_s",
+   "role": "cover",
+   "min": [
+    -69.25,
+    0.0,
+    12.75
+   ],
+   "max": [
+    -66.75,
+    3.5,
+    15.25
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "lane_dash",
+   "role": "accent",
+   "min": [
+    -66,
+    0,
+    -0.1
+   ],
+   "max": [
+    -63,
+    0.04,
+    0.1
+   ],
+   "mirror": true,
+   "color": "#e8e4d0",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "lane_dash",
+   "role": "accent",
+   "min": [
+    -50,
+    0,
+    -0.1
+   ],
+   "max": [
+    -47,
+    0.04,
+    0.1
+   ],
+   "mirror": true,
+   "color": "#e8e4d0",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "lane_dash",
+   "role": "accent",
+   "min": [
+    -42,
+    0,
+    -0.1
+   ],
+   "max": [
+    -39,
+    0.04,
+    0.1
+   ],
+   "mirror": true,
+   "color": "#e8e4d0",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "lane_dash",
+   "role": "accent",
+   "min": [
+    -18,
+    0,
+    -0.1
+   ],
+   "max": [
+    -15,
+    0.04,
+    0.1
+   ],
+   "mirror": true,
+   "color": "#e8e4d0",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "lane_dash",
+   "role": "accent",
+   "min": [
+    -10,
+    0,
+    -0.1
+   ],
+   "max": [
+    -7,
+    0.04,
+    0.1
+   ],
+   "mirror": true,
+   "color": "#e8e4d0",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_n",
+   "role": "wall",
+   "min": [
+    -50.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -49.0,
+    3.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_s",
+   "role": "wall",
+   "min": [
+    -46.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    -45.0,
+    3.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "chicane_cap_n",
+   "role": "accent",
+   "min": [
+    -50,
+    3.0,
+    -9
+   ],
+   "max": [
+    -49,
+    3.1,
+    1
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_n",
+   "role": "wall",
+   "min": [
+    -20.0,
+    0.0,
+    -9.0
+   ],
+   "max": [
+    -19.0,
+    3.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_s",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    -15.0,
+    3.0,
+    9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "chicane_cap_n",
+   "role": "accent",
+   "min": [
+    -20,
+    3.0,
+    -9
+   ],
+   "max": [
+    -19,
+    3.1,
+    1
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  }
+ ],
+ "waypoints": [
+  {
+   "name": "S",
+   "pos": [
+    -76,
+    0,
+    0
+   ],
+   "mirror": true,
+   "spawn": true
+  },
+  {
+   "name": "gt",
+   "pos": [
+    -71.5,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "q1",
+   "pos": [
+    -71,
+    0,
+    -5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "q2",
+   "pos": [
+    -66,
+    0,
+    -5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "A",
+   "pos": [
+    -56,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "c1a",
+   "pos": [
+    -49.5,
+    0,
+    4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1m",
+   "pos": [
+    -47.5,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1b",
+   "pos": [
+    -45.5,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "a1",
+   "pos": [
+    -41,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "B",
+   "pos": [
+    -28,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "c2a",
+   "pos": [
+    -21,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2p",
+   "pos": [
+    -17.5,
+    0,
+    3
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2m",
+   "pos": [
+    -17.5,
+    0,
+    -2.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2b",
+   "pos": [
+    -13,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "C",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "point": true
+  },
+  {
+   "name": "r0",
+   "pos": [
+    -68,
+    0,
+    -9.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "r1",
+   "pos": [
+    -68,
+    3.0,
+    -21
+   ],
+   "mirror": true
+  },
+  {
+   "name": "r2",
+   "pos": [
+    -68,
+    6,
+    -32
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d1",
+   "pos": [
+    -58,
+    6,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d2",
+   "pos": [
+    -46,
+    6,
+    -28.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d3",
+   "pos": [
+    -38.5,
+    6,
+    -28
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d4",
+   "pos": [
+    -39,
+    6,
+    -25.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m1",
+   "pos": [
+    -39,
+    4.5,
+    -19.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m2",
+   "pos": [
+    -39,
+    1.5,
+    -10.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m3",
+   "pos": [
+    -39,
+    0,
+    -5.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d5",
+   "pos": [
+    -24,
+    6,
+    -27.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d6",
+   "pos": [
+    -12,
+    6,
+    -28
+   ],
+   "mirror": true
+  },
+  {
+   "name": "d7",
+   "pos": [
+    0,
+    6,
+    -28
+   ]
+  },
+  {
+   "name": "nA1",
+   "pos": [
+    -56,
+    0,
+    -14
+   ],
+   "mirror": true
+  },
+  {
+   "name": "nA2",
+   "pos": [
+    -56,
+    0,
+    -24
+   ],
+   "mirror": true
+  },
+  {
+   "name": "u1",
+   "pos": [
+    -56,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "u2",
+   "pos": [
+    -46,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "u3",
+   "pos": [
+    -36,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "ub",
+   "pos": [
+    -28,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "nB2",
+   "pos": [
+    -28,
+    0,
+    -24
+   ],
+   "mirror": true
+  },
+  {
+   "name": "nB1",
+   "pos": [
+    -28,
+    0,
+    -14
+   ],
+   "mirror": true
+  },
+  {
+   "name": "u4",
+   "pos": [
+    -20,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "u5",
+   "pos": [
+    -9,
+    0,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "nC2",
+   "pos": [
+    -2,
+    0,
+    -24
+   ]
+  },
+  {
+   "name": "nC1",
+   "pos": [
+    -2,
+    0,
+    -14
+   ]
+  },
+  {
+   "name": "sA1",
+   "pos": [
+    -56,
+    0,
+    14
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sA2",
+   "pos": [
+    -56,
+    0,
+    28
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sA3",
+   "pos": [
+    -56,
+    0,
+    40
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sB1",
+   "pos": [
+    -28,
+    0,
+    14
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sB2",
+   "pos": [
+    -28,
+    0,
+    28
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sB3",
+   "pos": [
+    -28,
+    0,
+    40
+   ],
+   "mirror": true
+  },
+  {
+   "name": "sC1",
+   "pos": [
+    -2,
+    0,
+    14
+   ]
+  },
+  {
+   "name": "sC2",
+   "pos": [
+    -2,
+    0,
+    28
+   ]
+  },
+  {
+   "name": "t0",
+   "pos": [
+    -47,
+    0,
+    10.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t1",
+   "pos": [
+    -47,
+    3.0,
+    21
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t2",
+   "pos": [
+    -47,
+    6,
+    32
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t3",
+   "pos": [
+    -40,
+    6,
+    31
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t4",
+   "pos": [
+    -30,
+    6,
+    30.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t5",
+   "pos": [
+    -20,
+    6,
+    31
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t6",
+   "pos": [
+    -9,
+    6,
+    32
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t7",
+   "pos": [
+    -9,
+    3.0,
+    21
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t8",
+   "pos": [
+    -9,
+    0,
+    10.5
+   ],
+   "mirror": true
+  }
+ ],
+ "links": [
+  [
+   "S",
+   "gt",
+   "blv"
+  ],
+  [
+   "gt",
+   "q1",
+   "blv"
+  ],
+  [
+   "q1",
+   "q2",
+   "blv"
+  ],
+  [
+   "q2",
+   "A",
+   "blv"
+  ],
+  [
+   "A",
+   "c1a",
+   "blv"
+  ],
+  [
+   "c1a",
+   "c1m",
+   "blv"
+  ],
+  [
+   "c1a",
+   "t0",
+   "trn"
+  ],
+  [
+   "c1m",
+   "c1b",
+   "blv"
+  ],
+  [
+   "c1b",
+   "a1",
+   "blv"
+  ],
+  [
+   "a1",
+   "B",
+   "blv"
+  ],
+  [
+   "B",
+   "c2a",
+   "blv"
+  ],
+  [
+   "c2a",
+   "c2p",
+   "blv"
+  ],
+  [
+   "c2p",
+   "c2m",
+   "blv"
+  ],
+  [
+   "c2m",
+   "c2b",
+   "blv"
+  ],
+  [
+   "c2b",
+   "C",
+   "blv"
+  ],
+  [
+   "c2b",
+   "t8",
+   "trn"
+  ],
+  [
+   "r0",
+   "q2",
+   "blv"
+  ],
+  [
+   "r0",
+   "r1",
+   "roof"
+  ],
+  [
+   "r1",
+   "r2",
+   "roof"
+  ],
+  [
+   "r2",
+   "d1",
+   "roof"
+  ],
+  [
+   "d1",
+   "d2",
+   "roof"
+  ],
+  [
+   "d2",
+   "d3",
+   "roof"
+  ],
+  [
+   "d3",
+   "d4",
+   "roof"
+  ],
+  [
+   "d4",
+   "m1",
+   "roof"
+  ],
+  [
+   "m1",
+   "m2",
+   "roof"
+  ],
+  [
+   "m2",
+   "m3",
+   "roof"
+  ],
+  [
+   "m3",
+   "a1",
+   "blv"
+  ],
+  [
+   "m3",
+   "c1b",
+   "blv"
+  ],
+  [
+   "d5",
+   "d3",
+   "roof"
+  ],
+  [
+   "d5",
+   "d6",
+   "roof"
+  ],
+  [
+   "d6",
+   "d7",
+   "roof"
+  ],
+  [
+   "d7",
+   "d6",
+   "roof"
+  ],
+  [
+   "nA1",
+   "A",
+   "aln"
+  ],
+  [
+   "nA1",
+   "nA2",
+   "aln"
+  ],
+  [
+   "nA2",
+   "u1",
+   "aln"
+  ],
+  [
+   "u1",
+   "u2",
+   "aln"
+  ],
+  [
+   "u2",
+   "u3",
+   "aln"
+  ],
+  [
+   "u3",
+   "ub",
+   "aln"
+  ],
+  [
+   "ub",
+   "nB2",
+   "aln"
+  ],
+  [
+   "ub",
+   "u4",
+   "aln"
+  ],
+  [
+   "nB2",
+   "nB1",
+   "aln"
+  ],
+  [
+   "nB1",
+   "B",
+   "aln"
+  ],
+  [
+   "u4",
+   "u5",
+   "aln"
+  ],
+  [
+   "u5",
+   "nC2",
+   "aln"
+  ],
+  [
+   "nC2",
+   "nC1",
+   "aln"
+  ],
+  [
+   "nC1",
+   "C",
+   "aln"
+  ],
+  [
+   "sA1",
+   "A",
+   "aln"
+  ],
+  [
+   "sA1",
+   "sA2",
+   "aln"
+  ],
+  [
+   "sA2",
+   "sA3",
+   "aln"
+  ],
+  [
+   "sB1",
+   "B",
+   "aln"
+  ],
+  [
+   "sB1",
+   "sB2",
+   "aln"
+  ],
+  [
+   "sB2",
+   "sB3",
+   "aln"
+  ],
+  [
+   "sC1",
+   "C",
+   "aln"
+  ],
+  [
+   "sC1",
+   "sC2",
+   "aln"
+  ],
+  [
+   "t0",
+   "t1",
+   "trn"
+  ],
+  [
+   "t1",
+   "t2",
+   "trn"
+  ],
+  [
+   "t2",
+   "t3",
+   "trn"
+  ],
+  [
+   "t3",
+   "t4",
+   "trn"
+  ],
+  [
+   "t4",
+   "t5",
+   "trn"
+  ],
+  [
+   "t5",
+   "t6",
+   "trn"
+  ],
+  [
+   "t6",
+   "t7",
+   "trn"
+  ],
+  [
+   "t7",
+   "t8",
+   "trn"
+  ]
+ ]
+}

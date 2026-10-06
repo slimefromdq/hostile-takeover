@@ -86,6 +86,17 @@ back to the built-in map).
   - Hardcoded wall signs are skipped in replace mode.
 - A walk floor whose top is below -1 m is treated as sunken (a trench) for the minimap.
 
+## Maps in the repo
+
+| File | What it is |
+|---|---|
+| `tools/blender/maps/yard.py` | Small test map (replace mode) used by the round-trip test |
+| `tools/blender/maps/overpass.py` | **Overpass District**: a full 164 x 96 m replace-mode map built from the reference set. Highway deck with gas stations over a service lane, terraced park with plazas and a bridge, offset barrier chicanes on the boulevard |
+| `maps/overpass.blockout.json` | Its generated output. Copy to `maps/blockout.json` to play it |
+
+`python3 tools/blender/blockout_check.py maps/overpass.blockout.json` checks navigation (waypoint ground and clearance,
+walkable edges, depot reachability, spawns, capture discs) in seconds without Godot. `tests/map_audit.gd` stays the authority.
+
 ## Previewing without Godot
 
 `python3 tools/blender/preview_plan.py maps/blockout.json docs/previews/blockout` (needs `pip install matplotlib`) draws a
