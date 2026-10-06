@@ -18,6 +18,8 @@ static var spawn_step: float = 2.8
 static var depot_limit: float = MapLayout.DEPOT_LIMIT
 static var test_lane: Vector3 = MapLayout.TEST_LANE
 static var graph_data: Dictionary = {}
+# Optional audit profile from the blockout (sightline lanes, route families, spawn sight); {} means the built-in map's.
+static var audit_profile: Dictionary = {}
 static var replaced := false
 
 static func reset_settings() -> void:
@@ -31,6 +33,7 @@ static func reset_settings() -> void:
 	depot_limit = MapLayout.DEPOT_LIMIT
 	test_lane = MapLayout.TEST_LANE
 	graph_data = MapLayout.graph()
+	audit_profile = {}
 	replaced = false
 
 static func apply_settings(r: Dictionary) -> void:
@@ -44,6 +47,7 @@ static func apply_settings(r: Dictionary) -> void:
 	depot_limit = r.depot_limit
 	test_lane = r.test_lane
 	graph_data = r.graph
+	audit_profile = r.audit
 	replaced = true
 
 # Wall-mounted sign: flush on a face (`normal_z` = +1 faces south, -1 faces north), never billboarded,
@@ -91,6 +95,9 @@ static func build(root: Node3D) -> Array[Vector3]:
 	for message in BlockoutImporter.build(builder, blockout):
 		push_warning("Blockout: " + message)
 	builder.finalize(root)
+	MapVerbs.clear()
+	if not blockout.is_empty():
+		MapVerbs.configure(BlockoutImporter.features(blockout), root)
 	footprints = builder.footprints()
 	sunken = builder.sunken
 	if not replaced:

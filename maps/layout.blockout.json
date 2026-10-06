@@ -1,0 +1,4296 @@
+{
+ "format": 1,
+ "links": [
+  [
+   "S",
+   "gN",
+   "blv"
+  ],
+  [
+   "S",
+   "gS",
+   "blv"
+  ],
+  [
+   "gN",
+   "rN",
+   "blv"
+  ],
+  [
+   "gS",
+   "rS",
+   "blv"
+  ],
+  [
+   "rN",
+   "rC",
+   "blv"
+  ],
+  [
+   "rC",
+   "rS",
+   "blv"
+  ],
+  [
+   "rN",
+   "rNn",
+   "blv"
+  ],
+  [
+   "rS",
+   "rSs",
+   "blv"
+  ],
+  [
+   "rNn",
+   "xN",
+   "blv"
+  ],
+  [
+   "rSs",
+   "xS",
+   "blv"
+  ],
+  [
+   "rC",
+   "xC",
+   "blv"
+  ],
+  [
+   "xC",
+   "A",
+   "blv"
+  ],
+  [
+   "xN",
+   "lAb",
+   "blv"
+  ],
+  [
+   "A",
+   "lAb",
+   "blv"
+  ],
+  [
+   "A",
+   "a1",
+   "blv"
+  ],
+  [
+   "a1",
+   "pa",
+   "blv"
+  ],
+  [
+   "pa",
+   "w1",
+   "blv"
+  ],
+  [
+   "w1",
+   "g1",
+   "blv"
+  ],
+  [
+   "g1",
+   "g2",
+   "blv"
+  ],
+  [
+   "g2",
+   "w2",
+   "blv"
+  ],
+  [
+   "w2",
+   "B",
+   "blv"
+  ],
+  [
+   "B",
+   "pb",
+   "blv"
+  ],
+  [
+   "pb",
+   "w3",
+   "blv"
+  ],
+  [
+   "w3",
+   "g3",
+   "blv"
+  ],
+  [
+   "g3",
+   "g4",
+   "blv"
+  ],
+  [
+   "g4",
+   "w4",
+   "blv"
+  ],
+  [
+   "w4",
+   "b2",
+   "blv"
+  ],
+  [
+   "b2",
+   "C",
+   "blv"
+  ],
+  [
+   "lAb",
+   "lAm",
+   "aln"
+  ],
+  [
+   "lAm",
+   "lAn",
+   "aln"
+  ],
+  [
+   "lAn",
+   "n1",
+   "aln"
+  ],
+  [
+   "n1",
+   "n2",
+   "aln"
+  ],
+  [
+   "n2",
+   "aN1",
+   "aln"
+  ],
+  [
+   "aN1",
+   "q1",
+   "aln"
+  ],
+  [
+   "q1",
+   "q2",
+   "aln"
+  ],
+  [
+   "q2",
+   "n4",
+   "aln"
+  ],
+  [
+   "n4",
+   "lBn",
+   "aln"
+  ],
+  [
+   "lBn",
+   "s1",
+   "aln"
+  ],
+  [
+   "s1",
+   "s2",
+   "aln"
+  ],
+  [
+   "s2",
+   "aN3",
+   "aln"
+  ],
+  [
+   "aN3",
+   "u1",
+   "aln"
+  ],
+  [
+   "u1",
+   "u2",
+   "aln"
+  ],
+  [
+   "u2",
+   "cNn",
+   "aln"
+  ],
+  [
+   "lBn",
+   "lBm",
+   "aln"
+  ],
+  [
+   "lBm",
+   "lBb",
+   "aln"
+  ],
+  [
+   "lBb",
+   "B",
+   "blv"
+  ],
+  [
+   "blN",
+   "a1",
+   "blv"
+  ],
+  [
+   "blN",
+   "lobN1",
+   "aln"
+  ],
+  [
+   "lobN1",
+   "lobN2",
+   "aln"
+  ],
+  [
+   "lobN2",
+   "aN1",
+   "aln"
+  ],
+  [
+   "blM",
+   "b2",
+   "blv"
+  ],
+  [
+   "blM",
+   "lobM1",
+   "aln"
+  ],
+  [
+   "lobM1",
+   "lobM2",
+   "aln"
+  ],
+  [
+   "lobM2",
+   "aN3",
+   "aln"
+  ],
+  [
+   "C",
+   "cNb",
+   "blv"
+  ],
+  [
+   "cNb",
+   "cNm",
+   "aln"
+  ],
+  [
+   "cNm",
+   "cNn",
+   "aln"
+  ],
+  [
+   "A",
+   "sA0",
+   "blv"
+  ],
+  [
+   "sA0",
+   "sA1",
+   "aln"
+  ],
+  [
+   "sA1",
+   "sA2",
+   "aln"
+  ],
+  [
+   "sA2",
+   "sA3",
+   "aln"
+  ],
+  [
+   "B",
+   "sB0",
+   "blv"
+  ],
+  [
+   "sB0",
+   "sB1",
+   "aln"
+  ],
+  [
+   "sB1",
+   "sB2",
+   "aln"
+  ],
+  [
+   "sB2",
+   "sB3",
+   "aln"
+  ],
+  [
+   "C",
+   "sC0",
+   "blv"
+  ],
+  [
+   "sC0",
+   "sC1",
+   "aln"
+  ],
+  [
+   "sC1",
+   "sC2",
+   "aln"
+  ],
+  [
+   "sC2",
+   "sC3",
+   "aln"
+  ],
+  [
+   "sA3",
+   "v1",
+   "aln"
+  ],
+  [
+   "v1",
+   "v2",
+   "aln"
+  ],
+  [
+   "v2",
+   "v3",
+   "aln"
+  ],
+  [
+   "v3",
+   "z1",
+   "aln"
+  ],
+  [
+   "z1",
+   "z2",
+   "aln"
+  ],
+  [
+   "z2",
+   "sB3",
+   "aln"
+  ],
+  [
+   "sB3",
+   "y1",
+   "aln"
+  ],
+  [
+   "y1",
+   "y2",
+   "aln"
+  ],
+  [
+   "y2",
+   "y3",
+   "aln"
+  ],
+  [
+   "y3",
+   "y4",
+   "aln"
+  ],
+  [
+   "y4",
+   "sC3",
+   "aln"
+  ],
+  [
+   "xS",
+   "tAt",
+   "trn"
+  ],
+  [
+   "tAt",
+   "tAr",
+   "trn"
+  ],
+  [
+   "tAr",
+   "tAq",
+   "trn"
+  ],
+  [
+   "tAq",
+   "tAb",
+   "trn"
+  ],
+  [
+   "tAb",
+   "t1",
+   "trn"
+  ],
+  [
+   "t1",
+   "t1b",
+   "trn"
+  ],
+  [
+   "t1b",
+   "c1",
+   "trn"
+  ],
+  [
+   "c1",
+   "c2",
+   "trn"
+  ],
+  [
+   "c2",
+   "c3",
+   "trn"
+  ],
+  [
+   "c3",
+   "c4",
+   "trn"
+  ],
+  [
+   "c4",
+   "tBb",
+   "trn"
+  ],
+  [
+   "tBb",
+   "t3",
+   "trn"
+  ],
+  [
+   "t3",
+   "t4",
+   "trn"
+  ],
+  [
+   "t4",
+   "d0",
+   "trn"
+  ],
+  [
+   "d0",
+   "d1",
+   "trn"
+  ],
+  [
+   "d1",
+   "d2",
+   "trn"
+  ],
+  [
+   "d2",
+   "d3",
+   "trn"
+  ],
+  [
+   "d3",
+   "t5",
+   "trn"
+  ],
+  [
+   "t5",
+   "tCb",
+   "trn"
+  ],
+  [
+   "tCb",
+   "t6",
+   "trn"
+  ],
+  [
+   "t6",
+   "tC",
+   "trn"
+  ],
+  [
+   "tBb",
+   "tBq",
+   "trn"
+  ],
+  [
+   "tBq",
+   "tBr",
+   "trn"
+  ],
+  [
+   "tBr",
+   "tBt",
+   "trn"
+  ],
+  [
+   "tBt",
+   "a1",
+   "blv"
+  ],
+  [
+   "tCb",
+   "tCq",
+   "trn"
+  ],
+  [
+   "tCq",
+   "tCr",
+   "trn"
+  ],
+  [
+   "tCr",
+   "tCt",
+   "trn"
+  ],
+  [
+   "tCt",
+   "b2",
+   "blv"
+  ],
+  [
+   "A",
+   "rAb",
+   "blv"
+  ],
+  [
+   "rAb",
+   "rAt",
+   "roof"
+  ],
+  [
+   "rAt",
+   "dkA",
+   "roof"
+  ],
+  [
+   "dkA",
+   "r2a",
+   "roof"
+  ],
+  [
+   "r2a",
+   "r2b",
+   "roof"
+  ],
+  [
+   "r2b",
+   "r2c",
+   "roof"
+  ],
+  [
+   "r2c",
+   "r2c2",
+   "roof"
+  ],
+  [
+   "r2c2",
+   "r2d",
+   "roof"
+  ],
+  [
+   "r2d",
+   "r2e",
+   "roof"
+  ],
+  [
+   "r2e",
+   "dkB",
+   "roof"
+  ],
+  [
+   "dkB",
+   "dkBe",
+   "roof"
+  ],
+  [
+   "dkBe",
+   "r3a",
+   "roof"
+  ],
+  [
+   "r3a",
+   "r3b",
+   "roof"
+  ],
+  [
+   "r3b",
+   "r3c",
+   "roof"
+  ],
+  [
+   "r3c",
+   "r3c2",
+   "roof"
+  ],
+  [
+   "r3c2",
+   "r3d",
+   "roof"
+  ],
+  [
+   "r3d",
+   "r3e",
+   "roof"
+  ],
+  [
+   "r3e",
+   "dkC",
+   "roof"
+  ],
+  [
+   "dkC",
+   "cBt",
+   "roof"
+  ],
+  [
+   "cBt",
+   "cBb",
+   "roof"
+  ],
+  [
+   "cBb",
+   "C",
+   "blv"
+  ],
+  [
+   "r2e",
+   "rBt",
+   "roof"
+  ],
+  [
+   "rBt",
+   "rBb",
+   "roof"
+  ],
+  [
+   "rBb",
+   "B",
+   "blv"
+  ]
+ ],
+ "mode": "replace",
+ "objects": [
+  {
+   "color": "#8a929a",
+   "kind": "block",
+   "max": [
+    82.0,
+    0.0,
+    13.0
+   ],
+   "min": [
+    -82.0,
+    -5.0,
+    -60.0
+   ],
+   "role": "walk",
+   "tag": "floor_n"
+  },
+  {
+   "color": "#8a929a",
+   "kind": "block",
+   "max": [
+    82.0,
+    0.0,
+    60.0
+   ],
+   "min": [
+    -82.0,
+    -5.0,
+    29.0
+   ],
+   "role": "walk",
+   "tag": "floor_s"
+  },
+  {
+   "color": "#5f6b7a",
+   "kind": "block",
+   "max": [
+    82.0,
+    -4.0,
+    29.0
+   ],
+   "min": [
+    -82.0,
+    -5.0,
+    13.0
+   ],
+   "role": "walk",
+   "tag": "floor_trench"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -82.0,
+    30.0,
+    -13.0
+   ],
+   "min": [
+    -92.0,
+    -5.0,
+    -60.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "end_n"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -82.0,
+    30.0,
+    60.0
+   ],
+   "min": [
+    -92.0,
+    -5.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "end_s"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -91.0,
+    30.0,
+    13.0
+   ],
+   "min": [
+    -92.0,
+    -5.0,
+    -13.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "depot_back"
+  },
+  {
+   "color": "#dfe3e6",
+   "kind": "block",
+   "max": [
+    -82.0,
+    0.0,
+    13.0
+   ],
+   "min": [
+    -91.0,
+    -5.0,
+    -13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "depot_floor"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -82.0,
+    30.0,
+    13.0
+   ],
+   "min": [
+    -91.0,
+    6.0,
+    -13.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "depot_roof"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -82.0,
+    6.0,
+    -11.0
+   ],
+   "min": [
+    -83.0,
+    0.0,
+    -13.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gate_wall_a"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -82.0,
+    6.0,
+    5.0
+   ],
+   "min": [
+    -83.0,
+    0.0,
+    -5.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gate_wall_b"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -82.0,
+    6.0,
+    13.0
+   ],
+   "min": [
+    -83.0,
+    0.0,
+    11.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gate_wall_c"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -82.0,
+    6.0,
+    -5.0
+   ],
+   "min": [
+    -83.0,
+    4.0,
+    -11.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gate_lintel_n"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -82.0,
+    6.0,
+    11.0
+   ],
+   "min": [
+    -83.0,
+    4.0,
+    5.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gate_lintel_s"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -77.0,
+    3.5,
+    -3.0
+   ],
+   "min": [
+    -79.0,
+    0.0,
+    -9.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "baffle_n"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -77.0,
+    3.5,
+    9.0
+   ],
+   "min": [
+    -79.0,
+    0.0,
+    3.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "baffle_s"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -70.0,
+    5.5,
+    -12.0
+   ],
+   "min": [
+    -82.0,
+    0.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "nb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -70.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -82.0,
+    5.5,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -70.0,
+    7.0,
+    -12.0
+   ],
+   "min": [
+    -82.0,
+    6.0,
+    -12.5
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -70.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -82.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_n"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -51.0,
+    5.5,
+    -12.0
+   ],
+   "min": [
+    -58.0,
+    0.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "nb"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -38.0,
+    5.5,
+    -12.0
+   ],
+   "min": [
+    -45.0,
+    0.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "nb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -38.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -58.0,
+    5.5,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -38.0,
+    7.0,
+    -12.0
+   ],
+   "min": [
+    -58.0,
+    6.0,
+    -12.5
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -38.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -58.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_n"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -20.0,
+    5.5,
+    -12.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "nb"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -6.0,
+    5.5,
+    -12.0
+   ],
+   "min": [
+    -14.0,
+    0.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "nb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -6.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -26.0,
+    5.5,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -6.0,
+    7.0,
+    -12.0
+   ],
+   "min": [
+    -26.0,
+    6.0,
+    -12.5
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -6.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -26.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "parapet_n"
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -65.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -70.0,
+    0.0,
+    -27.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_ramp_A",
+   "y_end": 6.0,
+   "y_floor": 0.0,
+   "y_start": 0.0
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -33.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -38.0,
+    0.0,
+    -27.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_ramp_B",
+   "y_end": 6.0,
+   "y_floor": 0.0,
+   "y_start": 0.0
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -2.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    -6.0,
+    0.0,
+    -27.0
+   ],
+   "role": "walk",
+   "tag": "roof_ramp_C_w",
+   "y_end": 6.0,
+   "y_floor": 0.0,
+   "y_start": 0.0
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    6.0,
+    6.0,
+    -12.0
+   ],
+   "min": [
+    2.0,
+    0.0,
+    -27.0
+   ],
+   "role": "walk",
+   "tag": "roof_ramp_C_e",
+   "y_end": 6.0,
+   "y_floor": 0.0,
+   "y_start": 0.0
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -58.0,
+    6.0,
+    -27.0
+   ],
+   "min": [
+    -70.0,
+    5.25,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "deck_A"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -26.0,
+    6.0,
+    -27.0
+   ],
+   "min": [
+    -38.0,
+    5.25,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "deck_B"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    6.0,
+    6.0,
+    -27.0
+   ],
+   "min": [
+    -6.0,
+    5.25,
+    -30.0
+   ],
+   "role": "walk",
+   "tag": "deck_C"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -58.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -70.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "deck_parapet_A"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -26.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -38.0,
+    6.0,
+    -30.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "deck_parapet_B"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    6.0,
+    7.0,
+    -29.5
+   ],
+   "min": [
+    -6.0,
+    6.0,
+    -30.0
+   ],
+   "role": "wall",
+   "tag": "deck_parapet_C"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -75.5,
+    8.75,
+    -20.5
+   ],
+   "min": [
+    -79.5,
+    6.0,
+    -29.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "penthouse"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -52.0,
+    8.75,
+    -20.5
+   ],
+   "min": [
+    -56.0,
+    6.0,
+    -29.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "penthouse"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -39.0,
+    8.75,
+    -12.5
+   ],
+   "min": [
+    -42.0,
+    6.0,
+    -21.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "penthouse"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -20.0,
+    8.75,
+    -12.5
+   ],
+   "min": [
+    -24.0,
+    6.0,
+    -21.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "penthouse"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -10.0,
+    8.75,
+    -20.5
+   ],
+   "min": [
+    -13.0,
+    6.0,
+    -29.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "penthouse"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -70.0,
+    8.5,
+    35.0
+   ],
+   "min": [
+    -82.0,
+    0.0,
+    29.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "sb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -70.0,
+    9.0,
+    35.0
+   ],
+   "min": [
+    -82.0,
+    8.5,
+    29.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_s"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -38.0,
+    8.5,
+    35.0
+   ],
+   "min": [
+    -58.0,
+    0.0,
+    29.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "sb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -38.0,
+    9.0,
+    35.0
+   ],
+   "min": [
+    -58.0,
+    8.5,
+    29.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_s"
+  },
+  {
+   "color": "#d6e2ee",
+   "kind": "block",
+   "max": [
+    -6.0,
+    8.5,
+    35.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    29.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "sb"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -6.0,
+    9.0,
+    35.0
+   ],
+   "min": [
+    -26.0,
+    8.5,
+    29.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "roof_s"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -62.0,
+    24.0,
+    -36.0
+   ],
+   "min": [
+    -82.0,
+    0.0,
+    -60.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_n"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -42.0,
+    34.0,
+    -36.0
+   ],
+   "min": [
+    -62.0,
+    0.0,
+    -60.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_n"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -22.0,
+    20.0,
+    -36.0
+   ],
+   "min": [
+    -42.0,
+    0.0,
+    -60.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_n"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    0.0,
+    30.0,
+    -36.0
+   ],
+   "min": [
+    -22.0,
+    0.0,
+    -60.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_n"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -60.0,
+    28.0,
+    60.0
+   ],
+   "min": [
+    -82.0,
+    0.0,
+    41.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_s"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -40.0,
+    22.0,
+    60.0
+   ],
+   "min": [
+    -60.0,
+    0.0,
+    41.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_s"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    -20.0,
+    36.0,
+    60.0
+   ],
+   "min": [
+    -40.0,
+    0.0,
+    41.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_s"
+  },
+  {
+   "color": "#dbe5ef",
+   "kind": "block",
+   "max": [
+    0.0,
+    26.0,
+    60.0
+   ],
+   "min": [
+    -20.0,
+    0.0,
+    41.0
+   ],
+   "mirror": true,
+   "role": "tower",
+   "tag": "tower_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -77.0,
+    2.5,
+    -33.0
+   ],
+   "min": [
+    -80.0,
+    0.0,
+    -36.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -77.0,
+    2.5,
+    41.0
+   ],
+   "min": [
+    -80.0,
+    0.0,
+    38.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -54.0,
+    2.5,
+    -33.0
+   ],
+   "min": [
+    -57.0,
+    0.0,
+    -36.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -54.0,
+    2.5,
+    41.0
+   ],
+   "min": [
+    -57.0,
+    0.0,
+    38.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -22.0,
+    2.5,
+    -33.0
+   ],
+   "min": [
+    -25.0,
+    0.0,
+    -36.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -22.0,
+    2.5,
+    41.0
+   ],
+   "min": [
+    -25.0,
+    0.0,
+    38.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -40.0,
+    2.5,
+    -30.0
+   ],
+   "min": [
+    -43.0,
+    0.0,
+    -33.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -40.0,
+    2.5,
+    38.0
+   ],
+   "min": [
+    -43.0,
+    0.0,
+    35.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -9.0,
+    2.5,
+    -30.0
+   ],
+   "min": [
+    -12.0,
+    0.0,
+    -33.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -9.0,
+    2.5,
+    38.0
+   ],
+   "min": [
+    -12.0,
+    0.0,
+    35.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "alley_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -68.0,
+    1.25,
+    -4.0
+   ],
+   "min": [
+    -72.0,
+    0.0,
+    -7.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "dock_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -68.0,
+    1.25,
+    7.0
+   ],
+   "min": [
+    -72.0,
+    0.0,
+    4.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "dock_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -55.5,
+    2.5,
+    -4.0
+   ],
+   "min": [
+    -57.0,
+    0.0,
+    -9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "barrier_n"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -55.5,
+    2.5,
+    9.0
+   ],
+   "min": [
+    -57.0,
+    0.0,
+    4.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "barrier_s"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -43.0,
+    2.5,
+    -9.0
+   ],
+   "min": [
+    -44.0,
+    0.0,
+    -12.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -43.0,
+    2.5,
+    3.0
+   ],
+   "min": [
+    -44.0,
+    0.0,
+    -3.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -43.0,
+    2.5,
+    12.0
+   ],
+   "min": [
+    -44.0,
+    0.0,
+    9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -39.0,
+    2.5,
+    -3.0
+   ],
+   "min": [
+    -40.0,
+    0.0,
+    -9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal2"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -39.0,
+    2.5,
+    9.0
+   ],
+   "min": [
+    -40.0,
+    0.0,
+    3.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal2"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -25.0,
+    2.5,
+    -9.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    -12.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -25.0,
+    2.5,
+    3.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    -3.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -25.0,
+    2.5,
+    12.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal1"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -21.0,
+    2.5,
+    -3.0
+   ],
+   "min": [
+    -22.0,
+    0.0,
+    -9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal2"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -21.0,
+    2.5,
+    9.0
+   ],
+   "min": [
+    -22.0,
+    0.0,
+    3.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "portal2"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -34.0,
+    2.5,
+    9.0
+   ],
+   "min": [
+    -37.0,
+    0.0,
+    6.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "booth"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -9.0,
+    2.5,
+    4.5
+   ],
+   "min": [
+    -12.0,
+    0.0,
+    1.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "kiosk"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -9.0,
+    2.5,
+    -1.5
+   ],
+   "min": [
+    -12.0,
+    0.0,
+    -4.5
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "kiosk"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -7.0,
+    2.5,
+    12.0
+   ],
+   "min": [
+    -10.0,
+    0.0,
+    9.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "kiosk_edge"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -4.0,
+    1.25,
+    7.0
+   ],
+   "min": [
+    -8.0,
+    0.0,
+    6.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "planter"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -4.0,
+    1.25,
+    -6.0
+   ],
+   "min": [
+    -8.0,
+    0.0,
+    -7.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "planter"
+  },
+  {
+   "color": "#e8eaec",
+   "kind": "block",
+   "max": [
+    -12.0,
+    3.0,
+    -8.0
+   ],
+   "min": [
+    -20.0,
+    2.5,
+    -12.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "gallery_ledge"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -12.0,
+    2.5,
+    -8.0
+   ],
+   "min": [
+    -12.75,
+    0.0,
+    -9.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gallery_post"
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-x",
+   "kind": "ramp",
+   "max": [
+    -4.0,
+    3.0,
+    -8.0
+   ],
+   "min": [
+    -12.0,
+    0.0,
+    -12.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "gallery_ramp",
+   "y_end": 3.0,
+   "y_floor": 0.0,
+   "y_start": 0.0
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -12.0,
+    4.0,
+    -8.0
+   ],
+   "min": [
+    -20.0,
+    3.0,
+    -8.25
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "gallery_rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -78.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -82.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -70.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -72.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -50.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -58.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -38.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -44.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -20.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -26.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -6.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    -14.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    14.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    6.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    26.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    20.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    44.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    38.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    58.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    50.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    72.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    70.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    82.0,
+    1.0,
+    13.0
+   ],
+   "min": [
+    78.0,
+    0.0,
+    12.0
+   ],
+   "role": "wall",
+   "tag": "rail"
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -72.0,
+    0.0,
+    23.0
+   ],
+   "min": [
+    -78.0,
+    -4.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "trench_ramp_A",
+   "y_end": 0.0,
+   "y_floor": -4.0,
+   "y_start": -4.0
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -44.0,
+    0.0,
+    23.0
+   ],
+   "min": [
+    -50.0,
+    -4.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "trench_ramp_B",
+   "y_end": 0.0,
+   "y_floor": -4.0,
+   "y_start": -4.0
+  },
+  {
+   "color": "#dfe3e6",
+   "dir": "-z",
+   "kind": "ramp",
+   "max": [
+    -14.0,
+    0.0,
+    23.0
+   ],
+   "min": [
+    -20.0,
+    -4.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "trench_ramp_C",
+   "y_end": 0.0,
+   "y_floor": -4.0,
+   "y_start": -4.0
+  },
+  {
+   "color": "#dfe3e6",
+   "kind": "block",
+   "max": [
+    -58.0,
+    0.0,
+    29.0
+   ],
+   "min": [
+    -70.0,
+    -0.75,
+    13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "bridge_A"
+  },
+  {
+   "color": "#dfe3e6",
+   "kind": "block",
+   "max": [
+    -26.0,
+    0.0,
+    29.0
+   ],
+   "min": [
+    -38.0,
+    -0.75,
+    13.0
+   ],
+   "mirror": true,
+   "role": "walk",
+   "tag": "bridge_B"
+  },
+  {
+   "color": "#dfe3e6",
+   "kind": "block",
+   "max": [
+    6.0,
+    0.0,
+    29.0
+   ],
+   "min": [
+    -6.0,
+    -0.75,
+    13.0
+   ],
+   "role": "walk",
+   "tag": "bridge_C"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -63.0,
+    -0.75,
+    22.0
+   ],
+   "min": [
+    -65.0,
+    -4.0,
+    20.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "pier_A"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -31.0,
+    -0.75,
+    22.0
+   ],
+   "min": [
+    -33.0,
+    -4.0,
+    20.0
+   ],
+   "mirror": true,
+   "role": "wall",
+   "tag": "pier_B"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    1.0,
+    -0.75,
+    22.0
+   ],
+   "min": [
+    -1.0,
+    -4.0,
+    20.0
+   ],
+   "role": "wall",
+   "tag": "pier_C"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -39.0,
+    -1.0,
+    29.0
+   ],
+   "min": [
+    -45.0,
+    -4.0,
+    26.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "tram_car"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -7.0,
+    -1.0,
+    29.0
+   ],
+   "min": [
+    -13.0,
+    -4.0,
+    26.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "tram_car"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -60.0,
+    -1.0,
+    22.0
+   ],
+   "min": [
+    -61.0,
+    -4.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "baffle_a"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -56.0,
+    -1.0,
+    29.0
+   ],
+   "min": [
+    -57.0,
+    -4.0,
+    20.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "baffle_b"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -28.0,
+    -1.0,
+    22.0
+   ],
+   "min": [
+    -29.0,
+    -4.0,
+    13.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "baffle_c"
+  },
+  {
+   "color": "#ff6a2b",
+   "kind": "block",
+   "max": [
+    -24.0,
+    -1.0,
+    29.0
+   ],
+   "min": [
+    -25.0,
+    -4.0,
+    20.0
+   ],
+   "mirror": true,
+   "role": "cover",
+   "tag": "baffle_d"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -77.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -80.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -69.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -72.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -61.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -64.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -53.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -56.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -45.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -48.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -37.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -40.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -29.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -32.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -21.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -24.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -13.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -16.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    -5.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    -8.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    3.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    0.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    11.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    8.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    19.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    16.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    27.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    24.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    35.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    32.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    43.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    40.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    51.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    48.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    59.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    56.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    67.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    64.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#e8e4d0",
+   "kind": "decor",
+   "max": [
+    75.0,
+    0.04,
+    0.1
+   ],
+   "min": [
+    72.0,
+    0.0,
+    -0.1
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "dash"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    -78.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    -82.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    -50.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    -72.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    -20.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    -44.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    14.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    -14.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    44.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    20.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    72.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    50.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    82.0,
+    -2.8,
+    13.04
+   ],
+   "min": [
+    78.0,
+    -3.0,
+    13.0
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_n"
+  },
+  {
+   "color": "#ffd36b",
+   "kind": "decor",
+   "max": [
+    82.0,
+    -2.8,
+    29.0
+   ],
+   "min": [
+    -82.0,
+    -3.0,
+    28.96
+   ],
+   "mode": "flush",
+   "role": "accent",
+   "tag": "trench_strip_s"
+  }
+ ],
+ "settings": {
+  "bounds": [
+   -92.0,
+   -60.0,
+   184.0,
+   120.0
+  ],
+  "depot_limit": 83.0,
+  "spawn_step": 2.8,
+  "spawn_x": 86.0,
+  "spawn_z": -7.0,
+  "test_lane": [
+   -20.0,
+   0.0500000007450581,
+   0.0
+  ]
+ },
+ "source": "MapLayout",
+ "units": "m",
+ "waypoints": [
+  {
+   "mirror": true,
+   "name": "S",
+   "pos": [
+    -86.0,
+    0.0,
+    0.0
+   ],
+   "spawn": true
+  },
+  {
+   "mirror": true,
+   "name": "gN",
+   "pos": [
+    -82.5,
+    0.0,
+    -8.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "gS",
+   "pos": [
+    -82.5,
+    0.0,
+    8.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rN",
+   "pos": [
+    -80.5,
+    0.0,
+    -8.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rC",
+   "pos": [
+    -80.5,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rS",
+   "pos": [
+    -80.5,
+    0.0,
+    8.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rNn",
+   "pos": [
+    -80.5,
+    0.0,
+    -10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rSs",
+   "pos": [
+    -80.5,
+    0.0,
+    10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "xN",
+   "pos": [
+    -76.0,
+    0.0,
+    -10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "xC",
+   "pos": [
+    -75.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "xS",
+   "pos": [
+    -76.0,
+    0.0,
+    10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "A",
+   "point": true,
+   "pos": [
+    -64.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "a1",
+   "pos": [
+    -52.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "B",
+   "point": true,
+   "pos": [
+    -32.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "name": "C",
+   "point": true,
+   "pos": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "pa",
+   "pos": [
+    -47.0,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "w1",
+   "pos": [
+    -43.5,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "g1",
+   "pos": [
+    -41.5,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "g2",
+   "pos": [
+    -41.5,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "w2",
+   "pos": [
+    -38.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "pb",
+   "pos": [
+    -28.5,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "w3",
+   "pos": [
+    -25.5,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "g3",
+   "pos": [
+    -23.5,
+    0.0,
+    -6.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "g4",
+   "pos": [
+    -23.5,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "w4",
+   "pos": [
+    -19.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "b2",
+   "pos": [
+    -14.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lAb",
+   "pos": [
+    -61.5,
+    0.0,
+    -10.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lAm",
+   "pos": [
+    -61.5,
+    0.0,
+    -20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lAn",
+   "pos": [
+    -61.5,
+    0.0,
+    -33.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "aN1",
+   "pos": [
+    -48.0,
+    0.0,
+    -32.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lBn",
+   "pos": [
+    -29.5,
+    0.0,
+    -33.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "aN3",
+   "pos": [
+    -17.0,
+    0.0,
+    -32.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "n1",
+   "pos": [
+    -58.5,
+    0.0,
+    -31.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "n2",
+   "pos": [
+    -52.5,
+    0.0,
+    -31.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "q1",
+   "pos": [
+    -44.5,
+    0.0,
+    -34.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "q2",
+   "pos": [
+    -38.5,
+    0.0,
+    -34.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "n4",
+   "pos": [
+    -35.0,
+    0.0,
+    -33.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "s1",
+   "pos": [
+    -26.5,
+    0.0,
+    -31.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "s2",
+   "pos": [
+    -20.5,
+    0.0,
+    -31.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "u1",
+   "pos": [
+    -13.5,
+    0.0,
+    -34.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "u2",
+   "pos": [
+    -7.5,
+    0.0,
+    -34.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lBm",
+   "pos": [
+    -29.5,
+    0.0,
+    -20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lBb",
+   "pos": [
+    -29.5,
+    0.0,
+    -10.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "blN",
+   "pos": [
+    -48.0,
+    0.0,
+    -10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lobN1",
+   "pos": [
+    -48.0,
+    0.0,
+    -20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lobN2",
+   "pos": [
+    -48.0,
+    0.0,
+    -29.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "blM",
+   "pos": [
+    -17.0,
+    0.0,
+    -10.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lobM1",
+   "pos": [
+    -17.0,
+    0.0,
+    -20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "lobM2",
+   "pos": [
+    -17.0,
+    0.0,
+    -29.0
+   ]
+  },
+  {
+   "name": "cNb",
+   "pos": [
+    0.0,
+    0.0,
+    -10.0
+   ]
+  },
+  {
+   "name": "cNm",
+   "pos": [
+    0.0,
+    0.0,
+    -20.0
+   ]
+  },
+  {
+   "name": "cNn",
+   "pos": [
+    0.0,
+    0.0,
+    -33.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sA0",
+   "pos": [
+    -64.0,
+    0.0,
+    11.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sA1",
+   "pos": [
+    -64.0,
+    0.0,
+    20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sA2",
+   "pos": [
+    -64.0,
+    0.0,
+    32.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sA3",
+   "pos": [
+    -64.0,
+    0.0,
+    38.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "v1",
+   "pos": [
+    -58.5,
+    0.0,
+    36.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "v2",
+   "pos": [
+    -52.5,
+    0.0,
+    36.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "v3",
+   "pos": [
+    -48.0,
+    0.0,
+    38.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "z1",
+   "pos": [
+    -44.5,
+    0.0,
+    39.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "z2",
+   "pos": [
+    -38.5,
+    0.0,
+    39.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "y1",
+   "pos": [
+    -26.5,
+    0.0,
+    36.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "y2",
+   "pos": [
+    -20.5,
+    0.0,
+    36.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "y3",
+   "pos": [
+    -14.5,
+    0.0,
+    39.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "y4",
+   "pos": [
+    -7.5,
+    0.0,
+    39.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sB0",
+   "pos": [
+    -32.0,
+    0.0,
+    11.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sB1",
+   "pos": [
+    -32.0,
+    0.0,
+    20.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sB2",
+   "pos": [
+    -32.0,
+    0.0,
+    32.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "sB3",
+   "pos": [
+    -32.0,
+    0.0,
+    38.0
+   ]
+  },
+  {
+   "name": "sC0",
+   "pos": [
+    0.0,
+    0.0,
+    11.0
+   ]
+  },
+  {
+   "name": "sC1",
+   "pos": [
+    0.0,
+    0.0,
+    20.0
+   ]
+  },
+  {
+   "name": "sC2",
+   "pos": [
+    0.0,
+    0.0,
+    32.0
+   ]
+  },
+  {
+   "name": "sC3",
+   "pos": [
+    0.0,
+    0.0,
+    38.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tAt",
+   "pos": [
+    -75.0,
+    0.0,
+    11.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tAr",
+   "pos": [
+    -75.0,
+    0.0,
+    13.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tAq",
+   "pos": [
+    -75.0,
+    -4.0,
+    23.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tAb",
+   "pos": [
+    -75.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t1",
+   "pos": [
+    -67.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t1b",
+   "pos": [
+    -62.5,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "c1",
+   "pos": [
+    -58.5,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "c2",
+   "pos": [
+    -58.5,
+    -4.0,
+    17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "c3",
+   "pos": [
+    -54.0,
+    -4.0,
+    17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "c4",
+   "pos": [
+    -50.5,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tBb",
+   "pos": [
+    -47.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tBq",
+   "pos": [
+    -47.0,
+    -4.0,
+    23.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tBr",
+   "pos": [
+    -47.0,
+    0.0,
+    13.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tBt",
+   "pos": [
+    -47.0,
+    0.0,
+    11.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t3",
+   "pos": [
+    -38.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t4",
+   "pos": [
+    -32.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "d0",
+   "pos": [
+    -30.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "d1",
+   "pos": [
+    -26.5,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "d2",
+   "pos": [
+    -26.5,
+    -4.0,
+    17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "d3",
+   "pos": [
+    -22.5,
+    -4.0,
+    17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t5",
+   "pos": [
+    -21.5,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tCb",
+   "pos": [
+    -17.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tCq",
+   "pos": [
+    -17.0,
+    -4.0,
+    23.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tCr",
+   "pos": [
+    -17.0,
+    0.0,
+    13.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "tCt",
+   "pos": [
+    -17.0,
+    0.0,
+    11.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "t6",
+   "pos": [
+    -8.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "name": "tC",
+   "pos": [
+    0.0,
+    -4.0,
+    24.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rAb",
+   "pos": [
+    -67.5,
+    0.0,
+    -12.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rAt",
+   "pos": [
+    -67.5,
+    6.0,
+    -27.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "dkA",
+   "pos": [
+    -64.0,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2a",
+   "pos": [
+    -57.0,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2b",
+   "pos": [
+    -57.0,
+    6.0,
+    -17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2c",
+   "pos": [
+    -48.0,
+    6.0,
+    -17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2c2",
+   "pos": [
+    -45.0,
+    6.0,
+    -25.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2d",
+   "pos": [
+    -39.5,
+    6.0,
+    -25.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r2e",
+   "pos": [
+    -37.0,
+    6.0,
+    -28.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "dkB",
+   "pos": [
+    -32.0,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "dkBe",
+   "pos": [
+    -27.5,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rBt",
+   "pos": [
+    -35.5,
+    6.0,
+    -27.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "rBb",
+   "pos": [
+    -35.5,
+    0.0,
+    -12.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3a",
+   "pos": [
+    -25.0,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3b",
+   "pos": [
+    -25.0,
+    6.0,
+    -25.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3c",
+   "pos": [
+    -17.0,
+    6.0,
+    -25.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3c2",
+   "pos": [
+    -15.0,
+    6.0,
+    -17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3d",
+   "pos": [
+    -9.0,
+    6.0,
+    -17.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "r3e",
+   "pos": [
+    -7.0,
+    6.0,
+    -28.5
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "cBt",
+   "pos": [
+    -4.0,
+    6.0,
+    -27.0
+   ]
+  },
+  {
+   "mirror": true,
+   "name": "cBb",
+   "pos": [
+    -4.0,
+    0.0,
+    -12.0
+   ]
+  },
+  {
+   "name": "dkC",
+   "pos": [
+    0.0,
+    6.0,
+    -28.5
+   ]
+  }
+ ]
+}

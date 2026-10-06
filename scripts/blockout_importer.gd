@@ -32,7 +32,7 @@ static func build(b: MapBuilder, data: Dictionary) -> Array[String]:
 
 # Everything replace mode needs besides geometry. Returns:
 #   graph {"nodes": {name: Vector3}, "links": [[a, b, tag]]}, points (west to east), goal_names (same order),
-#   spawn_nodes [west, east], bounds, spawn_x, spawn_z, spawn_step, depot_limit, test_lane, errors.
+#   spawn_nodes [west, east], bounds, spawn_x, spawn_z, spawn_step, depot_limit, test_lane, audit, errors.
 # Waypoints with "mirror" also create an "e_<name>" node at -x, and links touching a mirrored node are mirrored,
 # exactly like MapLayout.graph(). Waypoints flagged "point" are the five capture points; "spawn" marks the depot node.
 static func resolve(data: Dictionary) -> Dictionary:
@@ -101,8 +101,46 @@ static func resolve(data: Dictionary) -> Dictionary:
 		"spawn_step": float(settings.get("spawn_step", 2.8)),
 		"depot_limit": float(settings.get("depot_limit", spawn_x - 3.0)),
 		"test_lane": test_lane,
+		"audit": settings.get("audit", {}),
 		"errors": errors,
 	}
+
+# Map verb features (see MapVerbs) with mirror applied: "mirror": true adds the copy reflected across x = 0.
+static func features(data: Dictionary) -> Array:
+	var out: Array = []
+	for f in data.get("features", []):
+		out.append(f)
+		if f.get("mirror", false):
+			out.append(_mirror_feature(f))
+	return out
+
+static func _flip(p: Array) -> Array:
+	return [-float(p[0]), p[1], p[2]]
+
+static func _mirror_feature(f: Dictionary) -> Dictionary:
+	var m: Dictionary = f.duplicate(true)
+	m.erase("mirror")
+	if m.has("tag"):
+		m.tag = str(m.tag) + "_e"
+	if m.has("min"):
+		var lo: Array = f.min
+		var hi: Array = f.max
+		m.min = [-float(hi[0]), lo[1], lo[2]]
+		m.max = [-float(lo[0]), hi[1], hi[2]]
+		if m.has("kick"):
+			m.kick = _flip(f.kick)
+	if m.has("from"):
+		m["from"] = _flip(f["from"])
+		m["to"] = _flip(f["to"])
+	if m.has("keys"):
+		var keys: Array = []
+		for k in f.keys:
+			var key: Array = [k[0], _flip(k[1])]
+			if k.size() > 2:
+				key.append([k[2][0], -float(k[2][1]), -float(k[2][2])])
+			keys.append(key)
+		m.keys = keys
+	return m
 
 # Graph only, same shape as MapLayout.graph().
 static func graph(data: Dictionary) -> Dictionary:

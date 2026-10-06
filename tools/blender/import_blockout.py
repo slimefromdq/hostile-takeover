@@ -130,6 +130,9 @@ def build_scene(doc, clear=True):
     for key, prop in SETTING_PROPS.items():
         if key in doc.get("settings", {}):
             scene[prop] = doc["settings"][key]
+    scene["ht_features"] = json.dumps(doc.get("features", []))
+    if doc.get("settings", {}).get("audit"):
+        scene["ht_audit"] = json.dumps(doc["settings"]["audit"])
     for rec in doc.get("objects", []):
         name = rec["tag"]
         col = _collection(bpy, scene, rec["role"].capitalize())

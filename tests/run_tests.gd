@@ -413,8 +413,8 @@ func test_hud() -> void:
 	check(rows[0].size() == 6 and rows[1].size() == 6, "scoreboard lists six fighters per team")
 	check(rows[1][0].k >= rows[1][-1].k, "scoreboard sorts by kills")
 	var mini: Minimap = game.hud.minimap
-	check(mini.to_map(CivicDividend.BOUNDS.position.x, CivicDividend.BOUNDS.position.y).is_zero_approx(), "minimap maps bounds origin to its corner")
-	check(mini.to_map(CivicDividend.BOUNDS.end.x, CivicDividend.BOUNDS.end.y).is_equal_approx(mini.size), "minimap maps bounds end to its far corner")
+	check(mini.to_map(CivicDividend.bounds.position.x, CivicDividend.bounds.position.y).is_zero_approx(), "minimap maps bounds origin to its corner")
+	check(mini.to_map(CivicDividend.bounds.end.x, CivicDividend.bounds.end.y).is_equal_approx(mini.size), "minimap maps bounds end to its far corner")
 	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
 	check(game.menu.cards.size() == Fighter.SPECS.size(), "menu has a card per class")
 	game.hud.hit(2)

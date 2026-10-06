@@ -31,6 +31,7 @@ class Blockout:
         self.waypoints = []
         self.links = []
         self.settings = {}
+        self.features = []
         self.warnings = []
 
     # ---- solids -------------------------------------------------------------
@@ -150,6 +151,7 @@ class Blockout:
             "mode": self.mode,
             "source": source,
             "settings": self.settings,
+            "features": self.features,
             "objects": self.objects,
             "waypoints": self.waypoints,
             "links": self.links,
