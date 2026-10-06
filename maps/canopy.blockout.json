@@ -119,11 +119,175 @@
      ],
      "p90": 60,
      "p99": 80
+    },
+    {
+     "label": "pump hall",
+     "xs": [
+      -88,
+      -64,
+      4
+     ],
+     "zs": [
+      -3,
+      0,
+      3
+     ],
+     "y": -11,
+     "rect": [
+      -90,
+      -5,
+      28,
+      10
+     ],
+     "p90": 30,
+     "p99": 40
+    },
+    {
+     "label": "cistern",
+     "xs": [
+      -26,
+      26,
+      4
+     ],
+     "zs": [
+      -3,
+      0,
+      3
+     ],
+     "y": -11,
+     "rect": [
+      -28,
+      -5,
+      56,
+      10
+     ],
+     "p90": 40,
+     "p99": 56
+    },
+    {
+     "label": "foundation line",
+     "xs": [
+      -41,
+      -37,
+      2
+     ],
+     "zs": [
+      -40,
+      -34,
+      -26,
+      -16,
+      -10
+     ],
+     "y": -6,
+     "azimuths": "ns",
+     "rect": [
+      -42,
+      -44,
+      6,
+      37
+     ],
+     "p90": 25,
+     "p99": 40
+    },
+    {
+     "label": "cellar spine",
+     "xs": [
+      -77,
+      -73,
+      2
+     ],
+     "zs": [
+      12,
+      20,
+      30,
+      40,
+      50,
+      58
+     ],
+     "y": -6,
+     "azimuths": "ns",
+     "rect": [
+      -78,
+      7,
+      6,
+      55
+     ],
+     "p90": 55,
+     "p99": 56
     }
    ]
   }
  },
  "features": [
+  {
+   "type": "climb",
+   "tag": "pump_ladder",
+   "face": "-z",
+   "min": [
+    -89,
+    -11.0,
+    2
+   ],
+   "max": [
+    -88,
+    -5.4,
+    3.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "pit_ladder",
+   "face": "-x",
+   "min": [
+    -44,
+    -6.0,
+    -51
+   ],
+   "max": [
+    -42.8,
+    0.6,
+    -49
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "vault_ladder",
+   "face": "+x",
+   "min": [
+    -69.2,
+    -6.0,
+    40.5
+   ],
+   "max": [
+    -68,
+    0.6,
+    42.5
+   ],
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "cellar_launch",
+   "min": [
+    -77,
+    -5.7,
+    60
+   ],
+   "max": [
+    -73,
+    -5.0,
+    62
+   ],
+   "power": 20,
+   "kick": [
+    0,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
   {
    "type": "climb",
    "tag": "spire_n_ladder",
@@ -342,12 +506,20 @@
      0,
      [
       -27,
-      0.0,
+      -6.0,
       -48
      ]
     ],
     [
-     8,
+     6,
+     [
+      -27,
+      -6.0,
+      -48
+     ]
+    ],
+    [
+     9,
      [
       -27,
       0.0,
@@ -355,7 +527,15 @@
      ]
     ],
     [
-     11,
+     15,
+     [
+      -27,
+      0.0,
+      -48
+     ]
+    ],
+    [
+     18,
      [
       -27,
       5.75,
@@ -363,7 +543,7 @@
      ]
     ],
     [
-     14,
+     21,
      [
       -27,
       5.75,
@@ -371,7 +551,7 @@
      ]
     ],
     [
-     17,
+     24,
      [
       -27,
       11.75,
@@ -379,7 +559,7 @@
      ]
     ],
     [
-     20,
+     27,
      [
       -27,
       11.75,
@@ -387,7 +567,7 @@
      ]
     ],
     [
-     23,
+     30,
      [
       -27,
       17.75,
@@ -395,7 +575,7 @@
      ]
     ],
     [
-     31,
+     38,
      [
       -27,
       17.75,
@@ -403,15 +583,23 @@
      ]
     ],
     [
-     40,
+     46,
      [
       -27,
-      0.0,
+      -6.0,
+      -48
+     ]
+    ],
+    [
+     52,
+     [
+      -27,
+      -6.0,
       -48
      ]
     ]
    ],
-   "period": 40,
+   "period": 52,
    "mirror": true
   },
   {
@@ -1267,6 +1455,182 @@
     -64.0
    ],
    "max": [
+    -84.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -84.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -77.0,
+    0.0,
+    -23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -84.0,
+    -1.0,
+    -7.0
+   ],
+   "max": [
+    -77.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -77.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -76.0,
+    0.0,
+    -23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -77.0,
+    -1.0,
+    -7.0
+   ],
+   "max": [
+    -76.0,
+    0.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -77.0,
+    -1.0,
+    62.0
+   ],
+   "max": [
+    -76.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -76.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -73.0,
+    0.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -76.0,
+    -1.0,
+    62.0
+   ],
+   "max": [
+    -73.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -73.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -72.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -72.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -68.0,
+    0.0,
+    40.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -72.0,
+    -1.0,
+    43.0
+   ],
+   "max": [
+    -68.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -68.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
     -64.0,
     0.0,
     64.0
@@ -1347,6 +1711,70 @@
     -64.0
    ],
    "max": [
+    -50.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -50.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -44.0,
+    0.0,
+    24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -50.0,
+    -1.0,
+    40.5
+   ],
+   "max": [
+    -44.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -44.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -42.0,
+    0.0,
+    -52.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -44.0,
+    -1.0,
+    -48.0
+   ],
+   "max": [
     -42.0,
     0.0,
     64.0
@@ -1363,7 +1791,23 @@
     -64.0
    ],
    "max": [
-    -36.0,
+    -41.0,
+    0.0,
+    -52.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -42.0,
+    -1.0,
+    -48.0
+   ],
+   "max": [
+    -41.0,
     0.0,
     28.0
    ],
@@ -1375,6 +1819,38 @@
    "role": "walk",
    "min": [
     -42.0,
+    -1.0,
+    58.0
+   ],
+   "max": [
+    -41.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -41.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -36.0,
+    0.0,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -41.0,
     -1.0,
     58.0
    ],
@@ -1443,7 +1919,7 @@
     -64.0
    ],
    "max": [
-    -28.0,
+    -29.5,
     0.0,
     7.0
    ],
@@ -1455,6 +1931,54 @@
    "role": "walk",
    "min": [
     -34.0,
+    -1.0,
+    23.0
+   ],
+   "max": [
+    -29.5,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -29.5,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -28.0,
+    0.0,
+    -50.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -29.5,
+    -1.0,
+    -45.5
+   ],
+   "max": [
+    -28.0,
+    0.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -29.5,
     -1.0,
     23.0
    ],
@@ -1471,6 +1995,38 @@
    "role": "walk",
    "min": [
     -28.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -24.5,
+    0.0,
+    -50.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -28.0,
+    -1.0,
+    -45.5
+   ],
+   "max": [
+    -24.5,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -24.5,
     -1.0,
     -64.0
    ],
@@ -1831,6 +2387,134 @@
     -7.0
    ],
    "max": [
+    -87.0,
+    -6.0,
+    2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -90.0,
+    -7.0,
+    5.0
+   ],
+   "max": [
+    -87.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -87.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    -76.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -76.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    -62.0,
+    -6.0,
+    -2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -76.0,
+    -7.0,
+    2.0
+   ],
+   "max": [
+    -62.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -62.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    -28.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -28.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    -14.0,
+    -6.0,
+    -2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -28.0,
+    -7.0,
+    2.0
+   ],
+   "max": [
+    -14.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -14.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
     0.0,
     -6.0,
     7.0
@@ -1863,6 +2547,22 @@
     -7.0
    ],
    "max": [
+    -84.0,
+    -1.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_n",
+   "role": "wall",
+   "min": [
+    -76.0,
+    -6.0,
+    -7.0
+   ],
+   "max": [
     -64.0,
     -1.0,
     -5.0
@@ -1879,6 +2579,22 @@
     -7.0
    ],
    "max": [
+    -42.0,
+    -1.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_n",
+   "role": "wall",
+   "min": [
+    -36.0,
+    -6.0,
+    -7.0
+   ],
+   "max": [
     -4.0,
     -1.0,
     -5.0
@@ -1891,6 +2607,38 @@
    "role": "wall",
    "min": [
     -90.0,
+    -6.0,
+    5.0
+   ],
+   "max": [
+    -78.0,
+    -1.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_s",
+   "role": "wall",
+   "min": [
+    -72.0,
+    -6.0,
+    5.0
+   ],
+   "max": [
+    -50.0,
+    -1.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_s",
+   "role": "wall",
+   "min": [
+    -44.0,
     -6.0,
     5.0
    ],
@@ -1914,6 +2662,58 @@
     0.0,
     -1.0,
     7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "stair_s0",
+   "role": "walk",
+   "min": [
+    -84.0,
+    -7.0,
+    -23.0
+   ],
+   "max": [
+    -76.0,
+    0.0,
+    -7.0
+   ],
+   "mirror": true,
+   "dir": "-z",
+   "y_floor": -7.0,
+   "y_start": -6.0,
+   "y_end": 0.0
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s0_wall_w",
+   "role": "wall",
+   "min": [
+    -86.0,
+    -6.0,
+    -23.0
+   ],
+   "max": [
+    -84.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s0_wall_e",
+   "role": "wall",
+   "min": [
+    -76.0,
+    -6.0,
+    -23.0
+   ],
+   "max": [
+    -74.0,
+    -1.0,
+    -7.0
    ],
    "mirror": true
   },
@@ -2061,12 +2861,12 @@
    "tag": "tunnel_pillar_a",
    "role": "wall",
    "min": [
-    -80.0,
+    -86.0,
     -6.0,
     -5.0
    ],
    "max": [
-    -78.0,
+    -84.0,
     -1.0,
     1.0
    ],
@@ -2077,12 +2877,12 @@
    "tag": "tunnel_pillar_b",
    "role": "wall",
    "min": [
-    -74.0,
+    -80.0,
     -6.0,
     -1.0
    ],
    "max": [
-    -72.0,
+    -78.0,
     -1.0,
     5.0
    ],
@@ -2125,12 +2925,12 @@
    "tag": "tunnel_pillar_a",
    "role": "wall",
    "min": [
-    -22.0,
+    -12.0,
     -6.0,
     -5.0
    ],
    "max": [
-    -20.0,
+    -10.0,
     -1.0,
     1.0
    ],
@@ -2141,12 +2941,12 @@
    "tag": "tunnel_pillar_b",
    "role": "wall",
    "min": [
-    -16.0,
+    -6.0,
     -6.0,
     -1.0
    ],
    "max": [
-    -14.0,
+    -4.0,
     -1.0,
     5.0
    ],
@@ -2169,6 +2969,873 @@
    "mirror": true,
    "color": "#ff6a2b",
    "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "pump_floor",
+   "role": "walk",
+   "min": [
+    -90.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    -76.0,
+    -11.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_end",
+   "role": "wall",
+   "min": [
+    -92.0,
+    -12.0,
+    -7.0
+   ],
+   "max": [
+    -90.0,
+    -7.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_wall_n",
+   "role": "wall",
+   "min": [
+    -90.0,
+    -12.0,
+    -7.0
+   ],
+   "max": [
+    -60.0,
+    -7.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_wall_s",
+   "role": "wall",
+   "min": [
+    -90.0,
+    -12.0,
+    5.0
+   ],
+   "max": [
+    -60.0,
+    -7.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_wall_e",
+   "role": "wall",
+   "min": [
+    -62.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    -60.0,
+    -7.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "pump_ramp",
+   "role": "walk",
+   "min": [
+    -76.0,
+    -12.0,
+    -2.0
+   ],
+   "max": [
+    -62.0,
+    -6.0,
+    2.0
+   ],
+   "mirror": true,
+   "dir": "+x",
+   "y_floor": -12.0,
+   "y_start": -11.0,
+   "y_end": -6.0
+  },
+  {
+   "kind": "block",
+   "tag": "pump_ramp_fill_n",
+   "role": "wall",
+   "min": [
+    -76.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    -62.0,
+    -7.0,
+    -2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_ramp_fill_s",
+   "role": "wall",
+   "min": [
+    -76.0,
+    -12.0,
+    2.0
+   ],
+   "max": [
+    -62.0,
+    -7.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pump_pier",
+   "role": "wall",
+   "min": [
+    -90.0,
+    -11.0,
+    0.0
+   ],
+   "max": [
+    -87.0,
+    -7.0,
+    2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "pump_ladder_strip",
+   "role": "accent",
+   "min": [
+    -89,
+    -11.0,
+    1.96
+   ],
+   "max": [
+    -88,
+    -6.0,
+    2
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pump_tank",
+   "role": "cover",
+   "min": [
+    -83.5,
+    -11.0,
+    -4.5
+   ],
+   "max": [
+    -80.5,
+    -8.0,
+    -1.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "pump_tank",
+   "role": "cover",
+   "min": [
+    -83.5,
+    -11.0,
+    1.5
+   ],
+   "max": [
+    -80.5,
+    -8.0,
+    4.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_floor",
+   "role": "walk",
+   "min": [
+    -14.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    0.0,
+    -11.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_wall_n",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -12.0,
+    -7.0
+   ],
+   "max": [
+    0.0,
+    -7.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_wall_s",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -12.0,
+    5.0
+   ],
+   "max": [
+    0.0,
+    -7.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_wall_w",
+   "role": "wall",
+   "min": [
+    -30.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    -28.0,
+    -7.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "cistern_ramp",
+   "role": "walk",
+   "min": [
+    -28.0,
+    -12.0,
+    -2.0
+   ],
+   "max": [
+    -14.0,
+    -6.0,
+    2.0
+   ],
+   "mirror": true,
+   "dir": "-x",
+   "y_floor": -12.0,
+   "y_start": -11.0,
+   "y_end": -6.0
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_ramp_fill_n",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -12.0,
+    -5.0
+   ],
+   "max": [
+    -14.0,
+    -7.0,
+    -2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_ramp_fill_s",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -12.0,
+    2.0
+   ],
+   "max": [
+    -14.0,
+    -7.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_buttress_n",
+   "role": "wall",
+   "min": [
+    -12.0,
+    -11.0,
+    -5.0
+   ],
+   "max": [
+    -10.0,
+    -7.0,
+    -2.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cistern_buttress_s",
+   "role": "wall",
+   "min": [
+    -4.0,
+    -11.0,
+    2.0
+   ],
+   "max": [
+    -2.0,
+    -7.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "found_floor",
+   "role": "walk",
+   "min": [
+    -42.0,
+    -7.0,
+    -44.0
+   ],
+   "max": [
+    -36.0,
+    -6.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "found_wall_w",
+   "role": "wall",
+   "min": [
+    -44.0,
+    -6.0,
+    -42.0
+   ],
+   "max": [
+    -42.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "found_wall_e",
+   "role": "wall",
+   "min": [
+    -36.0,
+    -6.0,
+    -42.0
+   ],
+   "max": [
+    -34.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "found_baffle_a",
+   "role": "wall",
+   "min": [
+    -42.0,
+    -6.0,
+    -30.0
+   ],
+   "max": [
+    -40.0,
+    -1.0,
+    -22.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "found_baffle_b",
+   "role": "wall",
+   "min": [
+    -38.0,
+    -6.0,
+    -38.0
+   ],
+   "max": [
+    -36.0,
+    -1.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_floor",
+   "role": "walk",
+   "min": [
+    -44.0,
+    -7.0,
+    -56.0
+   ],
+   "max": [
+    -24.0,
+    -6.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_wall_n",
+   "role": "wall",
+   "min": [
+    -46.0,
+    -6.0,
+    -58.0
+   ],
+   "max": [
+    -22.0,
+    -1.0,
+    -56.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_wall_w",
+   "role": "wall",
+   "min": [
+    -46.0,
+    -6.0,
+    -56.0
+   ],
+   "max": [
+    -44.0,
+    -1.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_wall_e",
+   "role": "wall",
+   "min": [
+    -24.0,
+    -6.0,
+    -56.0
+   ],
+   "max": [
+    -22.0,
+    -1.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_wall_sw",
+   "role": "wall",
+   "min": [
+    -46.0,
+    -6.0,
+    -44.0
+   ],
+   "max": [
+    -42.0,
+    -1.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_wall_se",
+   "role": "wall",
+   "min": [
+    -36.0,
+    -6.0,
+    -44.0
+   ],
+   "max": [
+    -24.0,
+    -1.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "pit_crate",
+   "role": "cover",
+   "min": [
+    -36.0,
+    -6.0,
+    -54.0
+   ],
+   "max": [
+    -33.0,
+    -3.5,
+    -51.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "pit_ladder_strip",
+   "role": "accent",
+   "min": [
+    -44.04,
+    -6.0,
+    -51
+   ],
+   "max": [
+    -44,
+    0,
+    -49
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_floor",
+   "role": "walk",
+   "min": [
+    -50.0,
+    -7.0,
+    7.0
+   ],
+   "max": [
+    -44.0,
+    -6.0,
+    24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_wall_w",
+   "role": "wall",
+   "min": [
+    -52.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -50.0,
+    -1.0,
+    24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_wall_e",
+   "role": "wall",
+   "min": [
+    -44.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -42.0,
+    -1.0,
+    24.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "culvert_ramp",
+   "role": "walk",
+   "min": [
+    -50.0,
+    -7.0,
+    24.0
+   ],
+   "max": [
+    -44.0,
+    0.0,
+    40.5
+   ],
+   "mirror": true,
+   "dir": "+z",
+   "y_floor": -7.0,
+   "y_start": -6.0,
+   "y_end": 0.0
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_slot_wall_w",
+   "role": "wall",
+   "min": [
+    -52.0,
+    -6.0,
+    24.0
+   ],
+   "max": [
+    -50.0,
+    -1.0,
+    40.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_slot_wall_e",
+   "role": "wall",
+   "min": [
+    -44.0,
+    -6.0,
+    24.0
+   ],
+   "max": [
+    -42.0,
+    -1.0,
+    26.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "culvert_slot_wall_e2",
+   "role": "wall",
+   "min": [
+    -44.0,
+    -6.0,
+    26.0
+   ],
+   "max": [
+    -42.0,
+    -4.0,
+    40.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_floor",
+   "role": "walk",
+   "min": [
+    -78.0,
+    -7.0,
+    7.0
+   ],
+   "max": [
+    -72.0,
+    -6.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_wall_w",
+   "role": "wall",
+   "min": [
+    -80.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -78.0,
+    -1.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_wall_e1",
+   "role": "wall",
+   "min": [
+    -72.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -70.0,
+    -1.0,
+    31.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_wall_e2",
+   "role": "wall",
+   "min": [
+    -72.0,
+    -6.0,
+    45.0
+   ],
+   "max": [
+    -70.0,
+    -1.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_wall_s",
+   "role": "wall",
+   "min": [
+    -80.0,
+    -6.0,
+    62.0
+   ],
+   "max": [
+    -70.0,
+    -1.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "vault_floor",
+   "role": "walk",
+   "min": [
+    -72.0,
+    -7.0,
+    33.0
+   ],
+   "max": [
+    -65.0,
+    -6.0,
+    43.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "vault_wall_n",
+   "role": "wall",
+   "min": [
+    -72.0,
+    -6.0,
+    31.0
+   ],
+   "max": [
+    -63.0,
+    -1.0,
+    33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "vault_wall_s",
+   "role": "wall",
+   "min": [
+    -72.0,
+    -6.0,
+    43.0
+   ],
+   "max": [
+    -63.0,
+    -1.0,
+    45.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "vault_wall_e",
+   "role": "wall",
+   "min": [
+    -65.0,
+    -6.0,
+    33.0
+   ],
+   "max": [
+    -63.0,
+    -1.0,
+    43.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "vault_pier",
+   "role": "wall",
+   "min": [
+    -68.0,
+    -6.0,
+    40.0
+   ],
+   "max": [
+    -65.0,
+    -1.0,
+    43.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "vault_ladder_strip",
+   "role": "accent",
+   "min": [
+    -68.04,
+    -6.0,
+    40.5
+   ],
+   "max": [
+    -68,
+    0,
+    42.5
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "cellar_pad",
+   "role": "accent",
+   "min": [
+    -77.0,
+    -6.0,
+    60.0
+   ],
+   "max": [
+    -73.0,
+    -5.75,
+    62.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
   },
   {
    "kind": "block",
@@ -3026,12 +4693,12 @@
    "tag": "site_container",
    "role": "cover",
    "min": [
-    -84.0,
+    -75.0,
     0.0,
     -22.0
    ],
    "max": [
-    -76.0,
+    -70.0,
     2.5,
     -18.0
    ],
@@ -3961,22 +5628,6 @@
    "min": [
     -47.75,
     0.0,
-    34.25
-   ],
-   "max": [
-    -44.25,
-    3.0,
-    37.75
-   ],
-   "mirror": true
-  },
-  {
-   "kind": "cylinder",
-   "tag": "tank",
-   "role": "cover",
-   "min": [
-    -47.75,
-    0.0,
     48.25
    ],
    "max": [
@@ -4445,7 +6096,7 @@
   {
    "name": "tW",
    "pos": [
-    -86,
+    -88,
     -6,
     0
    ],
@@ -4454,7 +6105,7 @@
   {
    "name": "p1a",
    "pos": [
-    -79,
+    -85,
     -6,
     3.5
    ],
@@ -4463,7 +6114,7 @@
   {
    "name": "p1b",
    "pos": [
-    -76,
+    -82,
     -6,
     0
    ],
@@ -4472,9 +6123,36 @@
   {
    "name": "p1c",
    "pos": [
-    -73,
+    -79,
     -6,
     -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p1e",
+   "pos": [
+    -77,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p1d",
+   "pos": [
+    -61,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "tA",
+   "pos": [
+    -60,
+    -6,
+    0
    ],
    "mirror": true
   },
@@ -4506,47 +6184,47 @@
    "mirror": true
   },
   {
-   "name": "p3a",
+   "name": "tB",
    "pos": [
-    -21,
+    -32,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "tBs",
+   "pos": [
+    -30,
     -6,
     3.5
    ],
    "mirror": true
   },
   {
+   "name": "p3a",
+   "pos": [
+    -13,
+    -6,
+    4
+   ],
+   "mirror": true
+  },
+  {
    "name": "p3b",
    "pos": [
-    -18,
+    -8,
     -6,
-    0
+    1.5
    ],
    "mirror": true
   },
   {
    "name": "p3c",
    "pos": [
-    -15,
+    -8,
     -6,
     -3.5
-   ],
-   "mirror": true
-  },
-  {
-   "name": "tA",
-   "pos": [
-    -60,
-    -6,
-    0
-   ],
-   "mirror": true
-  },
-  {
-   "name": "tB",
-   "pos": [
-    -32,
-    -6,
-    0
    ],
    "mirror": true
   },
@@ -4557,6 +6235,320 @@
     -6,
     0
    ]
+  },
+  {
+   "name": "pt",
+   "pos": [
+    -62,
+    -6.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "pm",
+   "pos": [
+    -69,
+    -8.5,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "pb",
+   "pos": [
+    -75,
+    -10.64,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "pr",
+   "pos": [
+    -84,
+    -11.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cw0",
+   "pos": [
+    -28,
+    -6.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cw1",
+   "pos": [
+    -21,
+    -8.5,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cw2",
+   "pos": [
+    -15,
+    -10.64,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cw3",
+   "pos": [
+    -10,
+    -11.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cC",
+   "pos": [
+    0,
+    -11.0,
+    0
+   ]
+  },
+  {
+   "name": "s0b",
+   "pos": [
+    -80,
+    -6,
+    -6
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s0m",
+   "pos": [
+    -80,
+    -3,
+    -15
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s0t",
+   "pos": [
+    -80,
+    0,
+    -23
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s0n",
+   "pos": [
+    -80,
+    0,
+    -25
+   ],
+   "mirror": true
+  },
+  {
+   "name": "fb",
+   "pos": [
+    -39,
+    -6,
+    -6
+   ],
+   "mirror": true
+  },
+  {
+   "name": "f1",
+   "pos": [
+    -39,
+    -6,
+    -15
+   ],
+   "mirror": true
+  },
+  {
+   "name": "f2",
+   "pos": [
+    -38,
+    -6,
+    -26
+   ],
+   "mirror": true
+  },
+  {
+   "name": "f3",
+   "pos": [
+    -40,
+    -6,
+    -34
+   ],
+   "mirror": true
+  },
+  {
+   "name": "f4",
+   "pos": [
+    -39,
+    -6,
+    -42
+   ],
+   "mirror": true
+  },
+  {
+   "name": "pit1",
+   "pos": [
+    -39,
+    -6,
+    -48
+   ],
+   "mirror": true
+  },
+  {
+   "name": "pit2",
+   "pos": [
+    -31,
+    -6,
+    -49
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu0",
+   "pos": [
+    -47,
+    -6,
+    6
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu1",
+   "pos": [
+    -47,
+    -6,
+    16
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu2",
+   "pos": [
+    -47,
+    -6,
+    24
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu3",
+   "pos": [
+    -47,
+    -3.0,
+    32.25
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu4",
+   "pos": [
+    -47,
+    0,
+    40.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cu5",
+   "pos": [
+    -47,
+    0,
+    42
+   ],
+   "mirror": true
+  },
+  {
+   "name": "e3",
+   "pos": [
+    -52,
+    0,
+    46
+   ],
+   "mirror": true
+  },
+  {
+   "name": "e2",
+   "pos": [
+    -62,
+    0,
+    46
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cm1",
+   "pos": [
+    -77,
+    -6,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cs0",
+   "pos": [
+    -75,
+    -6,
+    9
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cs2",
+   "pos": [
+    -75,
+    -6,
+    30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cs2b",
+   "pos": [
+    -75,
+    -6,
+    36
+   ],
+   "mirror": true
+  },
+  {
+   "name": "vv",
+   "pos": [
+    -69,
+    -6,
+    37
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cs3",
+   "pos": [
+    -75,
+    -6,
+    48
+   ],
+   "mirror": true
+  },
+  {
+   "name": "cs4",
+   "pos": [
+    -75,
+    -6,
+    57
+   ],
+   "mirror": true
   },
   {
    "name": "s1b",
@@ -4899,37 +6891,27 @@
   ],
   [
    "p1c",
+   "p1e",
+   "trn"
+  ],
+  [
+   "p1c",
+   "s0b",
+   "trn"
+  ],
+  [
+   "p1e",
+   "p1d",
+   "trn"
+  ],
+  [
+   "p1e",
+   "cm1",
+   "trn"
+  ],
+  [
+   "p1d",
    "tA",
-   "trn"
-  ],
-  [
-   "p2a",
-   "p2b",
-   "trn"
-  ],
-  [
-   "p2b",
-   "p2c",
-   "trn"
-  ],
-  [
-   "p2c",
-   "tB",
-   "trn"
-  ],
-  [
-   "p3a",
-   "p3b",
-   "trn"
-  ],
-  [
-   "p3b",
-   "p3c",
-   "trn"
-  ],
-  [
-   "p3c",
-   "tC",
    "trn"
   ],
   [
@@ -4943,8 +6925,38 @@
    "trn"
   ],
   [
+   "tA",
+   "pt",
+   "trn"
+  ],
+  [
+   "p2a",
+   "p2b",
+   "trn"
+  ],
+  [
+   "p2b",
+   "p2c",
+   "trn"
+  ],
+  [
+   "p2b",
+   "cu0",
+   "trn"
+  ],
+  [
+   "p2c",
    "tB",
-   "p3a",
+   "trn"
+  ],
+  [
+   "p2c",
+   "fb",
+   "trn"
+  ],
+  [
+   "tB",
+   "tBs",
    "trn"
   ],
   [
@@ -4953,8 +6965,188 @@
    "trn"
   ],
   [
+   "tB",
+   "cw0",
+   "trn"
+  ],
+  [
+   "tBs",
+   "p3a",
+   "trn"
+  ],
+  [
+   "p3a",
+   "p3b",
+   "trn"
+  ],
+  [
+   "p3b",
+   "p3c",
+   "trn"
+  ],
+  [
+   "p3c",
+   "tC",
+   "trn"
+  ],
+  [
    "tC",
    "s3b",
+   "trn"
+  ],
+  [
+   "pt",
+   "pm",
+   "trn"
+  ],
+  [
+   "pm",
+   "pb",
+   "trn"
+  ],
+  [
+   "pb",
+   "pr",
+   "trn"
+  ],
+  [
+   "cw0",
+   "cw1",
+   "trn"
+  ],
+  [
+   "cw1",
+   "cw2",
+   "trn"
+  ],
+  [
+   "cw2",
+   "cw3",
+   "trn"
+  ],
+  [
+   "cw3",
+   "cC",
+   "trn"
+  ],
+  [
+   "s0b",
+   "s0m",
+   "trn"
+  ],
+  [
+   "s0m",
+   "s0t",
+   "trn"
+  ],
+  [
+   "s0t",
+   "s0n",
+   "aln"
+  ],
+  [
+   "s0n",
+   "n1b",
+   "aln"
+  ],
+  [
+   "fb",
+   "f1",
+   "trn"
+  ],
+  [
+   "f1",
+   "f2",
+   "trn"
+  ],
+  [
+   "f2",
+   "f3",
+   "trn"
+  ],
+  [
+   "f3",
+   "f4",
+   "trn"
+  ],
+  [
+   "f4",
+   "pit1",
+   "trn"
+  ],
+  [
+   "pit1",
+   "pit2",
+   "trn"
+  ],
+  [
+   "cu0",
+   "cu1",
+   "trn"
+  ],
+  [
+   "cu1",
+   "cu2",
+   "trn"
+  ],
+  [
+   "cu2",
+   "cu3",
+   "trn"
+  ],
+  [
+   "cu3",
+   "cu4",
+   "trn"
+  ],
+  [
+   "cu4",
+   "cu5",
+   "trn"
+  ],
+  [
+   "cu5",
+   "e3",
+   "aln"
+  ],
+  [
+   "e3",
+   "e2",
+   "aln"
+  ],
+  [
+   "e2",
+   "m2",
+   "aln"
+  ],
+  [
+   "cm1",
+   "cs0",
+   "trn"
+  ],
+  [
+   "cs0",
+   "cs2",
+   "trn"
+  ],
+  [
+   "cs2",
+   "cs2b",
+   "trn"
+  ],
+  [
+   "cs2b",
+   "cs3",
+   "trn"
+  ],
+  [
+   "cs2b",
+   "vv",
+   "trn"
+  ],
+  [
+   "cs3",
+   "cs4",
    "trn"
   ],
   [

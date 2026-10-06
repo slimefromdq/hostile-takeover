@@ -15,6 +15,7 @@ MODE = "replace"
 TITLE = "Concrete Canopy"
 
 TUNNEL_Y = -6.0          # top of the tunnel floor
+SUMP_Y = -11.0           # top of the sump floor (pump hall, cistern): 4 m of headroom under the tunnel floor
 MID = 6.0
 ROOF = 12.0
 
@@ -49,6 +50,10 @@ def build(b):
                 {"label": "yard lane", "xs": [-22, 22, 4], "zs": [-58, -40, -22, 22, 40, 58], "y": 0, "azimuths": "ns", "rect": [-26, -62, 52, 124], "p50": 45, "p90": 90, "max": 125},
                 {"label": "market alley", "xs": [-84, -52, 4], "zs": [30, 46], "y": 0, "rect": [-86, 28, 36, 20], "p90": 45, "p99": 60},
                 {"label": "tunnel", "xs": [-88, 88, 4], "zs": [-3, 0, 3], "y": -6, "rect": [-96, -5, 192, 10], "p90": 60, "p99": 80},
+                {"label": "pump hall", "xs": [-88, -64, 4], "zs": [-3, 0, 3], "y": -11, "rect": [-90, -5, 28, 10], "p90": 30, "p99": 40},
+                {"label": "cistern", "xs": [-26, 26, 4], "zs": [-3, 0, 3], "y": -11, "rect": [-28, -5, 56, 10], "p90": 40, "p99": 56},
+                {"label": "foundation line", "xs": [-41, -37, 2], "zs": [-40, -34, -26, -16, -10], "y": -6, "azimuths": "ns", "rect": [-42, -44, 6, 37], "p90": 25, "p99": 40},
+                {"label": "cellar spine", "xs": [-77, -73, 2], "zs": [12, 20, 30, 40, 50, 58], "y": -6, "azimuths": "ns", "rect": [-78, 7, 6, 55], "p90": 55, "p99": 56},
             ])
     stage_shell(b)
     stage_underground(b)
@@ -62,13 +67,17 @@ def build(b):
 
 # ---- shell: floor, perimeter, depot, boulevard --------------------------------------------------
 
-STAIR_HOLES = [[-64, -23, -56, -7], [-36, 7, -28, 23], [-4, -23, 0, -7]]
+STAIR_HOLES = [[-84, -23, -76, -7], [-64, -23, -56, -7], [-36, 7, -28, 23], [-4, -23, 0, -7]]
 CANAL_HOLES = [[-42, 28, -34, 58]]
 VENT_HOLES = [[-56, -2, -52, 2]]
+# Access into the new underground: culvert stair slot, hoist well, foundation ladder hatch, market-hall hatch, cellar launch vent.
+DEPTH_HOLES = [[-50, 24, -44, 40.5], [-29.5, -50.5, -24.5, -45.5], [-44, -52, -41, -48], [-72, 40, -68, 43], [-77, 58, -73, 62]]
+# Holes in the tunnel floor (over the sump): pump-hall ramp slot, pump-hall ladder hatch, cistern ramp slot.
+TUNNEL_HOLES = [[-76, -2, -62, 2], [-90, 2, -87, 5], [-28, -2, -14, 2]]
 
 
 def stage_shell(b):
-    slab_with_holes(b, -96, -64, 0, 64, -1, 0, STAIR_HOLES + CANAL_HOLES + VENT_HOLES, "walk", "floor")
+    slab_with_holes(b, -96, -64, 0, 64, -1, 0, STAIR_HOLES + CANAL_HOLES + VENT_HOLES + DEPTH_HOLES, "walk", "floor")
     b.block(-96, -64, 96, -62, 0, 34, "tower", "wall_n")
     b.block(-96, 62, 96, 64, 0, 34, "tower", "wall_s")
     # Depot: a cavity (x -93..-87, z -8..8) carved from touching blocks: back wall, north/south masses, roof and a
@@ -91,14 +100,18 @@ def stage_shell(b):
 # ---- underground: subway tunnel and stairwells ------------------------------------------------------
 
 def stage_underground(b):
-    b.block(-90, -7, 0, 7, TUNNEL_Y - 1, TUNNEL_Y, "walk", "tunnel_floor", mirror=True)
+    slab_with_holes(b, -90, -7, 0, 7, TUNNEL_Y - 1, TUNNEL_Y, TUNNEL_HOLES, "walk", "tunnel_floor")
     b.block(-92, -7, -90, 7, TUNNEL_Y - 1, -1, "wall", "tunnel_end", mirror=True)
-    # North wall: openings for stairwells S1 (x -64..-56) and S3 (centre). South wall: opening for S2 (x -36..-28).
-    for x0, x1 in ((-90, -64), (-56, -4)):
+    # North wall: openings for stairwells S0 (x -84..-76), S1 (-64..-56), the Foundation Line (-42..-36) and S3 (centre).
+    for x0, x1 in ((-90, -84), (-76, -64), (-56, -42), (-36, -4)):
         b.block(x0, -7, x1, -5, TUNNEL_Y, -1, "wall", "tunnel_wall_n", mirror=True)
-    for x0, x1 in ((-90, -36), (-28, 0)):
+    # South wall: openings for the market cellars (-78..-72), the culvert (-50..-44) and S2 (-36..-28).
+    for x0, x1 in ((-90, -78), (-72, -50), (-44, -36), (-28, 0)):
         b.block(x0, 5, x1, 7, TUNNEL_Y, -1, "wall", "tunnel_wall_s", mirror=True)
     # Stairwells: long gentle ramps (20 degrees) up to street level, enclosed so no void is exposed.
+    b.ramp(-84, -23, -76, -7, TUNNEL_Y - 1, TUNNEL_Y, 0, "-z", "walk", "stair_s0", mirror=True)
+    b.block(-86, -23, -84, -7, TUNNEL_Y, -1, "wall", "stair_s0_wall_w", mirror=True)
+    b.block(-76, -23, -74, -7, TUNNEL_Y, -1, "wall", "stair_s0_wall_e", mirror=True)
     b.ramp(-64, -23, -56, -7, TUNNEL_Y - 1, TUNNEL_Y, 0, "-z", "walk", "stair_s1", mirror=True)
     b.block(-66, -23, -64, -7, TUNNEL_Y, -1, "wall", "stair_s1_wall_w", mirror=True)
     b.block(-56, -23, -54, -7, TUNNEL_Y, -1, "wall", "stair_s1_wall_e", mirror=True)
@@ -107,12 +120,97 @@ def stage_underground(b):
     b.block(-28, 7, -26, 23, TUNNEL_Y, -1, "wall", "stair_s2_wall_e", mirror=True)
     b.ramp(-4, -23, 4, -7, TUNNEL_Y - 1, TUNNEL_Y, 0, "-z", "walk", "stair_s3")
     b.block(-6, -23, -4, -7, TUNNEL_Y, -1, "wall", "stair_s3_wall", mirror=True)
-    # Staggered pillar pairs (A covers z -5..1, B covers z -1..5) break the 180 m tunnel into short runs.
-    for x0 in (-80, -50, -22):
+    # Staggered pillar pairs (A covers z -5..1, B covers z -1..5) break the 180 m tunnel into short runs. They stand clear of
+    # every stair mouth and sump slot.
+    for x0 in (-86, -50, -12):
         b.block(x0, -5, x0 + 2, 1, TUNNEL_Y, -1, "wall", "tunnel_pillar_a", mirror=True)
         b.block(x0 + 6, -1, x0 + 8, 5, TUNNEL_Y, -1, "wall", "tunnel_pillar_b", mirror=True)
     # Stairs are marked in green-white; tunnels read as fast lanes with orange strips.
     b.decor(-90, -5.04, 0, -5, -5.0, -4.75, "accent", "flush", "tunnel_strip_n", mirror=True, color=ORANGE)
+    stage_sump(b)
+    stage_branches(b)
+
+
+# ---- sump tier (y -11): pump hall under A and the cistern under C ----------------------------------------------
+
+def sump_ramp(b, x0, x1, direction, tag):
+    """A 14 m ramp slot (20 degrees) in the tunnel floor, 4 m wide, with solid fill either side so no void shows."""
+    b.ramp(x0, -2, x1, 2, SUMP_Y - 1, SUMP_Y, TUNNEL_Y, direction, "walk", tag, mirror=True)
+    b.block(x0, -5, x1, -2, SUMP_Y - 1, TUNNEL_Y - 1, "wall", tag + "_fill_n", mirror=True)
+    b.block(x0, 2, x1, 5, SUMP_Y - 1, TUNNEL_Y - 1, "wall", tag + "_fill_s", mirror=True)
+
+
+def stage_sump(b):
+    top = TUNNEL_Y - 1          # underside of the tunnel floor
+    # Pump hall (x -90..-76) with its ramp slot (-76..-62). Walls run under the tunnel walls.
+    b.block(-90, -5, -76, 5, SUMP_Y - 1, SUMP_Y, "walk", "pump_floor", mirror=True)
+    b.block(-92, -7, -90, 7, SUMP_Y - 1, top, "wall", "pump_end", mirror=True)
+    b.block(-90, -7, -60, -5, SUMP_Y - 1, top, "wall", "pump_wall_n", mirror=True)
+    b.block(-90, 5, -60, 7, SUMP_Y - 1, top, "wall", "pump_wall_s", mirror=True)
+    b.block(-62, -5, -60, 5, SUMP_Y - 1, top, "wall", "pump_wall_e", mirror=True)
+    sump_ramp(b, -76, -62, "+x", "pump_ramp")
+    b.block(-90, 0, -87, 2, SUMP_Y, top, "wall", "pump_pier", mirror=True)
+    b.climb(-89, 2, -88, 3.2, SUMP_Y, TUNNEL_Y + 0.6, mirror=True, tag="pump_ladder", face="-z")
+    b.decor(-89, 1.96, -88, 2, SUMP_Y, TUNNEL_Y, "accent", "flush", "pump_ladder_strip", mirror=True, color=CLIMB)
+    for z in (-3, 3):
+        b.cylinder(-82, z, 1.5, SUMP_Y, SUMP_Y + 3, "cover", "pump_tank", mirror=True)
+    # Cistern under C (x -14..14, mirrored through x = 0) with a ramp slot from each side.
+    b.block(-14, -5, 0, 5, SUMP_Y - 1, SUMP_Y, "walk", "cistern_floor", mirror=True)
+    b.block(-28, -7, 0, -5, SUMP_Y - 1, top, "wall", "cistern_wall_n", mirror=True)
+    b.block(-28, 5, 0, 7, SUMP_Y - 1, top, "wall", "cistern_wall_s", mirror=True)
+    b.block(-30, -5, -28, 5, SUMP_Y - 1, top, "wall", "cistern_wall_w", mirror=True)
+    sump_ramp(b, -28, -14, "-x", "cistern_ramp")
+    # Buttresses break the long hall into short runs.
+    b.block(-12, -5, -10, -2, SUMP_Y, top, "wall", "cistern_buttress_n", mirror=True)
+    b.block(-4, 2, -2, 5, SUMP_Y, top, "wall", "cistern_buttress_s", mirror=True)
+
+
+# ---- branch tunnels off the transit tunnel: Foundation Line (N), Culvert (S), Market cellars (S) -----------------------
+
+def corridor(b, x0, x1, z0, z1, tag, wall_z0=None):
+    """A 6 m tunnel under the street slab: floor, and a wall each side (west and east of x0..x1)."""
+    b.block(x0, z0, x1, z1, TUNNEL_Y - 1, TUNNEL_Y, "walk", tag + "_floor", mirror=True)
+    wz = z0 if wall_z0 is None else wall_z0
+    b.block(x0 - 2, wz, x0, z1, TUNNEL_Y, -1, "wall", tag + "_wall_w", mirror=True)
+    b.block(x1, wz, x1 + 2, z1, TUNNEL_Y, -1, "wall", tag + "_wall_e", mirror=True)
+
+
+def stage_branches(b):
+    # Foundation Line: x -42..-36 from the tunnel to a pit under the tower frame and the construction hoist.
+    corridor(b, -42, -36, -44, -7, "found", wall_z0=-42)
+    b.block(-42, -30, -40, -22, TUNNEL_Y, -1, "wall", "found_baffle_a", mirror=True)
+    b.block(-38, -38, -36, -30, TUNNEL_Y, -1, "wall", "found_baffle_b", mirror=True)
+    b.block(-44, -56, -24, -44, TUNNEL_Y - 1, TUNNEL_Y, "walk", "pit_floor", mirror=True)
+    b.block(-46, -58, -22, -56, TUNNEL_Y, -1, "wall", "pit_wall_n", mirror=True)
+    b.block(-46, -56, -44, -44, TUNNEL_Y, -1, "wall", "pit_wall_w", mirror=True)
+    b.block(-24, -56, -22, -42, TUNNEL_Y, -1, "wall", "pit_wall_e", mirror=True)
+    b.block(-46, -44, -42, -42, TUNNEL_Y, -1, "wall", "pit_wall_sw", mirror=True)
+    b.block(-36, -44, -24, -42, TUNNEL_Y, -1, "wall", "pit_wall_se", mirror=True)
+    b.block(-36, -54, -33, -51, TUNNEL_Y, TUNNEL_Y + 2.6, "cover", "pit_crate", mirror=True)
+    b.climb(-44, -51, -42.8, -49, TUNNEL_Y, 0.6, mirror=True, tag="pit_ladder", face="-x")
+    b.decor(-44.04, -51, -44, -49, TUNNEL_Y, 0, "accent", "flush", "pit_ladder_strip", mirror=True, color=CLIMB)
+    # Culvert: x -50..-44 south from the tunnel under the pump house to a stair slot that surfaces beside the canal.
+    corridor(b, -50, -44, 7, 24, "culvert")
+    b.ramp(-50, 24, -44, 40.5, TUNNEL_Y - 1, TUNNEL_Y, 0, "+z", "walk", "culvert_ramp", mirror=True)
+    b.block(-52, 24, -50, 40.5, TUNNEL_Y, -1, "wall", "culvert_slot_wall_w", mirror=True)
+    b.block(-44, 24, -42, 26, TUNNEL_Y, -1, "wall", "culvert_slot_wall_e", mirror=True)
+    b.block(-44, 26, -42, 40.5, TUNNEL_Y, -4, "wall", "culvert_slot_wall_e2", mirror=True)
+    # Market cellars: x -78..-72 under the market alley, a vault under the hall (ladder up into it) and a launch vent at the end.
+    b.block(-78, 7, -72, 62, TUNNEL_Y - 1, TUNNEL_Y, "walk", "cellar_floor", mirror=True)
+    b.block(-80, 7, -78, 62, TUNNEL_Y, -1, "wall", "cellar_wall_w", mirror=True)
+    b.block(-72, 7, -70, 31, TUNNEL_Y, -1, "wall", "cellar_wall_e1", mirror=True)
+    b.block(-72, 45, -70, 62, TUNNEL_Y, -1, "wall", "cellar_wall_e2", mirror=True)
+    b.block(-80, 62, -70, 64, TUNNEL_Y, -1, "wall", "cellar_wall_s", mirror=True)
+    b.block(-72, 33, -65, 43, TUNNEL_Y - 1, TUNNEL_Y, "walk", "vault_floor", mirror=True)
+    b.block(-72, 31, -63, 33, TUNNEL_Y, -1, "wall", "vault_wall_n", mirror=True)
+    b.block(-72, 43, -63, 45, TUNNEL_Y, -1, "wall", "vault_wall_s", mirror=True)
+    b.block(-65, 33, -63, 43, TUNNEL_Y, -1, "wall", "vault_wall_e", mirror=True)
+    b.block(-68, 40, -65, 43, TUNNEL_Y, -1, "wall", "vault_pier", mirror=True)
+    b.climb(-69.2, 40.5, -68, 42.5, TUNNEL_Y, 0.6, mirror=True, tag="vault_ladder", face="+x")
+    b.decor(-68.04, 40.5, -68, 42.5, TUNNEL_Y, 0, "accent", "flush", "vault_ladder_strip", mirror=True, color=CLIMB)
+    # Launch vent: step on the pad and it throws you up the shaft and out toward the alley.
+    b.block(-77, 60, -73, 62, TUNNEL_Y, TUNNEL_Y + 0.3, "accent", "cellar_pad", mirror=True, color=BOUNCE)
+    b.bounce(-77, 60, -73, 62, TUNNEL_Y + 0.3, TUNNEL_Y + 1.0, power=20, kick=(0, 0, -4), mirror=True, tag="cellar_launch")
 
 
 # ---- rail yard (centre): container lanes, tram viaducts, landmark spires, the blimp -------------------
@@ -170,12 +268,13 @@ def stage_construction(b):
     b.climb(-44, -40, -42.8, -36, 6, 12.6, mirror=True, tag="ladder_2", face="-x")
     b.climb(-52, -43.8, -48, -42, 12, 18.6, mirror=True, tag="ladder_3", face="-z")
     b.climb(-43.8, -52, -42, -48, 18, 24.6, mirror=True, tag="ladder_4", face="-x")
-    # Material hoist beside the tower: landings at 6, 12 and 18 m, a car that stops at ground and each landing.
+    # Material hoist beside the tower: landings at 6, 12 and 18 m, a car that stops at the foundation pit (y -6), ground and each landing.
     for level in (6, 12, 18):
         b.block(-32, -50, -29, -46, level - 0.5, level, "walk", "hoist_landing_%d" % level, mirror=True)
-    keys = [(0, (-27, 0.0, -48)), (8, (-27, 0.0, -48)), (11, (-27, 5.75, -48)), (14, (-27, 5.75, -48)), (17, (-27, 11.75, -48)),
-            (20, (-27, 11.75, -48)), (23, (-27, 17.75, -48)), (31, (-27, 17.75, -48)), (40, (-27, 0.0, -48))]
-    b.mover("hoist", (4, 0.5, 4), keys, color=MOVER, period=40, mirror=True)
+    keys = [(0, (-27, -6.0, -48)), (6, (-27, -6.0, -48)), (9, (-27, 0.0, -48)), (15, (-27, 0.0, -48)), (18, (-27, 5.75, -48)),
+            (21, (-27, 5.75, -48)), (24, (-27, 11.75, -48)), (27, (-27, 11.75, -48)), (30, (-27, 17.75, -48)), (38, (-27, 17.75, -48)),
+            (46, (-27, -6.0, -48)), (52, (-27, -6.0, -48))]
+    b.mover("hoist", (4, 0.5, 4), keys, color=MOVER, period=52, mirror=True)
     # Site office: a flat-roofed block across a 16 m gap from the tower's top plate; the crane span closes the gap.
     b.block(-82, -52, -70, -40, 0, 24, "tower", "site_office", mirror=True)
     b.climb(-80, -40, -76, -38.2, 0, 24.6, mirror=True, tag="office_ladder", face="-z")
@@ -190,7 +289,7 @@ def stage_construction(b):
             color=MOVER, period=300, mirror=True)
     b.event(210, "CRANES SWINGING SPANS INTO PLACE")
     # Open yard cover: containers (mantle height), well clear of the stairwell and the stairs' routes.
-    for x0, z0, x1, z1 in ((-84, -22, -76, -18), (-52, -22, -44, -18), (-40, -26, -34, -22)):
+    for x0, z0, x1, z1 in ((-75, -22, -70, -18), (-52, -22, -44, -18), (-40, -26, -34, -22)):
         b.block(x0, z0, x1, z1, 0, 2.6, "cover", "site_container", mirror=True)
 
 
@@ -263,7 +362,7 @@ def stage_industrial(b):
     for z in (44, 56):
         b.cylinder(-29, z, 3, 0, 30, "tower", "silo", mirror=True)
         b.climb(-33.2, z - 1.5, -32, z + 1.5, 0, 30.6, mirror=True, tag="silo_ladder", face="+x")
-    for x, z in ((-46, 36), (-46, 50), (-30, 32)):
+    for x, z in ((-46, 50), (-30, 32)):
         b.cylinder(x, z, 1.75, 0, 3, "cover", "tank", mirror=True)
     # Pump house at the north end: the shoulder that makes the canal approach a chokepoint.
     b.block(-48, 14, -42, 24, 0, 7, "wall", "pump_house", mirror=True)
@@ -326,15 +425,66 @@ def stage_graph(b):
     b.waypoint("B", -32, 0, 0, "c3a:blv", mirror=True, point=True)
     chicane_nodes(b, "c3", -20, "B", "C")
     b.waypoint("C", 0, 0, 0, point=True)
-    # underground: tunnel line and the three stairwells (tag trn)
-    b.waypoint("tW", -86, -6, 0, "p1a:trn", mirror=True)
-    for name, x0, nxt in (("p1", -80, "tA"), ("p2", -50, "tB"), ("p3", -22, "tC")):
-        b.waypoint(name + "a", x0 + 1, -6, 3.5, name + "b:trn", mirror=True)
-        b.waypoint(name + "b", x0 + 4, -6, 0, name + "c:trn", mirror=True)
-        b.waypoint(name + "c", x0 + 7, -6, -3.5, nxt + ":trn", mirror=True)
-    b.waypoint("tA", -60, -6, 0, "p2a:trn,s1b:trn", mirror=True)
-    b.waypoint("tB", -32, -6, 0, "p3a:trn,s2b:trn", mirror=True)
+    # underground: tunnel line, stairwells, the sump and the branch tunnels (tag trn). Pillars and ramp slots are threaded on z = +-3.5.
+    b.waypoint("tW", -88, -6, 0, "p1a:trn", mirror=True)
+    b.waypoint("p1a", -85, -6, 3.5, "p1b:trn", mirror=True)
+    b.waypoint("p1b", -82, -6, 0, "p1c:trn", mirror=True)
+    b.waypoint("p1c", -79, -6, -3.5, "p1e:trn,s0b:trn", mirror=True)
+    b.waypoint("p1e", -77, -6, -3.5, "p1d:trn,cm1:trn", mirror=True)
+    b.waypoint("p1d", -61, -6, -3.5, "tA:trn", mirror=True)
+    b.waypoint("tA", -60, -6, 0, "p2a:trn,s1b:trn,pt:trn", mirror=True)
+    b.waypoint("p2a", -49, -6, 3.5, "p2b:trn", mirror=True)
+    b.waypoint("p2b", -46, -6, 0, "p2c:trn,cu0:trn", mirror=True)
+    b.waypoint("p2c", -43, -6, -3.5, "tB:trn,fb:trn", mirror=True)
+    b.waypoint("tB", -32, -6, 0, "tBs:trn,s2b:trn,cw0:trn", mirror=True)
+    b.waypoint("tBs", -30, -6, 3.5, "p3a:trn", mirror=True)
+    b.waypoint("p3a", -13, -6, 4, "p3b:trn", mirror=True)
+    b.waypoint("p3b", -8, -6, 1.5, "p3c:trn", mirror=True)
+    b.waypoint("p3c", -8, -6, -3.5, "tC:trn", mirror=True)
     b.waypoint("tC", 0, -6, 0, "s3b:trn")
+    # sump: pump hall under A, cistern under C (the ramp slots are 14 m, 5 m drop)
+    def pump_y(x):
+        return round(SUMP_Y + (x + 76) / 14.0 * 5.0, 2)
+
+    def cist_y(x):
+        return round(TUNNEL_Y - (x + 28) / 14.0 * 5.0, 2)
+
+    b.waypoint("pt", -62, TUNNEL_Y, 0, "pm:trn", mirror=True)
+    b.waypoint("pm", -69, pump_y(-69), 0, "pb:trn", mirror=True)
+    b.waypoint("pb", -75, pump_y(-75), 0, "pr:trn", mirror=True)
+    b.waypoint("pr", -84, SUMP_Y, 0, "", mirror=True)
+    b.waypoint("cw0", -28, TUNNEL_Y, 0, "cw1:trn", mirror=True)
+    b.waypoint("cw1", -21, cist_y(-21), 0, "cw2:trn", mirror=True)
+    b.waypoint("cw2", -15, cist_y(-15), 0, "cw3:trn", mirror=True)
+    b.waypoint("cw3", -10, SUMP_Y, 0, "cC:trn", mirror=True)
+    b.waypoint("cC", 0, SUMP_Y, 0, "")
+    # stairwell S0 (near the depot), Foundation Line, culvert (surfaces beside the canal), market cellars
+    b.waypoint("s0b", -80, -6, -6, "s0m:trn", mirror=True)
+    b.waypoint("s0m", -80, -3, -15, "s0t:trn", mirror=True)
+    b.waypoint("s0t", -80, 0, -23, "s0n:aln", mirror=True)
+    b.waypoint("s0n", -80, 0, -25, "n1b:aln", mirror=True)
+    b.waypoint("fb", -39, -6, -6, "f1:trn", mirror=True)
+    b.waypoint("f1", -39, -6, -15, "f2:trn", mirror=True)
+    b.waypoint("f2", -38, -6, -26, "f3:trn", mirror=True)
+    b.waypoint("f3", -40, -6, -34, "f4:trn", mirror=True)
+    b.waypoint("f4", -39, -6, -42, "pit1:trn", mirror=True)
+    b.waypoint("pit1", -39, -6, -48, "pit2:trn", mirror=True)
+    b.waypoint("pit2", -31, -6, -49, "", mirror=True)
+    b.waypoint("cu0", -47, -6, 6, "cu1:trn", mirror=True)
+    b.waypoint("cu1", -47, -6, 16, "cu2:trn", mirror=True)
+    b.waypoint("cu2", -47, -6, 24, "cu3:trn", mirror=True)
+    b.waypoint("cu3", -47, round(-6 + (32.25 - 24) / 16.5 * 6, 2), 32.25, "cu4:trn", mirror=True)
+    b.waypoint("cu4", -47, 0, 40.5, "cu5:trn", mirror=True)
+    b.waypoint("cu5", -47, 0, 42, "e3:aln", mirror=True)
+    b.waypoint("e3", -52, 0, 46, "e2:aln", mirror=True)
+    b.waypoint("e2", -62, 0, 46, "m2:aln", mirror=True)
+    b.waypoint("cm1", -77, -6, 3.5, "cs0:trn", mirror=True)
+    b.waypoint("cs0", -75, -6, 9, "cs2:trn", mirror=True)
+    b.waypoint("cs2", -75, -6, 30, "cs2b:trn", mirror=True)
+    b.waypoint("cs2b", -75, -6, 36, "cs3:trn,vv:trn", mirror=True)
+    b.waypoint("vv", -69, -6, 37, "", mirror=True)
+    b.waypoint("cs3", -75, -6, 48, "cs4:trn", mirror=True)
+    b.waypoint("cs4", -75, -6, 57, "", mirror=True)
     b.waypoint("s1b", -60, -6, -6, "s1m:trn", mirror=True)
     b.waypoint("s1m", -60, -3, -15, "s1t:trn", mirror=True)
     b.waypoint("s1t", -60, 0, -23, "n1a:aln", mirror=True)
