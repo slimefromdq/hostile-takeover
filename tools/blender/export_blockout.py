@@ -18,8 +18,11 @@ Conventions (full guide: docs/BLENDER.md)
             ramp_start / ramp_end top heights in Godot y (default: box min y and box max y),
             ramp_floor base height (default: box min y)
     decor:  decor_mode "flush" (default) | "outside"
-- Empties in a collection named "waypoints" become bot waypoints; their `links` property is a
-  comma list such as "B:blv,C:blv" (route tags: blv, roof, trn, aln).
+- Empties in a collection named "waypoints" become bot waypoints. Properties: `links` ("B:blv,C:roof"; tags blv,
+  roof, trn, aln), `mirror`, `point` (capture point), `spawn` (depot node).
+- Scene custom properties (Scene tab > Custom Properties) become map settings: ht_mode ("add" | "replace"),
+  ht_bounds (x, z, width, height), ht_spawn_x, ht_spawn_z, ht_spawn_step, ht_depot_limit, ht_test_lane (x, y, z).
+- Objects in collections whose name starts with "_" (e.g. the mirror preview) and objects with `ht_preview` are skipped.
 """
 import json
 import math
@@ -31,6 +34,10 @@ SNAP = 0.25
 ROLES = ("walk", "wall", "tower", "cover", "accent", "hazard", "glass")
 KINDS = ("block", "ramp", "cylinder", "decor")
 RAMP_DIRS = ("+x", "-x", "+z", "-z")
+SCENE_SETTINGS = {
+    "ht_bounds": "bounds", "ht_spawn_x": "spawn_x", "ht_spawn_z": "spawn_z", "ht_spawn_step": "spawn_step",
+    "ht_depot_limit": "depot_limit", "ht_test_lane": "test_lane",
+}
 
 
 def to_godot(p):
@@ -51,6 +58,11 @@ def clean_tag(name):
 
 def off_grid(values):
     return any(abs(v / SNAP - round(v / SNAP)) > 1e-3 for v in values)
+
+
+def _num(v):
+    v = round(float(v), 4)
+    return int(v) if v == int(v) else v
 
 
 def convert_object(name, corners, props, collection_names):
@@ -77,8 +89,8 @@ def convert_object(name, corners, props, collection_names):
         "kind": kind,
         "tag": str(props.get("tag", clean_tag(name))),
         "role": role,
-        "min": [round(v, 4) for v in lo],
-        "max": [round(v, 4) for v in hi],
+        "min": [_num(v) for v in lo],
+        "max": [_num(v) for v in hi],
     }
     if props.get("mirror"):
         rec["mirror"] = True
@@ -89,9 +101,9 @@ def convert_object(name, corners, props, collection_names):
         if direction not in RAMP_DIRS:
             return None, ["%s: ramp needs ramp_dir one of %s" % (name, ", ".join(RAMP_DIRS))]
         rec["dir"] = direction
-        rec["y_floor"] = float(props.get("ramp_floor", lo[1]))
-        rec["y_start"] = float(props.get("ramp_start", lo[1]))
-        rec["y_end"] = float(props.get("ramp_end", hi[1]))
+        rec["y_floor"] = _num(props.get("ramp_floor", lo[1]))
+        rec["y_start"] = _num(props.get("ramp_start", lo[1]))
+        rec["y_end"] = _num(props.get("ramp_end", hi[1]))
     if kind == "decor":
         rec["mode"] = str(props.get("decor_mode", "flush"))
     return rec, warnings
@@ -108,15 +120,24 @@ def parse_links(text):
     return out
 
 
-def build_document(objects, waypoints, mode="add", source=""):
+def build_document(objects, waypoints, mode="add", source="", settings=None):
+    wps, links = [], []
+    for w in waypoints:
+        rec = {"name": w["name"], "pos": w["pos"]}
+        for flag in ("mirror", "point", "spawn"):
+            if w.get(flag):
+                rec[flag] = True
+        wps.append(rec)
+        links.extend([w["name"], t, tag] for t, tag in w["links"])
     return {
         "format": FORMAT,
         "units": "m",
         "mode": mode,
         "source": source,
+        "settings": settings or {},
         "objects": objects,
-        "waypoints": {w["name"]: w["pos"] for w in waypoints},
-        "links": [[w["name"], t, tag] for w in waypoints for t, tag in w["links"]],
+        "waypoints": wps,
+        "links": links,
     }
 
 
@@ -125,18 +146,38 @@ def _is_90(angle):
     return abs(q - round(q)) < 1e-3
 
 
-def export_scene(path, mode="add"):
+def _plain(value):
+    try:
+        return [_num(v) for v in value]
+    except TypeError:
+        return _num(value)
+
+
+def scene_settings(scene):
+    out = {}
+    for key, name in SCENE_SETTINGS.items():
+        if key in scene.keys():
+            out[name] = _plain(scene[key])
+    return out
+
+
+def export_scene(path, mode=None):
     import bpy  # only available inside Blender
     from mathutils import Vector
 
+    scene = bpy.context.scene
+    bpy.context.view_layer.update()  # world matrices are stale until the depsgraph runs (headless scripts)
     objects, waypoints, warnings = [], [], []
-    for obj in bpy.context.scene.objects:
+    for obj in scene.objects:
         cols = [c.name for c in obj.users_collection]
         props = {k: obj[k] for k in obj.keys() if not k.startswith("_")}
+        if props.get("ht_preview") or any(c.startswith("_") for c in cols):
+            continue
         if obj.type == "EMPTY" and "waypoints" in [c.lower() for c in cols]:
             pos = to_godot(tuple(obj.matrix_world.translation))
-            waypoints.append({"name": clean_tag(obj.name), "pos": [round(v, 4) for v in pos],
-                              "links": parse_links(props.get("links", ""))})
+            waypoints.append({"name": clean_tag(obj.name), "pos": [_num(v) for v in pos],
+                              "links": parse_links(props.get("links", "")), "mirror": bool(props.get("mirror")),
+                              "point": bool(props.get("point")), "spawn": bool(props.get("spawn"))})
             continue
         if obj.type != "MESH" or obj.hide_viewport or obj.hide_get():
             continue
@@ -147,12 +188,15 @@ def export_scene(path, mode="add"):
         warnings.extend(warns)
         if rec:
             objects.append(rec)
-    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath))
+    mode = mode or str(scene.get("ht_mode", "add"))
+    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath), scene_settings(scene))
     with open(path, "w") as f:
         json.dump(doc, f, indent=1)
-    print("Exported %d objects, %d waypoints to %s" % (len(objects), len(waypoints), path))
+        f.write("\n")
+    print("Exported %d objects, %d waypoints to %s (mode %s)" % (len(objects), len(waypoints), path, mode))
     for w in warnings:
         print("WARNING:", w)
+    return doc
 
 
 if __name__ == "__main__":

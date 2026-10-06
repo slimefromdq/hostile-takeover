@@ -35,7 +35,7 @@ func run() -> void:
 	root.add_child(world)
 	CivicDividend.build(world)
 	builder = CivicDividend.builder
-	graph = MapLayout.graph()
+	graph = CivicDividend.graph_data
 	await physics_frame
 	await physics_frame
 	space = world.get_world_3d().direct_space_state
@@ -116,7 +116,7 @@ func audit_registry() -> void:
 	print("  solids=%d meshes=%d shapes=%d decor=%d" % [solids.size(), builder.mesh_count(), builder.shape_count(), builder.decor.size()])
 
 func BOUNDS_INSIDE(box: AABB) -> bool:
-	return Rect2(box.position.x, box.position.z, box.size.x, box.size.z).intersects(MapLayout.BOUNDS)
+	return Rect2(box.position.x, box.position.z, box.size.x, box.size.z).intersects(CivicDividend.bounds)
 
 func _key(box: AABB) -> String:
 	return "%.2f,%.2f,%.2f,%.2f,%.2f,%.2f" % [box.position.x, box.position.y, box.position.z, box.size.x, box.size.y, box.size.z]
@@ -205,13 +205,13 @@ func audit_clearance() -> void:
 	bad = 0
 	for side in [0, 1]:
 		for id in range(6):
-			var sp := Vector3(-MapLayout.SPAWN_X if side == 0 else MapLayout.SPAWN_X, 0.0, -7.0 + id * 2.8)
+			var sp := Vector3(-CivicDividend.spawn_x if side == 0 else CivicDividend.spawn_x, 0.0, CivicDividend.spawn_z + id * CivicDividend.spawn_step)
 			if capsule_blocked(sp):
 				bad += 1
 				printerr("  spawn blocked: ", sp)
 	check(bad == 0, "all twelve spawn positions are clear")
 	bad = 0
-	for p in MapLayout.points():
+	for p in CivicDividend.capture_points:
 		for k in range(12):
 			var a := TAU * k / 12.0
 			var s := p + Vector3(cos(a), 0, sin(a)) * 4.4
@@ -221,7 +221,7 @@ func audit_clearance() -> void:
 				printerr("  capture disc not flat near ", p, " at ", s)
 	check(bad == 0, "capture discs sit on flat street-level floor (%d bad)" % bad)
 	bad = 0
-	for p in MapLayout.points():
+	for p in CivicDividend.capture_points:
 		if capsule_blocked(p, 4.2) and false:
 			bad += 1
 	# Cover inside the capture radius would make parts of the disc unusable.
@@ -230,7 +230,7 @@ func audit_clearance() -> void:
 		var box: AABB = s.aabb
 		if s.role == "walk" or box.position.y < -0.01 or box.size.y < 0.5:
 			continue
-		for p in MapLayout.points():
+		for p in CivicDividend.capture_points:
 			var nearest := Vector2(clampf(p.x, box.position.x, box.end.x), clampf(p.z, box.position.z, box.end.z))
 			if nearest.distance_to(Vector2(p.x, p.z)) < 4.5:
 				in_disc += 1
@@ -284,7 +284,7 @@ func audit_connectivity() -> void:
 	for l in graph.links:
 		adj[l[0]] = adj.get(l[0], []) + [[l[1], l[2]]]
 		adj[l[1]] = adj.get(l[1], []) + [[l[0], l[2]]]
-	for start in ["S", "e_S"]:
+	for start in CivicDividend.spawn_nodes:
 		var seen := {start: true}
 		var queue := [start]
 		while not queue.is_empty():
@@ -294,10 +294,10 @@ func audit_connectivity() -> void:
 					seen[e[0]] = true
 					queue.append(e[0])
 		check(seen.size() == graph.nodes.size(), "%s reaches every waypoint (%d/%d)" % [start, seen.size(), graph.nodes.size()])
-	for target in ["B", "C", "e_B", "e_A"]:
+	for target in CivicDividend.goal_names.slice(1):
 		var families := []
 		for family in ["blv", "roof", "trn", "aln"]:
-			if _reach_with_family("S", target, family, adj):
+			if _reach_with_family(CivicDividend.spawn_nodes[0], target, family, adj):
 				families.append(family)
 		check(families.size() >= 4, "route families from the Helix depot to %s: %s" % [target, families])
 
@@ -381,7 +381,7 @@ func audit_sightlines() -> void:
 	# Spawn dogleg: nothing standing in the depot can see the open boulevard.
 	var seen := 0
 	for sp_z in [-7.0, -4.2, -1.4, 1.4, 4.2, 7.0]:
-		var from := Vector3(-MapLayout.SPAWN_X, HEAD, sp_z)
+		var from := Vector3(-CivicDividend.spawn_x, HEAD, sp_z)
 		for tx in range(-70, 60, 10):
 			for tz in [-8, 0, 8]:
 				var to := Vector3(tx, HEAD, tz)
@@ -390,7 +390,7 @@ func audit_sightlines() -> void:
 					seen += 1
 	check(seen == 0, "spawn has no line of sight onto the boulevard (%d clear rays)" % seen)
 	# No capture point sees a point two or more steps away.
-	var pts := MapLayout.points()
+	var pts := CivicDividend.capture_points
 	var long_sight := 0
 	for i in range(5):
 		for j in range(i + 2, 5):

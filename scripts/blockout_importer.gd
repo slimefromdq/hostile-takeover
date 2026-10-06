@@ -4,7 +4,8 @@ extends RefCounted
 # Builds map geometry from a Blender blockout exported by tools/blender/export_blockout.py.
 # Every solid goes through MapBuilder, so snapping, colliders and audits behave as for hand-written layout.
 # CivicDividend.build loads res://maps/blockout.json when it exists: mode "add" layers it on the built-in
-# map, mode "replace" skips MapLayout.build. See docs/BLENDER.md.
+# map, mode "replace" skips MapLayout.build and takes bounds, spawns, capture points and the bot graph
+# from the file (see resolve). See docs/BLENDER.md.
 
 const FORMAT := 1
 const ACTIVE_PATH := "res://maps/blockout.json"
@@ -29,17 +30,118 @@ static func build(b: MapBuilder, data: Dictionary) -> Array[String]:
 			errors.append(message)
 	return errors
 
-# Bot waypoint graph in the same shape as MapLayout.graph(): {"nodes": {name: Vector3}, "links": [[a, b, tag]]}.
-static func graph(data: Dictionary) -> Dictionary:
+# Everything replace mode needs besides geometry. Returns:
+#   graph {"nodes": {name: Vector3}, "links": [[a, b, tag]]}, points (west to east), goal_names (same order),
+#   spawn_nodes [west, east], bounds, spawn_x, spawn_z, spawn_step, depot_limit, test_lane, errors.
+# Waypoints with "mirror" also create an "e_<name>" node at -x, and links touching a mirrored node are mirrored,
+# exactly like MapLayout.graph(). Waypoints flagged "point" are the five capture points; "spawn" marks the depot node.
+static func resolve(data: Dictionary) -> Dictionary:
+	var errors: Array[String] = []
+	var settings: Dictionary = data.get("settings", {})
 	var nodes := {}
-	for n in data.get("waypoints", {}):
-		var p: Array = data.waypoints[n]
-		nodes[n] = Vector3(float(p[0]), float(p[1]), float(p[2]))
+	var is_point := {}
+	var is_spawn := {}
+	var mirrored := {}
+	for w in _waypoint_list(data):
+		var name: String = w.get("name", "")
+		var pos := _vec(w.get("pos", [0, 0, 0]))
+		nodes[name] = pos
+		is_point[name] = bool(w.get("point", false))
+		is_spawn[name] = bool(w.get("spawn", false))
+		if w.get("mirror", false) and not is_zero_approx(pos.x):
+			mirrored[name] = true
+			nodes["e_" + name] = Vector3(-pos.x, pos.y, pos.z)
+			is_point["e_" + name] = is_point[name]
+			is_spawn["e_" + name] = is_spawn[name]
 	var links: Array = []
 	for l in data.get("links", []):
-		if nodes.has(l[0]) and nodes.has(l[1]):
-			links.append([l[0], l[1], l[2]])
-	return {"nodes": nodes, "links": links}
+		var a: String = l[0]
+		var b: String = l[1]
+		if not nodes.has(a) or not nodes.has(b):
+			errors.append("link %s-%s names a missing waypoint" % [a, b])
+			continue
+		links.append([a, b, str(l[2])])
+		var ma := ("e_" + a) if mirrored.has(a) else a
+		var mb := ("e_" + b) if mirrored.has(b) else b
+		if ma != a or mb != b:
+			links.append([ma, mb, str(l[2])])
+	var points: Array[Vector3] = []
+	var goal_names: Array[String] = []
+	var spawn_nodes: Array[String] = []
+	var names: Array = nodes.keys()
+	names.sort_custom(func(x: String, y: String) -> bool: return nodes[x].x < nodes[y].x)
+	for n in names:
+		if is_point[n]:
+			points.append(nodes[n])
+			goal_names.append(n)
+		if is_spawn[n]:
+			spawn_nodes.append(n)
+	if points.size() != 5:
+		errors.append("replace mode needs exactly 5 capture points (waypoints with point=true, mirrored ones count twice); found %d" % points.size())
+	if spawn_nodes.size() != 2:
+		errors.append("replace mode needs exactly 2 spawn nodes (spawn=true, mirrored); found %d" % spawn_nodes.size())
+	var spawn_x: float = float(settings.get("spawn_x", absf(nodes[spawn_nodes[0]].x) if spawn_nodes.size() == 2 else 0.0))
+	var bounds := _auto_bounds(data)
+	if settings.has("bounds"):
+		var r: Array = settings.bounds
+		bounds = Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+	var test_lane := Vector3.ZERO
+	if settings.has("test_lane"):
+		test_lane = _vec(settings.test_lane)
+	elif points.size() == 5:
+		test_lane = points[2] + Vector3(0, 0.05, 0)
+	return {
+		"graph": {"nodes": nodes, "links": links},
+		"points": points,
+		"goal_names": goal_names,
+		"spawn_nodes": spawn_nodes,
+		"bounds": bounds,
+		"spawn_x": spawn_x,
+		"spawn_z": float(settings.get("spawn_z", (nodes[spawn_nodes[0]].z - 7.0) if spawn_nodes.size() == 2 else 0.0)),
+		"spawn_step": float(settings.get("spawn_step", 2.8)),
+		"depot_limit": float(settings.get("depot_limit", spawn_x - 3.0)),
+		"test_lane": test_lane,
+		"errors": errors,
+	}
+
+# Graph only, same shape as MapLayout.graph().
+static func graph(data: Dictionary) -> Dictionary:
+	return resolve(data).graph
+
+static func _waypoint_list(data: Dictionary) -> Array:
+	var out: Array = []
+	var raw: Variant = data.get("waypoints", [])
+	if typeof(raw) == TYPE_ARRAY:
+		return raw
+	# Older files stored {name: [x, y, z]}.
+	for n in raw:
+		out.append({"name": n, "pos": raw[n]})
+	return out
+
+static func _vec(a: Array) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+# Ground rectangle of all geometry (mirrored copies included), used when settings.bounds is missing.
+static func _auto_bounds(data: Dictionary) -> Rect2:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for item in data.get("objects", []):
+		if item.get("kind", "block") == "decor" and item.get("mode", "flush") == "outside":
+			continue
+		var a: Array = item.get("min", [0, 0, 0])
+		var b: Array = item.get("max", [0, 0, 0])
+		var xs: Array = [float(a[0]), float(b[0])]
+		if item.get("mirror", false):
+			xs.append(-float(a[0]))
+			xs.append(-float(b[0]))
+		for x in xs:
+			lo.x = minf(lo.x, x)
+			hi.x = maxf(hi.x, x)
+		lo.y = minf(lo.y, float(a[2]))
+		hi.y = maxf(hi.y, float(b[2]))
+	if lo.x == INF:
+		return Rect2(-50, -50, 100, 100)
+	return Rect2(lo, hi - lo)
 
 static func default_color(role: String) -> Color:
 	match role:
@@ -74,6 +176,11 @@ static func _add(b: MapBuilder, item: Dictionary) -> String:
 	var mirror: bool = item.get("mirror", false)
 	match item.get("kind", "block"):
 		"block":
+			# A walk floor sunk below street level is the minimap's "sunken" area (e.g. a trench).
+			if role == "walk" and y1 < -1.0:
+				b.sunken.append(Rect2(x0, z0, x1 - x0, z1 - z0))
+				if mirror:
+					b.sunken.append(Rect2(-x1, z0, x1 - x0, z1 - z0))
 			if mirror:
 				b.pair(x0, z0, x1, z1, y0, y1, role, color, tag)
 			else:

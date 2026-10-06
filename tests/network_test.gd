@@ -33,7 +33,7 @@ func run() -> void:
 		# Test movement and swaps in a clear lane, independent of random spawn traffic.
 		for p in game.fighters.values():
 			if not p.bot and p.fighter_id != 1:
-				p.global_position = MapLayout.TEST_LANE
+				p.global_position = CivicDividend.test_lane
 				p.velocity = Vector3.ZERO
 		print("COMPRESSED SNAPSHOT: ", game.encode_world().size(), " bytes")
 		await create_timer(4).timeout
@@ -48,7 +48,7 @@ func run() -> void:
 			verify(not game.authoritative and game.fighters.size() == 12, "client is nonauthoritative and receives roster")
 			var p: Fighter = game.local_player()
 			verify(p.class_id == 3, "requested class assigned by server")
-			verify(p.global_position.distance_to(MapLayout.TEST_LANE) < 10, "client receives server relocation into clear test lane")
+			verify(p.global_position.distance_to(CivicDividend.test_lane) < 10, "client receives server relocation into clear test lane")
 			# Place and exchange with a nearby double on flat ground.
 			p.pitch = -0.25
 			game.input_edges |= 8

@@ -25,9 +25,10 @@ func run() -> void:
 	for class_id in [0, 2]:
 		me.change_class(class_id)
 		for family in ["blv", "roof", "trn", "aln"]:
-			for start in ["S", "e_S"]:
-				for goal in ["A", "B", "C", "e_B", "e_A"]:
-					if start == "S" and goal == "A" or start == "e_S" and goal == "e_A":
+			for start in CivicDividend.spawn_nodes:
+				for goal in CivicDividend.goal_names:
+					# A depot's own point is next door; walk to the other four.
+					if goal == CivicDividend.goal_names[0] and start == CivicDividend.spawn_nodes[0] or goal == CivicDividend.goal_names[4] and start == CivicDividend.spawn_nodes[1]:
 						continue
 					walk(me, game, graph, family, start, goal, class_id)
 					await physics_frame

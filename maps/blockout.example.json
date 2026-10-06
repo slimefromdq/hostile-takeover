@@ -3,20 +3,21 @@
  "units": "m",
  "mode": "add",
  "source": "example",
+ "settings": {},
  "objects": [
   {
    "kind": "block",
    "tag": "plaza_floor",
    "role": "walk",
    "min": [
-    -30,
-    -1,
-    45
+    -30.0,
+    -1.0,
+    45.0
    ],
    "max": [
-    -10,
-    0,
-    59
+    -10.0,
+    0.0,
+    59.0
    ]
   },
   {
@@ -24,14 +25,14 @@
    "tag": "plaza_wall",
    "role": "wall",
    "min": [
-    -30,
-    0,
-    45
+    -30.0,
+    0.0,
+    45.0
    ],
    "max": [
-    -29,
-    4,
-    59
+    -29.0,
+    4.0,
+    59.0
    ],
    "mirror": true
   },
@@ -40,33 +41,33 @@
    "tag": "plaza_ramp",
    "role": "walk",
    "min": [
-    -28,
-    0,
-    47
+    -28.0,
+    0.0,
+    47.0
    ],
    "max": [
-    -22,
-    3,
-    53
+    -22.0,
+    2.0,
+    53.0
    ],
    "dir": "+x",
    "y_floor": 0.0,
    "y_start": 0.0,
-   "y_end": 3.0
+   "y_end": 2.0
   },
   {
    "kind": "cylinder",
    "tag": "plaza_column",
    "role": "tower",
    "min": [
-    -18,
-    0,
-    50
+    -18.0,
+    0.0,
+    50.0
    ],
    "max": [
-    -16,
-    3,
-    52
+    -16.0,
+    3.0,
+    52.0
    ],
    "mirror": true
   },
@@ -87,18 +88,24 @@
    "mode": "flush"
   }
  ],
- "waypoints": {
-  "p1": [
-   -26,
-   0,
-   50
-  ],
-  "p2": [
-   -20,
-   0,
-   50
-  ]
- },
+ "waypoints": [
+  {
+   "name": "p1",
+   "pos": [
+    -26,
+    0,
+    50
+   ]
+  },
+  {
+   "name": "p2",
+   "pos": [
+    -20,
+    0,
+    50
+   ]
+  }
+ ],
  "links": [
   [
    "p1",

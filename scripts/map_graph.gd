@@ -1,7 +1,8 @@
 class_name MapGraph
 extends RefCounted
 
-# Waypoint graph for bots (walk and ramp edges only). Built from MapLayout.graph().
+# Waypoint graph for bots (walk and ramp edges only). Built from the active map (CivicDividend.graph_data,
+# which is MapLayout.graph() unless a blockout replaced the map).
 
 var names: Array[String] = []
 var positions: Array[Vector3] = []
@@ -10,7 +11,7 @@ var adjacency: Array = []
 
 static func from_layout() -> MapGraph:
 	var g := MapGraph.new()
-	var data := MapLayout.graph()
+	var data: Dictionary = CivicDividend.graph_data if not CivicDividend.graph_data.is_empty() else MapLayout.graph()
 	for n in data.nodes:
 		g.index[n] = g.names.size()
 		g.names.append(n)

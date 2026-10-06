@@ -247,7 +247,7 @@ func join_request(class_choice: int) -> void:
 	initial_sync.rpc_id(id, encode_world())
 
 func spawn_position(side: int, id: int) -> Vector3:
-	return Vector3(-MapLayout.SPAWN_X if side == 0 else MapLayout.SPAWN_X, 0.2, -7 + (abs(id) % 6) * 2.8)
+	return Vector3(-CivicDividend.spawn_x if side == 0 else CivicDividend.spawn_x, 0.2, CivicDividend.spawn_z + (abs(id) % 6) * CivicDividend.spawn_step)
 
 func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool) -> Fighter:
 	var p: Fighter = CLASS_SCENES[archetype].instantiate()
@@ -387,7 +387,7 @@ func _physics_process(dt: float) -> void:
 
 # Grapples and launch pads can never carry a fighter out of the arena.
 func out_of_bounds(pos: Vector3) -> bool:
-	var b := MapLayout.BOUNDS
+	var b := CivicDividend.bounds
 	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > 40.0
 
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
@@ -641,7 +641,7 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 	if target.hp <= 0 or not authoritative:
 		return
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
-	if absf(target.global_position.x) > MapLayout.DEPOT_LIMIT and attacker >= 0:
+	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0:
 		return
 	target.hp = maxf(0, target.hp - amount)
 	target.reveal = 0.65
@@ -1007,9 +1007,8 @@ func bot_weights(p: Fighter) -> Dictionary:
 	return p.bot_bias.duplicate()
 
 func plan_bot_path(p: Fighter, objective: int) -> void:
-	var goal_names := ["A", "B", "C", "e_B", "e_A"]
 	p.bot_goal = objective
-	p.bot_path = bot_graph.path(bot_graph.nearest(p.global_position), bot_graph.node(goal_names[objective]), bot_weights(p))
+	p.bot_path = bot_graph.path(bot_graph.nearest(p.global_position), bot_graph.node(CivicDividend.goal_names[objective]), bot_weights(p))
 	p.bot_path_i = 0
 	p.bot_progress_pos = p.global_position
 	p.bot_progress_time = 0.0

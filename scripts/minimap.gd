@@ -8,13 +8,13 @@ var game: Node3D
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var bounds := CivicDividend.BOUNDS
+	var bounds := CivicDividend.bounds
 	custom_minimum_size = Vector2(WIDTH, WIDTH * bounds.size.y / bounds.size.x)
 	size = custom_minimum_size
 
 # World (x, z) to minimap pixels.
 func to_map(x: float, z: float) -> Vector2:
-	var bounds := CivicDividend.BOUNDS
+	var bounds := CivicDividend.bounds
 	return Vector2((x - bounds.position.x) / bounds.size.x * size.x, (z - bounds.position.y) / bounds.size.y * size.y)
 
 func _draw() -> void:
