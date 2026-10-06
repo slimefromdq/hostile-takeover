@@ -250,18 +250,32 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	var left: Node3D = legs.get_node_or_null("LegL")
 	var right: Node3D = legs.get_node_or_null("LegR")
 	var air_tuck := 0.0 if grounded else 0.5
-	if left != null:
-		left.rotation.x = swing - air_tuck
-	if right != null:
-		right.rotation.x = -swing + air_tuck * 0.4
+	var blend := minf(1.0, dt * 10.0)
+	var left_x := swing - air_tuck
+	var right_x := -swing + air_tuck * 0.4
+	var arm_x := -swing * 0.8
 	var base_lean := -0.12 if class_id == 0 else (-0.06 if class_id == 3 else 0.0)
 	var lean := base_lean - 0.22 * run
+	var hip_y := 0.9
 	if sliding:
-		lean = -0.65
-	body.rotation.x = lerpf(body.rotation.x, lean, minf(1.0, dt * 10.0))
+		# Seated slide: hips drop, front leg extends, rear leg tucks, torso leans back, free arm braces.
+		left_x = -1.3
+		right_x = 0.6
+		arm_x = 0.9
+		lean = 0.9
+		hip_y = 0.5
+	# Legs ease in and out of the slide pose; otherwise they follow the run cycle directly.
+	var easing: bool = sliding or absf(legs.position.y - 0.9) > 0.02
+	if left != null:
+		left.rotation.x = lerpf(left.rotation.x, left_x, blend) if easing else left_x
+	if right != null:
+		right.rotation.x = lerpf(right.rotation.x, right_x, blend) if easing else right_x
+	legs.position.y = lerpf(legs.position.y, hip_y, blend)
+	body.position.y = lerpf(body.position.y, hip_y, blend)
+	body.rotation.x = lerpf(body.rotation.x, lean, blend)
 	var arm: Node3D = body.get_node_or_null("ArmL")
 	if arm != null:
-		arm.rotation.x = -swing * 0.8
+		arm.rotation.x = arm_x
 	var weapon: Node3D = body.get_node_or_null("Weapon")
 	if weapon != null:
 		# Counter the body lean so the weapon follows the aim exactly.

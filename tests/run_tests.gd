@@ -490,7 +490,7 @@ func test_air_movement() -> void:
 	p.simulate_movement(1.0 / 60, 2)
 	for i in range(30):
 		p.simulate_movement(1.0 / 60, 0)
-	check(p.global_position.x - start_x > 7.0, "air dash travels over 7 m in half a second (%.1f)" % (p.global_position.x - start_x))
+	check(p.global_position.x - start_x > 4.5, "air dash travels over 4.5 m in half a second (%.1f)" % (p.global_position.x - start_x))
 	await physics_frame
 	# Air control: forward input at speed adds nothing; strafing adds a bounded amount.
 	p.global_position = O + Vector3(-30, 8.0, -20)

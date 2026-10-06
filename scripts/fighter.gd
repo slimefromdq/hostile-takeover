@@ -5,12 +5,12 @@ const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resourc
 # Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
 const GRAVITY := 26.0
 const JUMP_SPEED := 10.0
-const DOUBLE_JUMP_SPEED := 9.0
+const DOUBLE_JUMP_SPEED := 10.5
 const WALL_KICK_UP := 10.5
 const WALL_KICK_PUSH := 7.5
 const WALL_KICK_PUSH_SKYRUNNER := 9.0
-const DASH_SPEED := 22.0
-const DASH_TIME := 0.28
+const DASH_SPEED := 19.0
+const DASH_TIME := 0.24
 const GROUND_ACCEL := 20.0
 const GROUND_FRICTION := 14.0
 const AIR_CAP := 1.2
@@ -249,8 +249,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if sliding:
 		var downhill := Vector3.DOWN.slide(get_floor_normal())
 		velocity += downhill * 16.0 * dt
-		velocity.x = move_toward(velocity.x, desired.x * speed, 2 * dt)
-		velocity.z = move_toward(velocity.z, desired.z * speed, 2 * dt)
+		velocity.x = move_toward(velocity.x, desired.x * speed, 2.8 * dt)
+		velocity.z = move_toward(velocity.z, desired.z * speed, 2.8 * dt)
 	elif grounded:
 		var rate := GROUND_ACCEL if desired.length() > 0.05 else GROUND_FRICTION
 		velocity.x = move_toward(velocity.x, desired.x * speed, rate * dt)
