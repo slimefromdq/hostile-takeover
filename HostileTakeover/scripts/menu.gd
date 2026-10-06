@@ -96,6 +96,10 @@ func _center() -> void:
 	position = ((get_viewport_rect().size - size) / 2.0).round()
 
 func refresh_display_button() -> void:
+	if DisplayPrefs.embedded():
+		display_button.text = "Display: Windowed · embedded in editor"
+		display_button.tooltip_text = "Fullscreen needs a standalone window: turn off Embed Game on Next Play in the editor, or run the exported game."
+		return
 	display_button.text = "Display: %s · F11" % ("Fullscreen" if DisplayPrefs.fullscreen else "Windowed")
 
 func _label(value: String, font_size: int, color: Color = Color("eef0e5")) -> Label:

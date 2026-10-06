@@ -298,6 +298,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_F11 or (event.keycode == KEY_ENTER and event.alt_pressed)):
 		DisplayPrefs.toggle()
 		menu.refresh_display_button()
+		if DisplayPrefs.embedded():
+			announce("Fullscreen unavailable while embedded in the editor. Turn off Embed Game on Next Play.")
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
