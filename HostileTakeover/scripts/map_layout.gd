@@ -16,17 +16,18 @@ const SPAWN_X := 86.0
 const DEPOT_LIMIT := 83.0
 const TEST_LANE := Vector3(-20, 0.05, 0)
 
-const ROAD := Color("5c656f")
-const PAVE := Color("78818a")
-const ROOF := Color("737b84")
-const TRENCH := Color("4f5963")
-const COOL := Color("3a5a78")
-const WARM := Color("7d4f48")
-const NEUTRAL := Color("5d6270")
-const COVER := Color("b3a27c")
-const TOWER_COOL := Color("2f4458")
-const TOWER_WARM := Color("5e3f3d")
-const RAIL := Color("c9d0d4")
+# Palette (see Visuals.PAL): clean white/grey masses, one hot accent. Helix/Monarch halves keep a faint cool/warm tint.
+const ROAD := Color("8a929a")
+const PAVE := Color("dfe3e6")
+const ROOF := Color("e8eaec")
+const TRENCH := Color("5f6b7a")
+const COOL := Color("d6e2ee")
+const WARM := Color("eed9d0")
+const NEUTRAL := Color("e4e6e8")
+const COVER := Color("ff6a2b")
+const TOWER_COOL := Color("dbe5ef")
+const TOWER_WARM := Color("efe0d8")
+const RAIL := Color("ff6a2b")
 
 static func points() -> Array[Vector3]:
 	var out: Array[Vector3] = []
