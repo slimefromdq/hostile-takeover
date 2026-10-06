@@ -226,6 +226,7 @@ func test_movement() -> void:
 	await physics_frame
 	await process_frame
 	await test_air_movement()
+	await test_input_forgiveness()
 	test_visual_pipeline()
 	test_effect_pool()
 	test_sfx()
@@ -656,6 +657,58 @@ func test_visual_pipeline() -> void:
 	# (no depth writes), which made walls draw on top of each other.
 	check(Visuals.SURFACE_SHADER.find("ALPHA") == -1, "map surface shader stays in the opaque pipeline")
 	check(Visuals.surface("glass", Color.WHITE) is StandardMaterial3D, "glass uses its own transparent material")
+
+func test_input_forgiveness() -> void:
+	await physics_frame
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.held = 0
+	p.movement = Vector2.ZERO
+	var base := O + Vector3(-30, 0, -20)
+	# Coyote time: a jump just after leaving the ground is still a ground jump and keeps the double jump.
+	p.global_position = base + Vector3(0, 3.0, 0)
+	p.velocity = Vector3.ZERO
+	p.air_jump = true
+	for i in range(7):
+		p.simulate_movement(1.0 / 60, 0)
+	p.simulate_movement(1.0 / 60, 1)
+	check(p.velocity.y > 9.5 and p.air_jump, "coyote jump counts as a ground jump and keeps the double jump")
+	await physics_frame
+	p.global_position = base + Vector3(0, 6.0, 0)
+	p.velocity = Vector3.ZERO
+	p.air_jump = true
+	for i in range(14):
+		p.simulate_movement(1.0 / 60, 0)
+	p.simulate_movement(1.0 / 60, 1)
+	check(p.velocity.y > 12.0 and not p.air_jump, "after the coyote window the press is a double jump")
+	await physics_frame
+	# Jump buffer: a press just before landing fires on touchdown; an early press is forgotten.
+	p.global_position = base + Vector3(0, 0.25, 0)
+	p.velocity = Vector3(0, -4, 0)
+	p.air_jump = false
+	p.coyote_time = 0.0
+	p.jump_buffer = 0.0
+	p.simulate_movement(1.0 / 60, 1)
+	check(p.jump_buffer > 0.0, "an unusable press is buffered")
+	var best := -99.0
+	for i in range(20):
+		p.simulate_movement(1.0 / 60, 0)
+		best = maxf(best, p.velocity.y)
+		await physics_frame
+	check(best > 9.5, "buffered press jumps on landing (peak vy %.1f)" % best)
+	p.global_position = base + Vector3(0, 2.0, 0)
+	p.velocity = Vector3.ZERO
+	p.air_jump = false
+	p.coyote_time = 0.0
+	p.jump_buffer = 0.0
+	p.simulate_movement(1.0 / 60, 1)
+	best = -99.0
+	for i in range(60):
+		p.simulate_movement(1.0 / 60, 0)
+		best = maxf(best, p.velocity.y)
+		await physics_frame
+	check(best < 1.0 and p.jump_buffer == 0.0, "an early press expires instead of jumping on landing (peak vy %.1f)" % best)
+	await physics_frame
 
 func test_air_movement() -> void:
 	# move_and_slide uses the physics delta only inside a physics frame, so each section starts on one.

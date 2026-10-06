@@ -30,6 +30,10 @@ const SLIDE_FRICTION := 8.0
 const SLIDE_TURN_RATE := 2.5
 const SLIDE_COOLDOWN := 0.6
 const SLIDE_DOWNHILL := 16.0
+# Input forgiveness windows (seconds) and wall-kick probe length (m, was 0.85).
+const COYOTE_TIME := 0.12
+const JUMP_BUFFER := 0.12
+const WALL_KICK_REACH := 1.1
 const MANTLE_SPEED := 8.5
 const MANTLE_HEAD_CLEARANCE := 2.6
 const MANTLE_REACH := 1.2
@@ -76,6 +80,8 @@ var air_jump: bool = true # double jump ready; restored only on landing
 var dash_cd: float = 0.0
 var sliding: bool = false
 var slide_cd: float = 0.0
+var coyote_time: float = 0.0
+var jump_buffer: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
 var zip_id: int = -1
 var zip_t: float = 0.0
@@ -299,39 +305,16 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		velocity.y -= GRAVITY * (0.35 if dash_time > 0.0 else 1.0) * dt
 	else:
 		velocity.y = -0.1
-	if movement_edges & 1:
-		if grounded:
-			velocity.y = JUMP_SPEED
-			if game.authoritative:
-				game.play_sfx(global_position, Sfx.Kind.JUMP)
-		else:
-			var wall: Dictionary = game.ray(global_position + Vector3.UP, global_position + Vector3.UP + horizontal_direction() * 0.85, [get_rid()], 1 | 4)
-			if wall.is_empty():
-				for offset in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK]:
-					wall = game.ray(global_position + Vector3.UP, global_position + Vector3.UP + Basis(Vector3.UP, yaw) * offset * 0.85, [get_rid()], 1 | 4)
-					if not wall.is_empty():
-						break
-			if not wall.is_empty() and absf(wall.normal.y) < 0.3:
-				if wall_normal.dot(wall.normal) > 0.9:
-					wall_repeats += 1
-				else:
-					wall_repeats = 0
-				wall_normal = wall.normal
-				velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
-				velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
-				dash_time = 0.0
-				if game.authoritative:
-					game.play_sfx(global_position, Sfx.Kind.JUMP)
-				if class_id == 0:
-					hot_lap = 2.0
-			elif air_jump:
-				# One double jump per landing, independent of the dash cooldown.
-				air_jump = false
-				velocity.y = DOUBLE_JUMP_SPEED
-				if game.authoritative:
-					game.play_sfx(global_position, Sfx.Kind.JUMP)
-				velocity.x += desired.x * 1.5
-				velocity.z += desired.z * 1.5
+	# Input forgiveness: a press shortly before a landing or wall still counts, and a jump just after
+	# walking off an edge is still a ground jump.
+	coyote_time = COYOTE_TIME if grounded else maxf(0.0, coyote_time - dt)
+	jump_buffer = maxf(0.0, jump_buffer - dt)
+	var fresh_press: bool = movement_edges & 1 != 0
+	if fresh_press or jump_buffer > 0.0:
+		if _try_jump(desired, grounded, fresh_press):
+			jump_buffer = 0.0
+		elif fresh_press:
+			jump_buffer = JUMP_BUFFER
 	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
 		dash_cd = DASH_COOLDOWN
@@ -402,6 +385,48 @@ func _slide_step(desired: Vector3, dt: float) -> void:
 	velocity.x = planar.x
 	velocity.z = planar.y
 	velocity += Vector3.DOWN.slide(get_floor_normal()) * SLIDE_DOWNHILL * dt
+
+# One jump press: ground jump (including coyote time), else wall kick, else the double jump.
+# Returns false when nothing was available so the caller can buffer the press. Buffered presses
+# never spend the double jump, which only a fresh press may use.
+func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
+	if grounded or (coyote_time > 0.0 and velocity.y <= 0.0):
+		velocity.y = JUMP_SPEED
+		coyote_time = 0.0
+		if game.authoritative:
+			game.play_sfx(global_position, Sfx.Kind.JUMP)
+		return true
+	var origin := global_position + Vector3.UP
+	var wall: Dictionary = game.ray(origin, origin + horizontal_direction() * WALL_KICK_REACH, [get_rid()], 1 | 4)
+	if wall.is_empty():
+		for offset in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK]:
+			wall = game.ray(origin, origin + Basis(Vector3.UP, yaw) * offset * WALL_KICK_REACH, [get_rid()], 1 | 4)
+			if not wall.is_empty():
+				break
+	if not wall.is_empty() and absf(wall.normal.y) < 0.3:
+		if wall_normal.dot(wall.normal) > 0.9:
+			wall_repeats += 1
+		else:
+			wall_repeats = 0
+		wall_normal = wall.normal
+		velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
+		velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
+		dash_time = 0.0
+		if game.authoritative:
+			game.play_sfx(global_position, Sfx.Kind.JUMP)
+		if class_id == 0:
+			hot_lap = 2.0
+		return true
+	if allow_double and air_jump:
+		# One double jump per landing, independent of the dash cooldown.
+		air_jump = false
+		velocity.y = DOUBLE_JUMP_SPEED
+		if game.authoritative:
+			game.play_sfx(global_position, Sfx.Kind.JUMP)
+		velocity.x += desired.x * 1.5
+		velocity.z += desired.z * 1.5
+		return true
+	return false
 
 # Forgiving ledge probe: several heights and slightly fanned angles, so grazing a ledge still counts.
 func _can_mantle(heading: Vector3) -> bool:
