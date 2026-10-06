@@ -130,6 +130,8 @@ static func _mirror_feature(f: Dictionary) -> Dictionary:
 		m.max = [-float(lo[0]), hi[1], hi[2]]
 		if m.has("kick"):
 			m.kick = _flip(f.kick)
+	if m.has("face"):
+		m.face = {"+x": "-x", "-x": "+x"}.get(str(f.face), f.face)
 	if m.has("from"):
 		m["from"] = _flip(f["from"])
 		m["to"] = _flip(f["to"])

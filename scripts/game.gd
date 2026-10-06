@@ -1047,6 +1047,9 @@ func bot_waypoint(p: Fighter, dt: float) -> Vector3:
 			p.edges |= 1
 		p.bot_progress_pos = p.global_position
 		p.bot_progress_time = 0.0
+	if p.bot_path.is_empty():
+		# The replan found no route (the bot is somewhere the graph does not cover): head for the point directly.
+		return p.bot_target
 	if p.bot_path_i >= p.bot_path.size() - 1:
 		return p.bot_target if Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 12.0 else p.bot_path[p.bot_path.size() - 1]
 	return p.bot_path[p.bot_path_i]
