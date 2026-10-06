@@ -394,7 +394,7 @@ func _physics_process(dt: float) -> void:
 # Grapples and launch pads can never carry a fighter out of the arena.
 func out_of_bounds(pos: Vector3) -> bool:
 	var b := CivicDividend.bounds
-	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > 40.0
+	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling
 
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:

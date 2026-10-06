@@ -39,7 +39,7 @@ KINDS = ("block", "ramp", "cylinder", "decor")
 RAMP_DIRS = ("+x", "-x", "+z", "-z")
 SCENE_SETTINGS = {
     "ht_bounds": "bounds", "ht_spawn_x": "spawn_x", "ht_spawn_z": "spawn_z", "ht_spawn_step": "spawn_step",
-    "ht_depot_limit": "depot_limit", "ht_test_lane": "test_lane",
+    "ht_depot_limit": "depot_limit", "ht_test_lane": "test_lane", "ht_ceiling": "ceiling",
 }
 
 

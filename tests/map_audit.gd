@@ -53,7 +53,7 @@ func audit_registry() -> void:
 	var solids: Array = builder.solids
 	var rb := CivicDividend.bounds
 	var y_min := -12.01 if CivicDividend.replaced else -5.01
-	var bounds := AABB(Vector3(rb.position.x - 0.01, y_min, rb.position.y - 0.01), Vector3(rb.size.x + 0.02, 40.01 - y_min, rb.size.y + 0.02))
+	var bounds := AABB(Vector3(rb.position.x - 0.01, y_min, rb.position.y - 0.01), Vector3(rb.size.x + 0.02, CivicDividend.ceiling + 0.01 - y_min, rb.size.y + 0.02))
 	var outside := 0
 	for s in solids:
 		if not bounds.encloses(s.aabb):
@@ -395,7 +395,15 @@ func audit_profile_lanes(along: Array, across: Array) -> void:
 		var xr: Array = lane.xs
 		var zs: Array = lane.zs
 		var r: Array = lane.rect
-		var stats := lane_stats(lane.label, range(int(xr[0]), int(xr[1]) + 1, int(xr[2])), zs, float(lane.get("y", 0.0)), across if lane.get("azimuths", "along") == "across" else along, Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])))
+		var azimuths: Array = along
+		if lane.get("azimuths", "along") == "across":
+			azimuths = across
+		elif lane.get("azimuths", "along") == "ns":
+			azimuths = []
+			for d in [-15.0, -7.0, 0.0, 7.0, 15.0]:
+				azimuths.append(deg_to_rad(90.0 + d))
+				azimuths.append(deg_to_rad(270.0 + d))
+		var stats := lane_stats(lane.label, range(int(xr[0]), int(xr[1]) + 1, int(xr[2])), zs, float(lane.get("y", 0.0)), azimuths, Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])))
 		if stats.is_empty():
 			check(false, "%s lane has no free sample points" % lane.label)
 			continue

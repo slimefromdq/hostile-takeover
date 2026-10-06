@@ -39,14 +39,19 @@ def slab_with_holes(b, x0, z0, x1, z1, y0, y1, holes, role, tag):
 
 
 def build(b):
-    b.configure(bounds=(-96, -64, 192, 128), spawn_x=90, spawn_z=-7, spawn_step=2.8, depot_limit=86)
+    b.configure(bounds=(-96, -64, 192, 128), spawn_x=90, spawn_z=-7, spawn_step=2.8, depot_limit=86, ceiling=80)
     b.audit(route_families=["blv", "aln", "trn"], min_families=3,
             lanes=[
                 {"label": "boulevard", "xs": [-88, 88, 4], "zs": [-10, -6, -2, 2, 6, 10], "y": 0, "rect": [-96, -12, 192, 24], "p50": 30, "p90": 60, "max": 100},
+                {"label": "yard lane", "xs": [-22, 22, 4], "zs": [-58, -40, -22, 22, 40, 58], "y": 0, "azimuths": "ns", "rect": [-26, -62, 52, 124], "p50": 45, "p90": 90, "max": 125},
+                {"label": "market alley", "xs": [-84, -52, 4], "zs": [30, 46], "y": 0, "rect": [-86, 28, 36, 20], "p90": 45, "p99": 60},
                 {"label": "tunnel", "xs": [-88, 88, 4], "zs": [-3, 0, 3], "y": -6, "rect": [-96, -5, 192, 10], "p90": 60, "p99": 80},
             ])
     stage_shell(b)
     stage_underground(b)
+    stage_yard(b)
+    stage_construction(b)
+    stage_market(b)
     stage_graph(b)
 
 
@@ -103,6 +108,130 @@ def stage_underground(b):
     b.decor(-90, -5.04, 0, -5, -5.0, -4.75, "accent", "flush", "tunnel_strip_n", mirror=True, color=ORANGE)
 
 
+# ---- rail yard (centre): container lanes, tram viaducts, landmark spires, the blimp -------------------
+
+def stage_yard(b):
+    # Container columns (single stack 2.6 m is mantle height, double stack 5.2 m is a sniper perch).
+    for z0, z1, h in ((-60, -48, 2.6), (-44, -32, 5.2), (-28, -16, 2.6)):
+        b.block(-24, z0, -19, z1, 0, h, "cover", "container_a", mirror=True, color=ORANGE if h > 3 else None)
+    for z0, z1, h in ((16, 28, 2.6), (32, 44, 5.2), (48, 60, 2.6)):
+        b.block(-24, z0, -19, z1, 0, h, "cover", "container_a", mirror=True, color=ORANGE if h > 3 else None)
+    for z0, z1 in ((-44, -32), (16, 28), (32, 44)):
+        b.block(-8, z0, -4, z1, 0, 2.6, "cover", "container_b", mirror=True)
+    # Cover islands in the centre lane so the long lane never runs end to end.
+    for z in (-34, 34):
+        b.block(-1.5, z - 1.5, 1.5, z + 1.5, 0, 2.6, "cover", "yard_island")
+    # Tram stations: decks at mid-level on piers. The tram car stops just inside each station.
+    for z0, z1, tag in ((-58, -50, "station_n"), (50, 58, "station_s")):
+        b.block(-16, z0, -8, z1, 5, MID, "walk", tag, mirror=True, color=MOVER)
+        for px in (-16, -10):
+            for pz in (z0, z1 - 2):
+                b.block(px, pz, px + 2, pz + 2, 0, 5, "wall", tag + "_pier", mirror=True)
+    # Landmark spires at both ends of the centre lane. The lower body's roof (y 34) is the blimp dock.
+    b.block(-6, -62, 6, -50, 0, 34, "tower", "spire_n_base")
+    b.block(-3, -62, 3, -56, 34, 62, "tower", "spire_n_top")
+    b.block(-6, 50, 6, 62, 0, 34, "tower", "spire_s_base")
+    b.block(-3, 56, 3, 62, 34, 62, "tower", "spire_s_top")
+    b.climb(-2, -51.2, 2, -50, 0, 34.6, tag="spire_n_ladder", face="-z")
+    b.climb(-2, 50, 2, 51.2, 0, 34.6, tag="spire_s_ladder", face="+z")
+    b.decor(-2, -50.04, 2, -50, 0, 34, "accent", "flush", "spire_n_ladder_strip", color=CLIMB)
+    b.decor(-2, 50, 2, 50.04, 0, 34, "accent", "flush", "spire_s_ladder_strip", color=CLIMB)
+    # Timed trams: one per side, out and back along the viaduct with a dwell at each station.
+    b.mover("tram", (6, 0.5, 16), [(0, (-12, 5.75, -42)), (8, (-12, 5.75, -42)), (28, (-12, 5.75, 42)),
+                                   (36, (-12, 5.75, 42)), (56, (-12, 5.75, -42))], color=MOVER, period=56, mirror=True)
+    # The blimp shuttles between the two docks above the centre lane; ride its top.
+    b.mover("blimp", (10, 3, 26), [(0, (0, 32.5, -36)), (12, (0, 32.5, -36)), (30, (0, 32.5, 36)),
+                                   (42, (0, 32.5, 36)), (60, (0, 32.5, -36))], color=MOVER, period=60)
+
+
+# ---- construction site (north): an exposed, vertical district --------------------------------------------
+
+def stage_construction(b):
+    # The tower frame: nine columns on a 12 m grid, floor plates at 6, 12, 18 and 24 m (cells between the columns).
+    for x in (-56, -44, -32):
+        for z in (-56, -44, -32):
+            b.block(x, z, x + 2, z + 2, 0, 24, "wall", "frame_column", mirror=True)
+    cells = {(0, 0): (-54, -54), (1, 0): (-42, -54), (0, 1): (-54, -42), (1, 1): (-42, -42)}
+    levels = {6: [(0, 0), (1, 0), (0, 1), (1, 1)], 12: [(0, 0), (1, 0), (0, 1)], 18: [(0, 0), (1, 0)], 24: [(0, 0)]}
+    for level, which in levels.items():
+        for ij in which:
+            x0, z0 = cells[ij]
+            b.block(x0, z0, x0 + 10, z0 + 10, level - 0.5, level, "walk", "frame_plate_%d" % level, mirror=True)
+    # Scaffold ladders: each climbs one level and tops out onto the next plate's edge (zig-zag, so every step is a choice).
+    b.climb(-52, -31.8, -48, -30, 0, 6.6, mirror=True, tag="ladder_1", face="-z")
+    b.climb(-44, -40, -42.8, -36, 6, 12.6, mirror=True, tag="ladder_2", face="-x")
+    b.climb(-52, -43.8, -48, -42, 12, 18.6, mirror=True, tag="ladder_3", face="-z")
+    b.climb(-43.8, -52, -42, -48, 18, 24.6, mirror=True, tag="ladder_4", face="-x")
+    # Material hoist beside the tower: landings at 6, 12 and 18 m, a car that stops at ground and each landing.
+    for level in (6, 12, 18):
+        b.block(-32, -50, -29, -46, level - 0.5, level, "walk", "hoist_landing_%d" % level, mirror=True)
+    keys = [(0, (-27, 0.0, -48)), (8, (-27, 0.0, -48)), (11, (-27, 5.75, -48)), (14, (-27, 5.75, -48)), (17, (-27, 11.75, -48)),
+            (20, (-27, 11.75, -48)), (23, (-27, 17.75, -48)), (31, (-27, 17.75, -48)), (40, (-27, 0.0, -48))]
+    b.mover("hoist", (4, 0.5, 4), keys, color=MOVER, period=40, mirror=True)
+    # Site office: a flat-roofed block across a 16 m gap from the tower's top plate; the crane span closes the gap.
+    b.block(-82, -52, -70, -40, 0, 24, "tower", "site_office", mirror=True)
+    b.climb(-80, -40, -76, -38.2, 0, 24.6, mirror=True, tag="office_ladder", face="-z")
+    b.decor(-80, -39.96, -76, -40, 0, 24, "accent", "flush", "office_ladder_strip", mirror=True, color=CLIMB)
+    # Tower crane: mast and jib are landmarks visible from anywhere in the north half.
+    b.block(-66, -36, -63, -33, 0, 40, "tower", "crane_mast", mirror=True)
+    b.block(-76, -35.5, -56, -33.5, 40, 41.5, "accent", "crane_jib", mirror=True, color=ORANGE)
+    # Event: the crane swings a span between the office roof and the tower's top plate (match time 210 s, then returns).
+    stowed = ((-62, 32.0, -36), (0, 90, 0))
+    placed = ((-62, 23.75, -47), (0, 0, 0))
+    b.mover("crane_span", (16, 0.5, 3), [(0, *stowed), (210, *stowed), (216, *placed), (270, *placed), (276, *stowed), (300, *stowed)],
+            color=MOVER, period=300, mirror=True)
+    b.event(210, "CRANES SWINGING SPANS INTO PLACE")
+    # Open yard cover: containers (mantle height), well clear of the stairwell and the stairs' routes.
+    for x0, z0, x1, z1 in ((-84, -22, -76, -18), (-52, -22, -44, -18), (-40, -26, -34, -22)):
+        b.block(x0, z0, x1, z1, 0, 2.6, "cover", "site_container", mirror=True)
+
+
+# ---- market and rooftop garden (south outer): tight alleys below, an open roof plateau above -----------------
+
+MARKET_X = [(-86, -77), (-73, -64), (-60, -51)]
+MARKET_Z = [(16, 28), (32, 44), (48, 62)]
+
+
+def stage_market(b):
+    for row, (z0, z1) in enumerate(MARKET_Z):
+        for col, (x0, x1) in enumerate(MARKET_X):
+            if (row, col) == (1, 1):
+                continue                                  # the market hall is built separately
+            b.block(x0, z0, x1, z1, 0, ROOF, "tower", "market_%d%d" % (row, col), mirror=True)
+            # Garden planters on the roof (cover islands up there).
+            b.cylinder((x0 + x1) / 2, (z0 + z1) / 2, 1.5, ROOF, ROOF + 1.2, "cover", "planter_%d%d" % (row, col), mirror=True)
+    # The hall: walls with a door on each alley, a roof slab with a 6 m skylight, stalls inside.
+    b.room(-73, 32, -64, 44, 0, ROOF - 1, 1, "tower", "hall", openings=[("w", 38, 4, 4), ("e", 38, 4, 4)], mirror=True)
+    slab_with_holes(b, -73, 32, -64, 44, ROOF - 1, ROOF, [[-71.5, 35, -65.5, 41]], "tower", "hall_roof")
+    b.block(-70, 35, -67.5, 37, 0, 2.4, "cover", "hall_stall", mirror=True)
+    # Event: the skylight floor collapses into the hall (once, at 150 s): a route from the roofs down to the street.
+    b.mover("skylight", (6, 0.5, 6), [(0, (-68.5, ROOF - 0.25, 38)), (150, (-68.5, ROOF - 0.25, 38)), (152.5, (-68.5, -0.75, 38))],
+            color=MOVER, mirror=True)
+    b.event(150, "MARKET SKYLIGHTS COLLAPSING")
+    # Roof bridges (the garden is one connected plateau) and mid-level bridges over the north-south alleys.
+    for z0 in (22, 54):
+        for x0, x1 in ((-77, -73), (-64, -60)):
+            b.block(x0, z0, x1, z0 + 4, ROOF - 0.5, ROOF, "walk", "roof_bridge", mirror=True)
+    for x0, x1 in ((-77, -73), (-64, -60)):
+        b.block(x0, 18, x1, 20, MID - 0.5, MID, "walk", "mid_bridge", mirror=True)
+    # Awnings are bounce pads: launch is strong enough to reach the roofs. Two on each side of the hall, two on the back row.
+    for (x0, x1, zs) in ((-77, -75, (35, 41)), (-62, -60, (35, 41)), (-77, -75, (51, 57)), (-62, -60, (51, 57))):
+        z0, z1 = zs
+        b.block(x0, z0, x1, z1, 3.5, 4.0, "accent", "awning", mirror=True, color=BOUNCE)
+        b.bounce(x0, z0, x1, z1, 4.0, 4.7, power=23, mirror=True, tag="awning_bounce")
+    # Boulevard-side awnings: gentle hops up to the mid-level bridges.
+    for x0, x1 in ((-86, -80), (-60, -54)):
+        b.block(x0, 14, x1, 16, 3.5, 4.0, "accent", "awning_blv", mirror=True, color=BOUNCE)
+        b.bounce(x0, 14, x1, 16, 4.0, 4.7, power=17, mirror=True, tag="awning_blv_bounce")
+    # Fire escapes: climb lanes up the alley faces, topping out onto the roofs.
+    for x0 in (-83, -70, -57):
+        b.climb(x0, 28, x0 + 3, 29.2, 0, ROOF + 0.6, mirror=True, tag="escape_s", face="-z")
+        b.decor(x0, 28, x0 + 3, 28.04, 0, ROOF, "accent", "flush", "escape_s_strip", mirror=True, color=CLIMB)
+    for x0 in (-83, -57):
+        b.climb(x0, 46.8, x0 + 3, 48, 0, ROOF + 0.6, mirror=True, tag="escape_n", face="+z")
+        b.decor(x0, 47.96, x0 + 3, 48, 0, ROOF, "accent", "flush", "escape_n_strip", mirror=True, color=CLIMB)
+
+
 # ---- bot graph (walk and ramp edges only; verbs are for players) ------------------------------------
 
 def chicane_nodes(b, name, x0, before, after):
@@ -149,3 +278,10 @@ def stage_graph(b):
     b.waypoint("n3a", 0, 0, -25, "n3b:aln")
     b.waypoint("n3b", -8, 0, -25, "n3c:aln", mirror=True)
     b.waypoint("n3c", -8, 0, -12, "C:aln", mirror=True)
+    # market alleys: a loop off the boulevard (tag aln)
+    b.waypoint("m0", -75, 0, 13, "m1:aln,c1p:aln", mirror=True)
+    b.waypoint("m1", -75, 0, 30, "m2:aln,m4:aln", mirror=True)
+    b.waypoint("m2", -75, 0, 46, "m3:aln", mirror=True)
+    b.waypoint("m3", -75, 0, 56, "", mirror=True)
+    b.waypoint("m4", -62, 0, 30, "m5:aln", mirror=True)
+    b.waypoint("m5", -62, 0, 14, "A:aln", mirror=True)

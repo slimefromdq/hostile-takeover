@@ -16,6 +16,8 @@ static var spawn_x: float = MapLayout.SPAWN_X
 static var spawn_z: float = -7.0
 static var spawn_step: float = 2.8
 static var depot_limit: float = MapLayout.DEPOT_LIMIT
+# Height above which fighters are killed (grapples and launch pads can never carry anyone out of the arena).
+static var ceiling: float = 40.0
 static var test_lane: Vector3 = MapLayout.TEST_LANE
 static var graph_data: Dictionary = {}
 # Optional audit profile from the blockout (sightline lanes, route families, spawn sight); {} means the built-in map's.
@@ -31,6 +33,7 @@ static func reset_settings() -> void:
 	spawn_z = -7.0
 	spawn_step = 2.8
 	depot_limit = MapLayout.DEPOT_LIMIT
+	ceiling = 40.0
 	test_lane = MapLayout.TEST_LANE
 	graph_data = MapLayout.graph()
 	audit_profile = {}
@@ -45,6 +48,7 @@ static func apply_settings(r: Dictionary) -> void:
 	spawn_z = r.spawn_z
 	spawn_step = r.spawn_step
 	depot_limit = r.depot_limit
+	ceiling = r.ceiling
 	test_lane = r.test_lane
 	graph_data = r.graph
 	audit_profile = r.audit

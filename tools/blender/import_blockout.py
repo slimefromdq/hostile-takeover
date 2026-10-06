@@ -16,7 +16,7 @@ ROLE_COLORS = {
 }
 SETTING_PROPS = {
     "bounds": "ht_bounds", "spawn_x": "ht_spawn_x", "spawn_z": "ht_spawn_z", "spawn_step": "ht_spawn_step",
-    "depot_limit": "ht_depot_limit", "test_lane": "ht_test_lane",
+    "depot_limit": "ht_depot_limit", "test_lane": "ht_test_lane", "ceiling": "ht_ceiling",
 }
 MIRROR_DIR = {"+x": "-x", "-x": "+x", "+z": "+z", "-z": "-z"}
 

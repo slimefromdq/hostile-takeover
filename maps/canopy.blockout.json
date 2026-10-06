@@ -14,6 +14,7 @@
   "spawn_z": -7,
   "spawn_step": 2.8,
   "depot_limit": 86,
+  "ceiling": 80,
   "audit": {
    "route_families": [
     "blv",
@@ -49,6 +50,54 @@
      "max": 100
     },
     {
+     "label": "yard lane",
+     "xs": [
+      -22,
+      22,
+      4
+     ],
+     "zs": [
+      -58,
+      -40,
+      -22,
+      22,
+      40,
+      58
+     ],
+     "y": 0,
+     "azimuths": "ns",
+     "rect": [
+      -26,
+      -62,
+      52,
+      124
+     ],
+     "p50": 45,
+     "p90": 90,
+     "max": 125
+    },
+    {
+     "label": "market alley",
+     "xs": [
+      -84,
+      -52,
+      4
+     ],
+     "zs": [
+      30,
+      46
+     ],
+     "y": 0,
+     "rect": [
+      -86,
+      28,
+      36,
+      20
+     ],
+     "p90": 45,
+     "p99": 60
+    },
+    {
      "label": "tunnel",
      "xs": [
       -88,
@@ -73,7 +122,631 @@
    ]
   }
  },
- "features": [],
+ "features": [
+  {
+   "type": "climb",
+   "tag": "spire_n_ladder",
+   "face": "-z",
+   "min": [
+    -2,
+    0,
+    -51.2
+   ],
+   "max": [
+    2,
+    34.6,
+    -50
+   ]
+  },
+  {
+   "type": "climb",
+   "tag": "spire_s_ladder",
+   "face": "+z",
+   "min": [
+    -2,
+    0,
+    50
+   ],
+   "max": [
+    2,
+    34.6,
+    51.2
+   ]
+  },
+  {
+   "type": "mover",
+   "tag": "tram",
+   "size": [
+    6,
+    0.5,
+    16
+   ],
+   "role": "accent",
+   "color": "#a38bff",
+   "keys": [
+    [
+     0,
+     [
+      -12,
+      5.75,
+      -42
+     ]
+    ],
+    [
+     8,
+     [
+      -12,
+      5.75,
+      -42
+     ]
+    ],
+    [
+     28,
+     [
+      -12,
+      5.75,
+      42
+     ]
+    ],
+    [
+     36,
+     [
+      -12,
+      5.75,
+      42
+     ]
+    ],
+    [
+     56,
+     [
+      -12,
+      5.75,
+      -42
+     ]
+    ]
+   ],
+   "period": 56,
+   "mirror": true
+  },
+  {
+   "type": "mover",
+   "tag": "blimp",
+   "size": [
+    10,
+    3,
+    26
+   ],
+   "role": "accent",
+   "color": "#a38bff",
+   "keys": [
+    [
+     0,
+     [
+      0,
+      32.5,
+      -36
+     ]
+    ],
+    [
+     12,
+     [
+      0,
+      32.5,
+      -36
+     ]
+    ],
+    [
+     30,
+     [
+      0,
+      32.5,
+      36
+     ]
+    ],
+    [
+     42,
+     [
+      0,
+      32.5,
+      36
+     ]
+    ],
+    [
+     60,
+     [
+      0,
+      32.5,
+      -36
+     ]
+    ]
+   ],
+   "period": 60
+  },
+  {
+   "type": "climb",
+   "tag": "ladder_1",
+   "face": "-z",
+   "min": [
+    -52,
+    0,
+    -31.8
+   ],
+   "max": [
+    -48,
+    6.6,
+    -30
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "ladder_2",
+   "face": "-x",
+   "min": [
+    -44,
+    6,
+    -40
+   ],
+   "max": [
+    -42.8,
+    12.6,
+    -36
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "ladder_3",
+   "face": "-z",
+   "min": [
+    -52,
+    12,
+    -43.8
+   ],
+   "max": [
+    -48,
+    18.6,
+    -42
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "ladder_4",
+   "face": "-x",
+   "min": [
+    -43.8,
+    18,
+    -52
+   ],
+   "max": [
+    -42,
+    24.6,
+    -48
+   ],
+   "mirror": true
+  },
+  {
+   "type": "mover",
+   "tag": "hoist",
+   "size": [
+    4,
+    0.5,
+    4
+   ],
+   "role": "accent",
+   "color": "#a38bff",
+   "keys": [
+    [
+     0,
+     [
+      -27,
+      0.0,
+      -48
+     ]
+    ],
+    [
+     8,
+     [
+      -27,
+      0.0,
+      -48
+     ]
+    ],
+    [
+     11,
+     [
+      -27,
+      5.75,
+      -48
+     ]
+    ],
+    [
+     14,
+     [
+      -27,
+      5.75,
+      -48
+     ]
+    ],
+    [
+     17,
+     [
+      -27,
+      11.75,
+      -48
+     ]
+    ],
+    [
+     20,
+     [
+      -27,
+      11.75,
+      -48
+     ]
+    ],
+    [
+     23,
+     [
+      -27,
+      17.75,
+      -48
+     ]
+    ],
+    [
+     31,
+     [
+      -27,
+      17.75,
+      -48
+     ]
+    ],
+    [
+     40,
+     [
+      -27,
+      0.0,
+      -48
+     ]
+    ]
+   ],
+   "period": 40,
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "office_ladder",
+   "face": "-z",
+   "min": [
+    -80,
+    0,
+    -40
+   ],
+   "max": [
+    -76,
+    24.6,
+    -38.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "mover",
+   "tag": "crane_span",
+   "size": [
+    16,
+    0.5,
+    3
+   ],
+   "role": "accent",
+   "color": "#a38bff",
+   "keys": [
+    [
+     0,
+     [
+      -62,
+      32.0,
+      -36
+     ],
+     [
+      0,
+      90,
+      0
+     ]
+    ],
+    [
+     210,
+     [
+      -62,
+      32.0,
+      -36
+     ],
+     [
+      0,
+      90,
+      0
+     ]
+    ],
+    [
+     216,
+     [
+      -62,
+      23.75,
+      -47
+     ],
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     270,
+     [
+      -62,
+      23.75,
+      -47
+     ],
+     [
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     276,
+     [
+      -62,
+      32.0,
+      -36
+     ],
+     [
+      0,
+      90,
+      0
+     ]
+    ],
+    [
+     300,
+     [
+      -62,
+      32.0,
+      -36
+     ],
+     [
+      0,
+      90,
+      0
+     ]
+    ]
+   ],
+   "period": 300,
+   "mirror": true
+  },
+  {
+   "type": "event",
+   "time": 210,
+   "text": "CRANES SWINGING SPANS INTO PLACE"
+  },
+  {
+   "type": "mover",
+   "tag": "skylight",
+   "size": [
+    6,
+    0.5,
+    6
+   ],
+   "role": "accent",
+   "color": "#a38bff",
+   "keys": [
+    [
+     0,
+     [
+      -68.5,
+      11.75,
+      38
+     ]
+    ],
+    [
+     150,
+     [
+      -68.5,
+      11.75,
+      38
+     ]
+    ],
+    [
+     152.5,
+     [
+      -68.5,
+      -0.75,
+      38
+     ]
+    ]
+   ],
+   "mirror": true
+  },
+  {
+   "type": "event",
+   "time": 150,
+   "text": "MARKET SKYLIGHTS COLLAPSING"
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_bounce",
+   "min": [
+    -77,
+    4.0,
+    35
+   ],
+   "max": [
+    -75,
+    4.7,
+    41
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_bounce",
+   "min": [
+    -62,
+    4.0,
+    35
+   ],
+   "max": [
+    -60,
+    4.7,
+    41
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_bounce",
+   "min": [
+    -77,
+    4.0,
+    51
+   ],
+   "max": [
+    -75,
+    4.7,
+    57
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_bounce",
+   "min": [
+    -62,
+    4.0,
+    51
+   ],
+   "max": [
+    -60,
+    4.7,
+    57
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_blv_bounce",
+   "min": [
+    -86,
+    4.0,
+    14
+   ],
+   "max": [
+    -80,
+    4.7,
+    16
+   ],
+   "power": 17,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_blv_bounce",
+   "min": [
+    -60,
+    4.0,
+    14
+   ],
+   "max": [
+    -54,
+    4.7,
+    16
+   ],
+   "power": 17,
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_s",
+   "face": "-z",
+   "min": [
+    -83,
+    0,
+    28
+   ],
+   "max": [
+    -80,
+    12.6,
+    29.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_s",
+   "face": "-z",
+   "min": [
+    -70,
+    0,
+    28
+   ],
+   "max": [
+    -67,
+    12.6,
+    29.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_s",
+   "face": "-z",
+   "min": [
+    -57,
+    0,
+    28
+   ],
+   "max": [
+    -54,
+    12.6,
+    29.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_n",
+   "face": "+z",
+   "min": [
+    -83,
+    0,
+    46.8
+   ],
+   "max": [
+    -80,
+    12.6,
+    48
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_n",
+   "face": "+z",
+   "min": [
+    -57,
+    0,
+    46.8
+   ],
+   "max": [
+    -54,
+    12.6,
+    48
+   ],
+   "mirror": true
+  }
+ ],
  "objects": [
   {
    "kind": "block",
@@ -875,6 +1548,1657 @@
    "mirror": true,
    "color": "#ff6a2b",
    "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    -60.0
+   ],
+   "max": [
+    -19.0,
+    2.5,
+    -48.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    -44.0
+   ],
+   "max": [
+    -19.0,
+    5.25,
+    -32.0
+   ],
+   "mirror": true,
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    -28.0
+   ],
+   "max": [
+    -19.0,
+    2.5,
+    -16.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    16.0
+   ],
+   "max": [
+    -19.0,
+    2.5,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -19.0,
+    5.25,
+    44.0
+   ],
+   "mirror": true,
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "block",
+   "tag": "container_a",
+   "role": "cover",
+   "min": [
+    -24.0,
+    0.0,
+    48.0
+   ],
+   "max": [
+    -19.0,
+    2.5,
+    60.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_b",
+   "role": "cover",
+   "min": [
+    -8.0,
+    0.0,
+    -44.0
+   ],
+   "max": [
+    -4.0,
+    2.5,
+    -32.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_b",
+   "role": "cover",
+   "min": [
+    -8.0,
+    0.0,
+    16.0
+   ],
+   "max": [
+    -4.0,
+    2.5,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "container_b",
+   "role": "cover",
+   "min": [
+    -8.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -4.0,
+    2.5,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "yard_island",
+   "role": "cover",
+   "min": [
+    -1.5,
+    0.0,
+    -35.5
+   ],
+   "max": [
+    1.5,
+    2.5,
+    -32.5
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "yard_island",
+   "role": "cover",
+   "min": [
+    -1.5,
+    0.0,
+    32.5
+   ],
+   "max": [
+    1.5,
+    2.5,
+    35.5
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "station_n",
+   "role": "walk",
+   "min": [
+    -16.0,
+    5.0,
+    -58.0
+   ],
+   "max": [
+    -8.0,
+    6.0,
+    -50.0
+   ],
+   "mirror": true,
+   "color": "#a38bff"
+  },
+  {
+   "kind": "block",
+   "tag": "station_n_pier",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    -58.0
+   ],
+   "max": [
+    -14.0,
+    5.0,
+    -56.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_n_pier",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    -52.0
+   ],
+   "max": [
+    -14.0,
+    5.0,
+    -50.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_n_pier",
+   "role": "wall",
+   "min": [
+    -10.0,
+    0.0,
+    -58.0
+   ],
+   "max": [
+    -8.0,
+    5.0,
+    -56.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_n_pier",
+   "role": "wall",
+   "min": [
+    -10.0,
+    0.0,
+    -52.0
+   ],
+   "max": [
+    -8.0,
+    5.0,
+    -50.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_s",
+   "role": "walk",
+   "min": [
+    -16.0,
+    5.0,
+    50.0
+   ],
+   "max": [
+    -8.0,
+    6.0,
+    58.0
+   ],
+   "mirror": true,
+   "color": "#a38bff"
+  },
+  {
+   "kind": "block",
+   "tag": "station_s_pier",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    50.0
+   ],
+   "max": [
+    -14.0,
+    5.0,
+    52.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_s_pier",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    56.0
+   ],
+   "max": [
+    -14.0,
+    5.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_s_pier",
+   "role": "wall",
+   "min": [
+    -10.0,
+    0.0,
+    50.0
+   ],
+   "max": [
+    -8.0,
+    5.0,
+    52.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "station_s_pier",
+   "role": "wall",
+   "min": [
+    -10.0,
+    0.0,
+    56.0
+   ],
+   "max": [
+    -8.0,
+    5.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "spire_n_base",
+   "role": "tower",
+   "min": [
+    -6.0,
+    0.0,
+    -62.0
+   ],
+   "max": [
+    6.0,
+    34.0,
+    -50.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "spire_n_top",
+   "role": "tower",
+   "min": [
+    -3.0,
+    34.0,
+    -62.0
+   ],
+   "max": [
+    3.0,
+    62.0,
+    -56.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "spire_s_base",
+   "role": "tower",
+   "min": [
+    -6.0,
+    0.0,
+    50.0
+   ],
+   "max": [
+    6.0,
+    34.0,
+    62.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "spire_s_top",
+   "role": "tower",
+   "min": [
+    -3.0,
+    34.0,
+    56.0
+   ],
+   "max": [
+    3.0,
+    62.0,
+    62.0
+   ]
+  },
+  {
+   "kind": "decor",
+   "tag": "spire_n_ladder_strip",
+   "role": "accent",
+   "min": [
+    -2,
+    0,
+    -50.04
+   ],
+   "max": [
+    2,
+    34,
+    -50
+   ],
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "spire_s_ladder_strip",
+   "role": "accent",
+   "min": [
+    -2,
+    0,
+    50
+   ],
+   "max": [
+    2,
+    34,
+    50.04
+   ],
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -56.0,
+    0.0,
+    -56.0
+   ],
+   "max": [
+    -54.0,
+    24.0,
+    -54.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -56.0,
+    0.0,
+    -44.0
+   ],
+   "max": [
+    -54.0,
+    24.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -56.0,
+    0.0,
+    -32.0
+   ],
+   "max": [
+    -54.0,
+    24.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -44.0,
+    0.0,
+    -56.0
+   ],
+   "max": [
+    -42.0,
+    24.0,
+    -54.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -44.0,
+    0.0,
+    -44.0
+   ],
+   "max": [
+    -42.0,
+    24.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -44.0,
+    0.0,
+    -32.0
+   ],
+   "max": [
+    -42.0,
+    24.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -32.0,
+    0.0,
+    -56.0
+   ],
+   "max": [
+    -30.0,
+    24.0,
+    -54.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -32.0,
+    0.0,
+    -44.0
+   ],
+   "max": [
+    -30.0,
+    24.0,
+    -42.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_column",
+   "role": "wall",
+   "min": [
+    -32.0,
+    0.0,
+    -32.0
+   ],
+   "max": [
+    -30.0,
+    24.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_6",
+   "role": "walk",
+   "min": [
+    -54.0,
+    5.5,
+    -54.0
+   ],
+   "max": [
+    -44.0,
+    6.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_6",
+   "role": "walk",
+   "min": [
+    -42.0,
+    5.5,
+    -54.0
+   ],
+   "max": [
+    -32.0,
+    6.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_6",
+   "role": "walk",
+   "min": [
+    -54.0,
+    5.5,
+    -42.0
+   ],
+   "max": [
+    -44.0,
+    6.0,
+    -32.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_6",
+   "role": "walk",
+   "min": [
+    -42.0,
+    5.5,
+    -42.0
+   ],
+   "max": [
+    -32.0,
+    6.0,
+    -32.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_12",
+   "role": "walk",
+   "min": [
+    -54.0,
+    11.5,
+    -54.0
+   ],
+   "max": [
+    -44.0,
+    12.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_12",
+   "role": "walk",
+   "min": [
+    -42.0,
+    11.5,
+    -54.0
+   ],
+   "max": [
+    -32.0,
+    12.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_12",
+   "role": "walk",
+   "min": [
+    -54.0,
+    11.5,
+    -42.0
+   ],
+   "max": [
+    -44.0,
+    12.0,
+    -32.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_18",
+   "role": "walk",
+   "min": [
+    -54.0,
+    17.5,
+    -54.0
+   ],
+   "max": [
+    -44.0,
+    18.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_18",
+   "role": "walk",
+   "min": [
+    -42.0,
+    17.5,
+    -54.0
+   ],
+   "max": [
+    -32.0,
+    18.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "frame_plate_24",
+   "role": "walk",
+   "min": [
+    -54.0,
+    23.5,
+    -54.0
+   ],
+   "max": [
+    -44.0,
+    24.0,
+    -44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hoist_landing_6",
+   "role": "walk",
+   "min": [
+    -32.0,
+    5.5,
+    -50.0
+   ],
+   "max": [
+    -29.0,
+    6.0,
+    -46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hoist_landing_12",
+   "role": "walk",
+   "min": [
+    -32.0,
+    11.5,
+    -50.0
+   ],
+   "max": [
+    -29.0,
+    12.0,
+    -46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hoist_landing_18",
+   "role": "walk",
+   "min": [
+    -32.0,
+    17.5,
+    -50.0
+   ],
+   "max": [
+    -29.0,
+    18.0,
+    -46.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "site_office",
+   "role": "tower",
+   "min": [
+    -82.0,
+    0.0,
+    -52.0
+   ],
+   "max": [
+    -70.0,
+    24.0,
+    -40.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "office_ladder_strip",
+   "role": "accent",
+   "min": [
+    -80,
+    0,
+    -40
+   ],
+   "max": [
+    -76,
+    24,
+    -39.96
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "crane_mast",
+   "role": "tower",
+   "min": [
+    -66.0,
+    0.0,
+    -36.0
+   ],
+   "max": [
+    -63.0,
+    40.0,
+    -33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "crane_jib",
+   "role": "accent",
+   "min": [
+    -76.0,
+    40.0,
+    -35.5
+   ],
+   "max": [
+    -56.0,
+    41.5,
+    -33.5
+   ],
+   "mirror": true,
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "block",
+   "tag": "site_container",
+   "role": "cover",
+   "min": [
+    -84.0,
+    0.0,
+    -22.0
+   ],
+   "max": [
+    -76.0,
+    2.5,
+    -18.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "site_container",
+   "role": "cover",
+   "min": [
+    -52.0,
+    0.0,
+    -22.0
+   ],
+   "max": [
+    -44.0,
+    2.5,
+    -18.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "site_container",
+   "role": "cover",
+   "min": [
+    -40.0,
+    0.0,
+    -26.0
+   ],
+   "max": [
+    -34.0,
+    2.5,
+    -22.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_00",
+   "role": "tower",
+   "min": [
+    -86.0,
+    0.0,
+    16.0
+   ],
+   "max": [
+    -77.0,
+    12.0,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_00",
+   "role": "cover",
+   "min": [
+    -83.0,
+    12.0,
+    20.5
+   ],
+   "max": [
+    -80.0,
+    13.25,
+    23.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_01",
+   "role": "tower",
+   "min": [
+    -73.0,
+    0.0,
+    16.0
+   ],
+   "max": [
+    -64.0,
+    12.0,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_01",
+   "role": "cover",
+   "min": [
+    -70.0,
+    12.0,
+    20.5
+   ],
+   "max": [
+    -67.0,
+    13.25,
+    23.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_02",
+   "role": "tower",
+   "min": [
+    -60.0,
+    0.0,
+    16.0
+   ],
+   "max": [
+    -51.0,
+    12.0,
+    28.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_02",
+   "role": "cover",
+   "min": [
+    -57.0,
+    12.0,
+    20.5
+   ],
+   "max": [
+    -54.0,
+    13.25,
+    23.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_10",
+   "role": "tower",
+   "min": [
+    -86.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -77.0,
+    12.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_10",
+   "role": "cover",
+   "min": [
+    -83.0,
+    12.0,
+    36.5
+   ],
+   "max": [
+    -80.0,
+    13.25,
+    39.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_12",
+   "role": "tower",
+   "min": [
+    -60.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -51.0,
+    12.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_12",
+   "role": "cover",
+   "min": [
+    -57.0,
+    12.0,
+    36.5
+   ],
+   "max": [
+    -54.0,
+    13.25,
+    39.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_20",
+   "role": "tower",
+   "min": [
+    -86.0,
+    0.0,
+    48.0
+   ],
+   "max": [
+    -77.0,
+    12.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_20",
+   "role": "cover",
+   "min": [
+    -83.0,
+    12.0,
+    53.5
+   ],
+   "max": [
+    -80.0,
+    13.25,
+    56.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_21",
+   "role": "tower",
+   "min": [
+    -73.0,
+    0.0,
+    48.0
+   ],
+   "max": [
+    -64.0,
+    12.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_21",
+   "role": "cover",
+   "min": [
+    -70.0,
+    12.0,
+    53.5
+   ],
+   "max": [
+    -67.0,
+    13.25,
+    56.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "market_22",
+   "role": "tower",
+   "min": [
+    -60.0,
+    0.0,
+    48.0
+   ],
+   "max": [
+    -51.0,
+    12.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_22",
+   "role": "cover",
+   "min": [
+    -57.0,
+    12.0,
+    53.5
+   ],
+   "max": [
+    -54.0,
+    13.25,
+    56.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_n0",
+   "role": "tower",
+   "min": [
+    -72.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -65.0,
+    11.0,
+    33.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_s0",
+   "role": "tower",
+   "min": [
+    -72.0,
+    0.0,
+    43.0
+   ],
+   "max": [
+    -65.0,
+    11.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_w0",
+   "role": "tower",
+   "min": [
+    -73.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -72.0,
+    11.0,
+    36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_w1",
+   "role": "tower",
+   "min": [
+    -73.0,
+    4.0,
+    36.0
+   ],
+   "max": [
+    -72.0,
+    11.0,
+    40.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_w2",
+   "role": "tower",
+   "min": [
+    -73.0,
+    0.0,
+    40.0
+   ],
+   "max": [
+    -72.0,
+    11.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_e0",
+   "role": "tower",
+   "min": [
+    -65.0,
+    0.0,
+    32.0
+   ],
+   "max": [
+    -64.0,
+    11.0,
+    36.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_e1",
+   "role": "tower",
+   "min": [
+    -65.0,
+    4.0,
+    36.0
+   ],
+   "max": [
+    -64.0,
+    11.0,
+    40.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_e2",
+   "role": "tower",
+   "min": [
+    -65.0,
+    0.0,
+    40.0
+   ],
+   "max": [
+    -64.0,
+    11.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_roof",
+   "role": "tower",
+   "min": [
+    -73.0,
+    11.0,
+    32.0
+   ],
+   "max": [
+    -71.5,
+    12.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_roof",
+   "role": "tower",
+   "min": [
+    -71.5,
+    11.0,
+    32.0
+   ],
+   "max": [
+    -65.5,
+    12.0,
+    35.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_roof",
+   "role": "tower",
+   "min": [
+    -71.5,
+    11.0,
+    41.0
+   ],
+   "max": [
+    -65.5,
+    12.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_roof",
+   "role": "tower",
+   "min": [
+    -65.5,
+    11.0,
+    32.0
+   ],
+   "max": [
+    -64.0,
+    12.0,
+    44.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "hall_stall",
+   "role": "cover",
+   "min": [
+    -70.0,
+    0.0,
+    35.0
+   ],
+   "max": [
+    -67.5,
+    2.5,
+    37.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "roof_bridge",
+   "role": "walk",
+   "min": [
+    -77.0,
+    11.5,
+    22.0
+   ],
+   "max": [
+    -73.0,
+    12.0,
+    26.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "roof_bridge",
+   "role": "walk",
+   "min": [
+    -64.0,
+    11.5,
+    22.0
+   ],
+   "max": [
+    -60.0,
+    12.0,
+    26.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "roof_bridge",
+   "role": "walk",
+   "min": [
+    -77.0,
+    11.5,
+    54.0
+   ],
+   "max": [
+    -73.0,
+    12.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "roof_bridge",
+   "role": "walk",
+   "min": [
+    -64.0,
+    11.5,
+    54.0
+   ],
+   "max": [
+    -60.0,
+    12.0,
+    58.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "mid_bridge",
+   "role": "walk",
+   "min": [
+    -77.0,
+    5.5,
+    18.0
+   ],
+   "max": [
+    -73.0,
+    6.0,
+    20.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "mid_bridge",
+   "role": "walk",
+   "min": [
+    -64.0,
+    5.5,
+    18.0
+   ],
+   "max": [
+    -60.0,
+    6.0,
+    20.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "awning",
+   "role": "accent",
+   "min": [
+    -77.0,
+    3.5,
+    35.0
+   ],
+   "max": [
+    -75.0,
+    4.0,
+    41.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning",
+   "role": "accent",
+   "min": [
+    -62.0,
+    3.5,
+    35.0
+   ],
+   "max": [
+    -60.0,
+    4.0,
+    41.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning",
+   "role": "accent",
+   "min": [
+    -77.0,
+    3.5,
+    51.0
+   ],
+   "max": [
+    -75.0,
+    4.0,
+    57.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning",
+   "role": "accent",
+   "min": [
+    -62.0,
+    3.5,
+    51.0
+   ],
+   "max": [
+    -60.0,
+    4.0,
+    57.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning_blv",
+   "role": "accent",
+   "min": [
+    -86.0,
+    3.5,
+    14.0
+   ],
+   "max": [
+    -80.0,
+    4.0,
+    16.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning_blv",
+   "role": "accent",
+   "min": [
+    -60.0,
+    3.5,
+    14.0
+   ],
+   "max": [
+    -54.0,
+    4.0,
+    16.0
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_s_strip",
+   "role": "accent",
+   "min": [
+    -83,
+    0,
+    28
+   ],
+   "max": [
+    -80,
+    12.0,
+    28.04
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_s_strip",
+   "role": "accent",
+   "min": [
+    -70,
+    0,
+    28
+   ],
+   "max": [
+    -67,
+    12.0,
+    28.04
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_s_strip",
+   "role": "accent",
+   "min": [
+    -57,
+    0,
+    28
+   ],
+   "max": [
+    -54,
+    12.0,
+    28.04
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_n_strip",
+   "role": "accent",
+   "min": [
+    -83,
+    0,
+    47.96
+   ],
+   "max": [
+    -80,
+    12.0,
+    48
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_n_strip",
+   "role": "accent",
+   "min": [
+    -57,
+    0,
+    47.96
+   ],
+   "max": [
+    -54,
+    12.0,
+    48
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
   }
  ],
  "waypoints": [
@@ -1298,6 +3622,60 @@
     -12
    ],
    "mirror": true
+  },
+  {
+   "name": "m0",
+   "pos": [
+    -75,
+    0,
+    13
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m1",
+   "pos": [
+    -75,
+    0,
+    30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m2",
+   "pos": [
+    -75,
+    0,
+    46
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m3",
+   "pos": [
+    -75,
+    0,
+    56
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m4",
+   "pos": [
+    -62,
+    0,
+    30
+   ],
+   "mirror": true
+  },
+  {
+   "name": "m5",
+   "pos": [
+    -62,
+    0,
+    14
+   ],
+   "mirror": true
   }
  ],
  "links": [
@@ -1534,6 +3912,41 @@
   [
    "n3c",
    "C",
+   "aln"
+  ],
+  [
+   "m0",
+   "m1",
+   "aln"
+  ],
+  [
+   "m0",
+   "c1p",
+   "aln"
+  ],
+  [
+   "m1",
+   "m2",
+   "aln"
+  ],
+  [
+   "m1",
+   "m4",
+   "aln"
+  ],
+  [
+   "m2",
+   "m3",
+   "aln"
+  ],
+  [
+   "m4",
+   "m5",
+   "aln"
+  ],
+  [
+   "m5",
+   "A",
    "aln"
   ]
  ]

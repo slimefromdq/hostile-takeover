@@ -100,6 +100,7 @@ static func resolve(data: Dictionary) -> Dictionary:
 		"spawn_z": float(settings.get("spawn_z", (nodes[spawn_nodes[0]].z - 7.0) if spawn_nodes.size() == 2 else 0.0)),
 		"spawn_step": float(settings.get("spawn_step", 2.8)),
 		"depot_limit": float(settings.get("depot_limit", spawn_x - 3.0)),
+		"ceiling": float(settings.get("ceiling", 40.0)),
 		"test_lane": test_lane,
 		"audit": settings.get("audit", {}),
 		"errors": errors,
