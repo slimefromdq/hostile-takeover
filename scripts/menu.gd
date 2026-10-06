@@ -129,7 +129,7 @@ func setup(owner_game: Node3D) -> void:
 		DisplayPrefs.set_sensitivity(v)
 		sens_label.text = "Aim sensitivity: %.2f" % v)
 	sens_row.add_child(sens_slider)
-	options.add_child(sens_row)
+	column.add_child(sens_row)
 	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
