@@ -93,7 +93,7 @@ func _ready() -> void:
 		start_game("join")
 
 func setup_inputs() -> void:
-	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_CTRL, "dash": KEY_SHIFT, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V, "scoreboard": KEY_TAB}
+	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V, "scoreboard": KEY_TAB}
 	for action in bindings:
 		InputMap.add_action(action)
 		var key := InputEventKey.new()
