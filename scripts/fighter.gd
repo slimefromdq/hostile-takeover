@@ -40,6 +40,20 @@ const SLIDE_JUMP_SPEED_CAP_HOT_LAP := 14.0
 const COYOTE_TIME := 0.12
 const JUMP_BUFFER := 0.12
 const WALL_KICK_REACH := 1.1
+# Wall run: auto-attaches to a wall you are moving along, holds height with a slow sag, and exits with a wall kick.
+const WALL_RUN_MIN_SPEED := 5.0
+const WALL_RUN_TIME := 0.9
+const WALL_RUN_TIME_HOT_LAP := 1.4
+const WALL_RUN_GRAVITY := 0.15
+const WALL_RUN_SAG_TIME := 0.3
+const WALL_RUN_STICK := 2.0
+const WALL_RUN_REACH := 0.85
+const WALL_RUN_COOLDOWN := 0.35
+const WALL_RUN_SPEED_CAP := 12.0
+const WALL_RUN_SPEED_CAP_HOT_LAP := 14.0
+const WALL_RUN_MAX_RISE := 1.0
+const WALL_RUN_ENTRY_FALL := 3.0
+const WALL_RUN_PROBE_ANGLES := [PI / 2.0, -PI / 2.0, PI / 4.0, -PI / 4.0]
 const MANTLE_SPEED := 8.5
 const MANTLE_HEAD_CLEARANCE := 2.6
 const MANTLE_REACH := 1.2
@@ -87,6 +101,10 @@ var dash_cd: float = 0.0
 var sliding: bool = false
 var slide_cd: float = 0.0
 var slide_grace: float = 0.0
+var wall_running: bool = false
+var wall_run_time: float = 0.0
+var wall_run_normal: Vector3 = Vector3.ZERO
+var wall_run_cd: float = 0.0
 var coyote_time: float = 0.0
 var jump_buffer: float = 0.0
 # Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
@@ -263,6 +281,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		zip_id = -1
 		climbing = false
 		sliding = false
+		wall_running = false
 		return
 	idle_weapon += dt
 	if held & 3:
@@ -286,6 +305,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	movement_edges = MapVerbs.pre_move(self, dt, movement_edges, grounded)
 	if zip_id >= 0:
 		sliding = false
+		wall_running = false
 		MapVerbs.zip_move(self, dt, movement_edges)
 		move_and_slide()
 		MapVerbs.zip_after_slide(self)
@@ -297,19 +317,27 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		speed *= 0.55
 	_update_slide_state(grounded, dt)
 	dash_time = maxf(0.0, dash_time - dt)
+	_update_wall_run(grounded, desired, dt)
 	if sliding:
 		_slide_step(desired, dt)
 	elif grounded:
 		var rate := GROUND_ACCEL if desired.length() > 0.05 else GROUND_FRICTION
 		velocity.x = move_toward(velocity.x, desired.x * speed, rate * dt)
 		velocity.z = move_toward(velocity.z, desired.z * speed, rate * dt)
+	elif wall_running:
+		_wall_run_step(dt)
 	elif dash_time > 0.0:
 		velocity.x = dash_velocity.x
 		velocity.z = dash_velocity.z
 	else:
 		_air_steer(desired, dt)
 	if not grounded:
-		velocity.y -= GRAVITY * (0.35 if dash_time > 0.0 else 1.0) * dt
+		var gravity_scale := 1.0
+		if dash_time > 0.0:
+			gravity_scale = 0.35
+		elif wall_running:
+			gravity_scale = lerpf(1.0, WALL_RUN_GRAVITY, clampf(wall_run_time / WALL_RUN_SAG_TIME, 0.0, 1.0))
+		velocity.y -= GRAVITY * gravity_scale * dt
 	else:
 		velocity.y = -0.1
 	# Input forgiveness: a press shortly before a landing or wall still counts, and a jump just after
@@ -325,6 +353,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
 		dash_cd = DASH_COOLDOWN
+		_end_wall_run()
 		var dash_dir := desired.normalized() if desired.length() > 0.1 else horizontal_direction()
 		dash_time = DASH_TIME
 		dash_velocity = dash_dir * DASH_SPEED
@@ -408,6 +437,68 @@ func _slide_jump_boost() -> void:
 		sliding = false
 		slide_cd = SLIDE_COOLDOWN
 
+func _end_wall_run() -> void:
+	if wall_running:
+		wall_running = false
+		wall_run_cd = WALL_RUN_COOLDOWN
+
+func _wall_ray(dir: Vector3) -> Dictionary:
+	var origin := global_position + Vector3.UP
+	var hit: Dictionary = game.ray(origin, origin + dir * WALL_RUN_REACH, [get_rid()], 1 | 4)
+	if not hit.is_empty() and absf(hit.normal.y) >= 0.3:
+		return {}
+	return hit
+
+# Attach while airborne, holding forward, at speed along a wall (at most about 45 degrees into it, so
+# a head-on hit stays a plain wall kick); stay on while the wall, speed and input hold out.
+func _update_wall_run(grounded: bool, desired: Vector3, dt: float) -> void:
+	wall_run_cd = maxf(0.0, wall_run_cd - dt)
+	if grounded or climbing or grapple_time > 0.0 or rush_time > 0.0 or dash_time > 0.0:
+		_end_wall_run()
+		return
+	var forward: bool = movement.y < -0.1
+	var horizontal := Vector3(velocity.x, 0, velocity.z)
+	if wall_running:
+		wall_run_time -= dt
+		var wall := _wall_ray(-wall_run_normal)
+		var normal := Vector3(wall.normal.x, 0, wall.normal.z).normalized() if not wall.is_empty() else Vector3.ZERO
+		if wall_run_time <= 0.0 or not forward or horizontal.length() < WALL_RUN_MIN_SPEED or normal.dot(wall_run_normal) < 0.7:
+			_end_wall_run()
+		else:
+			wall_run_normal = normal
+		return
+	if wall_run_cd > 0.0 or not forward or horizontal.length() < WALL_RUN_MIN_SPEED:
+		return
+	var heading := horizontal.normalized()
+	for angle in WALL_RUN_PROBE_ANGLES:
+		var wall := _wall_ray(heading.rotated(Vector3.UP, angle))
+		if wall.is_empty():
+			continue
+		var normal := Vector3(wall.normal.x, 0, wall.normal.z).normalized()
+		var tangent := horizontal - normal * horizontal.dot(normal)
+		var along := tangent.length()
+		if along < WALL_RUN_MIN_SPEED or -horizontal.dot(normal) > along or desired.dot(tangent / along) < 0.3:
+			continue
+		wall_running = true
+		wall_run_normal = normal
+		wall_run_time = WALL_RUN_TIME_HOT_LAP if hot_lap > 0.0 else WALL_RUN_TIME
+		velocity.y = clampf(velocity.y, -WALL_RUN_ENTRY_FALL, WALL_RUN_MAX_RISE)
+		return
+
+# Keep speed along the wall (a gentle push into it holds contact); height only sags.
+func _wall_run_step(dt: float) -> void:
+	var horizontal := Vector3(velocity.x, 0, velocity.z)
+	var tangent := horizontal - wall_run_normal * horizontal.dot(wall_run_normal)
+	if tangent.length() < 0.01:
+		_end_wall_run()
+		return
+	var cap := WALL_RUN_SPEED_CAP_HOT_LAP if hot_lap > 0.0 else WALL_RUN_SPEED_CAP
+	var speed := move_toward(tangent.length(), cap, 18.0 * dt) if tangent.length() > cap else tangent.length()
+	var run := tangent.normalized() * speed - wall_run_normal * WALL_RUN_STICK
+	velocity.x = run.x
+	velocity.z = run.z
+	velocity.y = minf(velocity.y, WALL_RUN_MAX_RISE)
+
 # One jump press: ground jump (including coyote time), else wall kick, else the double jump.
 # Returns false when nothing was available so the caller can buffer the press. Buffered presses
 # never spend the double jump, which only a fresh press may use.
@@ -421,7 +512,7 @@ func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
 			game.play_sfx(global_position, Sfx.Kind.JUMP)
 		return true
 	var origin := global_position + Vector3.UP
-	var wall: Dictionary = game.ray(origin, origin + horizontal_direction() * WALL_KICK_REACH, [get_rid()], 1 | 4)
+	var wall: Dictionary = {"normal": wall_run_normal} if wall_running else game.ray(origin, origin + horizontal_direction() * WALL_KICK_REACH, [get_rid()], 1 | 4)
 	if wall.is_empty():
 		for offset in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK]:
 			wall = game.ray(origin, origin + Basis(Vector3.UP, yaw) * offset * WALL_KICK_REACH, [get_rid()], 1 | 4)
@@ -433,6 +524,9 @@ func _try_jump(desired: Vector3, grounded: bool, allow_double: bool) -> bool:
 		else:
 			wall_repeats = 0
 		wall_normal = wall.normal
+		if wall_running:
+			velocity += wall.normal * WALL_RUN_STICK # cancel the contact push so the kick is full strength
+		_end_wall_run()
 		velocity += wall.normal * (WALL_KICK_PUSH_SKYRUNNER if class_id == 0 else WALL_KICK_PUSH)
 		velocity.y = WALL_KICK_UP / (1.0 + wall_repeats * 0.5)
 		dash_time = 0.0
@@ -505,6 +599,13 @@ func change_class(value: int, weapon_choice: int = -1) -> void:
 	cooldowns.assign([0.0, 0.0, 0.0])
 	dash_time = 0.0
 	dash_cd = 0.0
+	sliding = false
+	slide_cd = 0.0
+	slide_grace = 0.0
+	coyote_time = 0.0
+	jump_buffer = 0.0
+	wall_running = false
+	wall_run_cd = 0.0
 	air_dash = true
 	air_jump = true
 	reload_timer = 0
@@ -573,7 +674,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"] or weapon_id != data.get("w", 0):
@@ -611,6 +712,9 @@ func unpack(data: Dictionary, local: bool) -> void:
 	gun_buff = data.gun_buff
 	melee_buff = data.melee_buff
 	sliding = data.get("sl", false)
+	wall_running = data.get("wr", false)
+	wall_run_time = data.get("wrt", 0.0)
+	wall_run_normal = data.get("wrn", Vector3.ZERO)
 	zip_id = data.get("zip", -1)
 	zip_t = data.get("zt", 0.0)
 	zip_dir = data.get("zd", 1)

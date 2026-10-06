@@ -228,6 +228,7 @@ func test_movement() -> void:
 	await test_air_movement()
 	await test_input_forgiveness()
 	await test_slide_jump()
+	await test_wall_run()
 	test_visual_pipeline()
 	test_effect_pool()
 	test_sfx()
@@ -742,6 +743,72 @@ func test_slide_jump() -> void:
 	check(speeds[0] > 10.3 and speeds[0] < 12.1, "jumping from a slide adds speed (%.2f)" % speeds[0])
 	check(speeds[1] > 10.0, "jumping just after a slide still gets the boost (%.2f)" % speeds[1])
 	check(speeds[2] < 12.1, "slide-jump boost stops at the speed cap (%.2f)" % speeds[2])
+	await physics_frame
+
+func test_wall_run() -> void:
+	await physics_frame
+	var p: Fighter = game.local_player()
+	p.change_class(1)
+	p.held = 0
+	# The proving-ground end wall faces -x at x=89.5; running along -z keeps it on the right-hand side.
+	var start := O + Vector3(88.9, 6.0, 25.0)
+	p.yaw = 0.0
+	p.movement = Vector2(0, -1)
+	p.wall_normal = Vector3.ZERO
+	p.wall_repeats = 0
+	p.global_position = start
+	p.velocity = Vector3(0, 0, -9)
+	p.air_jump = false
+	p.air_dash = false
+	for i in range(3):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.wall_running, "running along a wall at speed attaches a wall run")
+	var top := p.global_position.y
+	var frames := 3
+	while p.wall_running and frames < 120:
+		p.simulate_movement(1.0 / 60, 0)
+		frames += 1
+	check(frames >= 45 and frames <= 66, "wall run lasts about 0.9 s (%d frames)" % frames)
+	check(top - p.global_position.y < 3.0, "wall run barely loses height (%.2f m, free fall is about 10 m)" % (top - p.global_position.y))
+	check(not p.air_jump and not p.air_dash, "wall run restores neither the double jump nor the dash")
+	check(p.wall_run_cd > 0.0, "ending a wall run starts a re-attach cooldown")
+	await physics_frame
+	# Space exits with the wall kick, away from the wall.
+	p.wall_run_cd = 0.0
+	p.global_position = start
+	p.velocity = Vector3(0, 0, -9)
+	for i in range(10):
+		p.simulate_movement(1.0 / 60, 0)
+	var attached := p.wall_running
+	p.simulate_movement(1.0 / 60, 1)
+	check(attached and not p.wall_running and p.velocity.x < -6.0 and p.velocity.y > 9.5, "jump kicks off a wall run away from the wall (%s)" % p.velocity)
+	await physics_frame
+	# Head-on contact and slow speed do not attach.
+	p.wall_run_cd = 0.0
+	p.yaw = -PI / 2
+	p.global_position = O + Vector3(88.4, 6.0, 10.0)
+	p.velocity = Vector3(9, 0, 0)
+	for i in range(3):
+		p.simulate_movement(1.0 / 60, 0)
+	check(not p.wall_running, "a head-on hit does not start a wall run")
+	await physics_frame
+	p.yaw = 0.0
+	p.global_position = start
+	p.velocity = Vector3(0, 0, -3)
+	for i in range(3):
+		p.simulate_movement(1.0 / 60, 0)
+	check(not p.wall_running, "moving too slowly does not start a wall run")
+	await physics_frame
+	# Skyrunner's Hot Lap runs longer.
+	p.change_class(0)
+	p.hot_lap = 2.0
+	p.movement = Vector2(0, -1)
+	p.global_position = start
+	p.velocity = Vector3(0, 0, -9)
+	for i in range(3):
+		p.simulate_movement(1.0 / 60, 0)
+	check(p.wall_running and p.wall_run_time > 1.2, "Hot Lap extends the wall run (%.2f s)" % p.wall_run_time)
+	p.change_class(1)
 	await physics_frame
 
 func test_air_movement() -> void:

@@ -22,7 +22,7 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | F1 / F2 / F3 | Toggle control hints / colour-blind palette / mute |
 | Escape | Class selector / resume menu |
 
-Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m.
+Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m. Airborne and running along a wall at speed with W held, you automatically wall run for about 0.9 s (longer with Hot Lap), sagging slowly; Space kicks off the wall, and a wall run restores neither double jump nor dash.
 
 Sprint activates automatically after 1.25 seconds without weapon use. Shooting and alternate fire return you to combat speed. Damage and nonweapon abilities do not reset sprint. Changes of class are accepted only in your depot or while dead. Respawn takes five seconds. The match continues while the menu is open.
 
