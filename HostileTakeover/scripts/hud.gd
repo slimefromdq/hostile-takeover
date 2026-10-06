@@ -207,6 +207,9 @@ func _draw_waypoint(p: Fighter) -> void:
 			dir = Vector2.UP
 		var scale := minf((size.x / 2.0 - margin) / maxf(absf(dir.x), 1.0), (size.y / 2.0 - margin) / maxf(absf(dir.y), 1.0))
 		screen = center + dir * scale
+	var zone := reticle_zone().grow(34.0)
+	if zone.has_point(screen):
+		screen.y = zone.position.y - 4.0
 	var color := owner_color(game.match_state.owners[best])
 	diamond(screen, 15.0, Color(0, 0, 0, 0.6))
 	diamond(screen, 12.0, Color(color, 0.9))
@@ -233,6 +236,8 @@ func _draw_crosshair(p: Fighter) -> void:
 	if p.reload_timer > 0.0:
 		var total: float = p.spec.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
 		draw_arc(c, 28.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - clampf(p.reload_timer / total, 0.0, 1.0)), 32, Color(1, 1, 1, 0.9), 3.0)
+	_draw_dash_icon(p, c + Vector2(48.0, 0.0))
+	_draw_ammo(p, c + Vector2(0.0, 52.0))
 	if hit_timer > 0.0:
 		var color := Color.WHITE
 		var inner := 10.0
@@ -246,20 +251,34 @@ func _draw_crosshair(p: Fighter) -> void:
 		for dir in [Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]:
 			draw_line(c + dir.normalized() * inner, c + dir.normalized() * outer, color, 3.0)
 
+# Screen area reserved for the reticle cluster (dash icon, hit marker, ammo); world-anchored
+# markers and the HP bar are nudged out of it so nothing overlaps.
+func reticle_zone() -> Rect2:
+	var c := size / 2.0
+	return Rect2(c.x - 90.0, c.y - 44.0, 180.0, 100.0)
+
+# Double chevron: white while the air dash / double jump charge is available, red once spent.
+func _draw_dash_icon(p: Fighter, c: Vector2) -> void:
+	var color := Color.WHITE if p.air_dash else UiStyle.DANGER
+	for k in range(2):
+		var o := Vector2(k * 7.0 - 7.0, 0.0)
+		var pts := PackedVector2Array([c + o + Vector2(-3, -7), c + o + Vector2(4, 0), c + o + Vector2(-3, 7)])
+		draw_polyline(PackedVector2Array([pts[0] + Vector2(1, 1), pts[1] + Vector2(1, 1), pts[2] + Vector2(1, 1)]), Color(0, 0, 0, 0.7), 4.0, true)
+		draw_polyline(pts, color, 2.5, true)
+
+func _draw_ammo(p: Fighter, c: Vector2) -> void:
+	if p.reload_timer > 0.0:
+		text(c + Vector2(-80, 0), "RELOADING", 18, UiStyle.HIGHLIGHT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
+		return
+	text(c + Vector2(-80, 0), "%d / %d" % [p.ammo, p.spec.magazine], 22, Color(UiStyle.DANGER) if p.ammo <= maxi(1, p.spec.magazine / 5) else UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
+
 func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)
 	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
 	var base_y := size.y - 24.0
-	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 300.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
-	draw_rect(Rect2(12, base_y - 88.0, 4, 76.0), team_color)
-	text(Vector2(24, base_y - 70), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
-	if p.reload_timer > 0.0:
-		text(Vector2(24, base_y - 12), "RELOADING", 18, Color("ffe2a3"))
-	else:
-		text(Vector2(24, base_y - 12), "AMMO %d / %d" % [p.ammo, p.spec.magazine], 18)
-		if p.spec.magazine <= 30:
-			for i in range(p.spec.magazine):
-				draw_rect(Rect2(150.0 + i * 8.0, base_y - 26, 5, 14), Color.WHITE if i < p.ammo else Color(1, 1, 1, 0.2))
+	UiStyle.draw_panel(self, Rect2(12, base_y - 56.0, 300.0, 56.0), UiStyle.PANEL, Color(team_color, 0.85))
+	draw_rect(Rect2(12, base_y - 44.0, 4, 32.0), team_color)
+	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
 	if p.hp <= 0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
@@ -272,7 +291,7 @@ func _draw_health_bar(p: Fighter) -> void:
 		return
 	var feet: Vector3 = p.global_position
 	var head: Vector3 = feet + Vector3.UP * 1.9
-	var side: Vector3 = camera.global_transform.basis.x * 0.65
+	var side: Vector3 = -camera.global_transform.basis.x * 0.65
 	if camera.is_position_behind(head + side):
 		return
 	var bottom := camera.unproject_position(feet + side)
@@ -280,8 +299,11 @@ func _draw_health_bar(p: Fighter) -> void:
 	var h := clampf(bottom.y - top.y, 80.0, 360.0)
 	var mid := (bottom + top) * 0.5
 	var rect := Rect2(mid.x - 7.0, mid.y - h / 2.0, 14.0, h)
-	rect.position.x = clampf(rect.position.x, 40.0, size.x - 80.0)
+	rect.position.x = clampf(rect.position.x, 40.0, size.x - 300.0)
 	rect.position.y = clampf(rect.position.y, 150.0, size.y - 160.0 - h)
+	var zone := reticle_zone().grow(8.0)
+	if rect.grow(4.0).intersects(zone):
+		rect.position.x = zone.position.x - rect.size.x - 12.0
 	var team_color := Visuals.team_color(p.team)
 	var fraction: float = clampf(p.hp / p.spec.health, 0.0, 1.0)
 	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
