@@ -469,20 +469,30 @@ def stage_verbs(b):
 
 
 # ---- health packs: (x, y, z) on the floor, west half, mirrored ---------------------------------------
-# Spread over every tier, with the dead ends (foundation pit, pump hall) as rewards for going there.
-# Kept clear of capture discs, the tram and hoist paths and the depots.
+# Deliberately hard to find or reach: rooftops and dock corners up high, tucked corners inside buildings,
+# and dead ends underground. At least 28 m apart (3D), mirrors included, and 18 m from every capture disc.
+# The minimap marks them, so finding one is a matter of the route, not of luck.
 
 HEALPACKS = [
-    (-60, 0, 7), (-50, 0, -30), (-12, 0, -40), (-12, 0, 40),      # street
-    (-30, TUNNEL_Y, 0), (-40, TUNNEL_Y, -50),                      # tunnel and foundation pit
-    (-84, SUMP_Y, 0), (-6, SUMP_Y, 0),                             # pump hall and cistern
-    (-75, ROOF, 24), (-70, 18, 54),                                # roof bridge and billboard deck
+    (-28.5, 30, 56.5),        # south silo top (silo_ladder)
+    (-52, 24, -52.5),         # tower top plate, tucked NW corner (ladders 1-4)
+    (-72.5, 18, 54),          # billboard deck, east end (fire escape + billboard_launch)
+    (-85, SUMP_Y, -3.5),      # pump hall far end, NW corner
+    (-26.5, TUNNEL_Y, -54.2), # foundation pit NE corner, dead end of the Foundation Line
+    (-66.5, TUNNEL_Y, 34.5),  # market hall vault NE corner (cellar tunnel / vault_ladder)
+    (-45, 7, 21.5),           # pump house roof behind the cover (pump_house_ladder)
+    (-84, 0, -46),            # dead-end alley beside the site office
+    (-40.5, TUNNEL_Y, -16.5), # Foundation Line mid-corridor
 ]
+# On the x = 0 axis, so not mirrored: the north spire dock behind the spire top (spire_n_ladder or the blimp).
+SINGLE_HEALPACKS = [(-4.5, 34, -59)]
 
 
 def stage_healpacks(b):
     for x, y, z in HEALPACKS:
         b.pickup(x, y, z, mirror=True)
+    for x, y, z in SINGLE_HEALPACKS:
+        b.pickup(x, y, z, mirror=False, tag="healpack_spire")
 
 
 # ---- bot graph (walk and ramp edges only; verbs are for players) ------------------------------------

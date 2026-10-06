@@ -162,12 +162,14 @@ func check_canopy() -> void:
 		kinds[f.type] = kinds.get(f.type, 0) + 1
 	check(kinds.get("climb", 0) >= 20 and kinds.get("bounce", 0) >= 10 and kinds.get("cable", 0) >= 6 and kinds.get("mover", 0) >= 10 and kinds.get("event", 0) == 3, "canopy has every verb: %s" % [kinds])
 	var packs := 0
-	var west := 0
+	var singles := 0
 	for f in features:
 		if f.type == "pickup":
 			packs += 1
-			west += 1 if f.pos[0] < 0 else 0
-	check(packs >= 16 and packs == west * 2, "canopy has mirrored health packs (got %d)" % packs)
+			check(absf(f.pos[0]) <= 86.0, "health pack %s sits outside the protected depots" % f.get("tag", ""))
+			if absf(f.pos[0]) < 8.0:
+				singles += 1
+	check(packs == 19 and singles == 1, "canopy has 9 mirrored health pack pairs and one on the axis (got %d, %d single)" % [packs, singles])
 	for f in features:
 		if f.type == "climb":
 			check(f.has("face"), "climb lane %s names the direction you face" % f.get("tag", ""))

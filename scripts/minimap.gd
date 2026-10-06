@@ -42,6 +42,7 @@ func _draw() -> void:
 		draw_arc(c, 9.0, 0, TAU, 20, color, 2.0)
 		draw_string(font, c + Vector2(-4, 5), String.chr(65 + i), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var me: Fighter = game.local_player()
+	_draw_health_packs(me)
 	if me == null:
 		return
 	for p in game.fighters.values():
@@ -58,3 +59,22 @@ func _draw() -> void:
 	var forward := Vector2(-sin(me.yaw), -cos(me.yaw))
 	var side := Vector2(-forward.y, forward.x)
 	draw_colored_polygon(PackedVector2Array([m + forward * 8.0, m - forward * 4.0 + side * 4.5, m - forward * 4.0 - side * 4.5]), Color.WHITE)
+
+# Health packs: a plus per pack, always shown so you can plan a route. Taken packs go grey. Many sit on
+# top of each other in x/z across tiers, so packs more than a floor above or below you are dimmer and
+# carry an arrow pointing which way to go.
+func _draw_health_packs(me: Fighter) -> void:
+	for e in game.entities.values():
+		if e.kind != "healpack":
+			continue
+		var c := to_map(e.global_position.x, e.global_position.z)
+		var dy: float = 0.0 if me == null else e.global_position.y - me.global_position.y
+		var color := Color("3dff7a") if not e.used else Color(0.55, 0.6, 0.6)
+		if absf(dy) > 3.0:
+			color.a = 0.55
+		draw_line(c + Vector2(-3.5, 0), c + Vector2(3.5, 0), color, 2.0)
+		draw_line(c + Vector2(0, -3.5), c + Vector2(0, 3.5), color, 2.0)
+		if dy > 3.0:
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -9), c + Vector2(3.5, -5), c + Vector2(-3.5, -5)]), color)
+		elif dy < -3.0:
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, 9), c + Vector2(3.5, 5), c + Vector2(-3.5, 5)]), color)

@@ -1629,9 +1629,9 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -60,
-    0,
-    7
+    -28.5,
+    30,
+    56.5
    ],
    "mirror": true
   },
@@ -1640,9 +1640,9 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -50,
-    0,
-    -30
+    -52,
+    24,
+    -52.5
    ],
    "mirror": true
   },
@@ -1651,9 +1651,9 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -12,
-    0,
-    -40
+    -72.5,
+    18,
+    54
    ],
    "mirror": true
   },
@@ -1662,9 +1662,9 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -12,
-    0,
-    40
+    -85,
+    -11.0,
+    -3.5
    ],
    "mirror": true
   },
@@ -1673,9 +1673,9 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -30,
+    -26.5,
     -6.0,
-    0
+    -54.2
    ],
    "mirror": true
   },
@@ -1684,9 +1684,20 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -40,
+    -66.5,
     -6.0,
-    -50
+    34.5
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "healpack",
+   "kind": "health",
+   "pos": [
+    -45,
+    7,
+    21.5
    ],
    "mirror": true
   },
@@ -1696,8 +1707,8 @@
    "kind": "health",
    "pos": [
     -84,
-    -11.0,
-    0
+    0,
+    -46
    ],
    "mirror": true
   },
@@ -1706,33 +1717,21 @@
    "tag": "healpack",
    "kind": "health",
    "pos": [
-    -6,
-    -11.0,
-    0
+    -40.5,
+    -6.0,
+    -16.5
    ],
    "mirror": true
   },
   {
    "type": "pickup",
-   "tag": "healpack",
+   "tag": "healpack_spire",
    "kind": "health",
    "pos": [
-    -75,
-    12.0,
-    24
-   ],
-   "mirror": true
-  },
-  {
-   "type": "pickup",
-   "tag": "healpack",
-   "kind": "health",
-   "pos": [
-    -70,
-    18,
-    54
-   ],
-   "mirror": true
+    -4.5,
+    34,
+    -59
+   ]
   }
  ],
  "objects": [

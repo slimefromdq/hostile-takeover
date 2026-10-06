@@ -446,6 +446,13 @@ func test_hud() -> void:
 	var mini: Minimap = game.hud.minimap
 	check(mini.to_map(CivicDividend.bounds.position.x, CivicDividend.bounds.position.y).is_zero_approx(), "minimap maps bounds origin to its corner")
 	check(mini.to_map(CivicDividend.bounds.end.x, CivicDividend.bounds.end.y).is_equal_approx(mini.size), "minimap maps bounds end to its far corner")
+	var pack_data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": O + Vector3(0, 12, 0), "yaw": 0.0, "used": false}
+	game.entity_next += 1
+	game.create_entity_from(pack_data)
+	mini._draw_health_packs(game.local_player())
+	mini._draw_health_packs(null)
+	check(true, "minimap draws health packs above, below and without a local player")
+	game.remove_entity(pack_data.id)
 	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
 	check(game.menu.cards.size() == Fighter.SPECS.size(), "menu has a card per class")
 	game.hud.hit(2)

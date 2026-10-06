@@ -110,7 +110,7 @@ the Enforcer's wider capsule clipped the blimp hull at the spire ladder (blimp d
 ## Not done yet
 
 - **Hijackable elevators and shutters.** The hoist and tram are on a fixed timeline; letting a team call or hold them needs a small server state.
-- **More pickups.** Only health packs exist (20 of them, listed in `stage_healpacks`). Ammo or ability charge pickups at dead ends would follow the same `pickup` feature.
+- **More pickups.** Only health packs exist (19, hidden in high and secluded spots, listed in `stage_healpacks`; the minimap marks them). Ammo or ability charge pickups at dead ends would follow the same `pickup` feature.
 - **Bots only use walk and ramp routes** (stairs, boulevard, alleys, the tunnel, its branches and the sump). They do not use ziplines, ladders, launch pads or the hoist, so the mid and roof tiers (including the Span) are for players.
 - Water is a coloured floor; there is no swimming or slowing.
 - It has not been play-tested by people. The numbers (bounce power, zip speed, dwell times) are first guesses.

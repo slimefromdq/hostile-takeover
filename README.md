@@ -37,7 +37,7 @@ Aim placement abilities at a visible location; invalid placements do not consume
 
 ## Health packs
 
-Concrete Canopy has 20 mirrored health packs on every tier, including the dead ends (foundation pit, pump hall). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy hero cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
+Concrete Canopy has 19 health packs, deliberately hard to find: rooftops and docks, tucked corners inside buildings, and underground dead ends (foundation pit, pump hall, market vault). The minimap marks every pack with a green plus (grey while taken, with an arrow when it is on another tier). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy hero cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
 
 ## Acquisition
 
