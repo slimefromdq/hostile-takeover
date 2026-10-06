@@ -23,15 +23,18 @@ const PAL := {
 const ENEMY_OUTLINE := Color("ff3b3b")
 const ALLY_OUTLINE := Color("8fe3ff")
 
-# role -> [surface base multiplier, line colour, grid cell metres, line width, emission]
+# role -> [base multiplier, seam colour, cell metres, seam width, seam emission, seams on top faces,
+#          seam strength, horizontal bands only on walls, roughness, grime amount]
+# Architectural roles get thin, dark, low-contrast seams (clean panels, floor bands). Accent and hazard keep
+# bright emissive stripes because they are route and guidance markings.
 const ROLES := {
-	"walk": [1.0, Color("c9cfd2"), 4.0, 0.05, 0.0, 1.0],
-	"wall": [1.0, Color("ffd36b"), 2.0, 0.06, 0.6, 0.0],
-	"tower": [0.7, Color("cfc8b4"), 3.0, 0.45, 0.1, 0.0],
-	"cover": [1.0, Color("ffffff"), 1.0, 0.04, 0.0, 0.0],
-	"accent": [1.0, Color("ffffff"), 2.0, 0.2, 1.4, 1.0],
-	"hazard": [1.0, Color("ffcc00"), 1.0, 0.25, 0.8, 1.0],
-	"glass": [1.0, Color("bfe9ff"), 2.0, 0.05, 0.2, 1.0],
+	"walk": [1.0, Color("55606b"), 4.0, 0.03, 0.0, 1.0, 0.22, 0.0, 0.9, 0.10],
+	"wall": [1.0, Color("55606b"), 2.0, 0.025, 0.0, 0.0, 0.18, 0.0, 0.8, 0.08],
+	"tower": [0.92, Color("46566b"), 3.0, 0.12, 0.0, 0.0, 0.32, 1.0, 0.6, 0.06],
+	"cover": [1.0, Color("7a2e10"), 2.0, 0.03, 0.0, 0.0, 0.22, 0.0, 0.55, 0.05],
+	"accent": [1.0, Color("ffffff"), 2.0, 0.2, 1.4, 1.0, 0.55, 0.0, 0.5, 0.0],
+	"hazard": [1.0, Color("ffcc00"), 1.0, 0.25, 0.8, 1.0, 0.55, 0.0, 0.6, 0.0],
+	"glass": [1.0, Color("bfe9ff"), 2.0, 0.05, 0.2, 1.0, 0.55, 0.0, 0.1, 0.0],
 }
 
 const SURFACE_SHADER := """
@@ -42,27 +45,49 @@ uniform float cell = 2.0;
 uniform float line_width = 0.05;
 uniform float emission_strength = 0.0;
 uniform float top_lines = 1.0;
+uniform float seam_strength = 0.55;
+uniform float bands_only = 0.0;
+uniform float roughness_value = 0.85;
+uniform float grime = 0.0;
 varying vec3 world_pos;
 varying vec3 world_normal;
+float hash21(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float value_noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash21(i), hash21(i + vec2(1.0, 0.0)), f.x), mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 void fragment() {
 	vec3 n = abs(world_normal);
+	bool is_top = n.y > 0.7;
 	vec2 uv = world_pos.xy;
-	if (n.y > 0.7) {
+	if (is_top) {
 		uv = world_pos.xz;
 	} else if (n.x > n.z) {
 		uv = world_pos.zy;
 	}
 	vec2 g = abs(fract(uv / cell - 0.5) - 0.5) * cell;
 	float line = 1.0 - step(line_width, min(g.x, g.y));
-	if (n.y > 0.7) {
+	if (bands_only > 0.5 && !is_top) {
+		// Floor bands only: horizontal lines, no vertical joints.
+		line = 1.0 - step(line_width, g.y);
+	}
+	if (is_top) {
 		line *= top_lines;
 	}
-	ALBEDO = mix(base_color.rgb, line_color.rgb, line * 0.55);
-	ROUGHNESS = 0.85;
+	// Large soft stains break up flat colour; faces away from the sun read slightly darker.
+	float stain = value_noise(world_pos.xz * 0.35 + vec2(world_pos.y * 0.2, 0.0)) - 0.5;
+	float sun_read = is_top ? 1.0 : 0.93;
+	vec3 surface = base_color.rgb * sun_read * (1.0 - grime * stain);
+	ALBEDO = mix(surface, line_color.rgb, line * seam_strength);
+	ROUGHNESS = roughness_value;
 	EMISSION = line_color.rgb * line * emission_strength;
 }
 """
@@ -143,6 +168,10 @@ static func surface(role: String, color: Color) -> Material:
 		sm.set_shader_parameter("line_width", params[3])
 		sm.set_shader_parameter("emission_strength", params[4])
 		sm.set_shader_parameter("top_lines", params[5])
+		sm.set_shader_parameter("seam_strength", params[6])
+		sm.set_shader_parameter("bands_only", params[7])
+		sm.set_shader_parameter("roughness_value", params[8])
+		sm.set_shader_parameter("grime", params[9])
 		mat = sm
 	_materials[key] = mat
 	return mat
