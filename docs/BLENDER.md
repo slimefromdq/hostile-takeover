@@ -86,6 +86,11 @@ back to the built-in map).
   - Hardcoded wall signs are skipped in replace mode.
 - A walk floor whose top is below -1 m is treated as sunken (a trench) for the minimap.
 
+## Previewing without Godot
+
+`python3 tools/blender/preview_plan.py maps/blockout.json docs/previews/blockout` (needs `pip install matplotlib`) draws a
+top-down plan (solids, capture radii, bot graph) and an isometric view. `docs/previews/yard_plan.png` is the Test Yard.
+
 ## Checks
 
 - `python3 -I tools/blender/test_export_blockout.py` and `python3 -I tools/blender/test_blockout_kit.py`: no Blender needed.
