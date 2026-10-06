@@ -6,12 +6,24 @@ extends RefCounted
 
 const SETTINGS_PATH := "user://settings.cfg"
 static var fullscreen := false
+# Multiplier on the base mouse look rate (0.0025 rad per pixel).
+const SENS_MIN := 0.2
+const SENS_MAX := 3.0
+static var sensitivity := 1.0
 
 static func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) == OK:
 		fullscreen = cfg.get_value("display", "fullscreen", false)
+		sensitivity = clampf(float(cfg.get_value("input", "sensitivity", 1.0)), SENS_MIN, SENS_MAX)
 	apply()
+
+static func set_sensitivity(value: float) -> void:
+	sensitivity = clampf(value, SENS_MIN, SENS_MAX)
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("input", "sensitivity", sensitivity)
+	cfg.save(SETTINGS_PATH)
 
 # The editor's "Embed Game on Next Play" runs the game inside an editor panel, which cannot go fullscreen.
 static func embedded() -> bool:

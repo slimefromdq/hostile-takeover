@@ -88,6 +88,25 @@ func setup(owner_game: Node3D) -> void:
 		refresh_display_button())
 	options.add_child(display_button)
 	refresh_display_button()
+	var sens_row := HBoxContainer.new()
+	sens_row.add_theme_constant_override("separation", 10)
+	var sens_label := Label.new()
+	sens_label.add_theme_color_override("font_color", UiStyle.ACCENT)
+	sens_row.add_child(sens_label)
+	var sens_slider := HSlider.new()
+	sens_slider.min_value = DisplayPrefs.SENS_MIN
+	sens_slider.max_value = DisplayPrefs.SENS_MAX
+	sens_slider.step = 0.05
+	sens_slider.value = DisplayPrefs.sensitivity
+	sens_slider.custom_minimum_size = Vector2(220, 0)
+	sens_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sens_slider.focus_mode = Control.FOCUS_CLICK
+	sens_label.text = "Aim sensitivity: %.2f" % sens_slider.value
+	sens_slider.value_changed.connect(func(v: float):
+		DisplayPrefs.set_sensitivity(v)
+		sens_label.text = "Aim sensitivity: %.2f" % v)
+	sens_row.add_child(sens_slider)
+	options.add_child(sens_row)
 	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, hold at a ledge to mantle\n1 air dash (shares a charge with the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide · Q / E / F abilities · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)

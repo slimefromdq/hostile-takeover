@@ -322,8 +322,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if p == null or not running or menu.visible:
 		return
 	if event is InputEventMouseMotion:
-		p.yaw -= event.relative.x * 0.0025
-		p.pitch = clampf(p.pitch - event.relative.y * 0.0025, -1.25, 1.2)
+		var look := 0.0025 * DisplayPrefs.sensitivity
+		p.yaw -= event.relative.x * look
+		p.pitch = clampf(p.pitch - event.relative.y * look, -1.25, 1.2)
 	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32]]:
 		if event.is_action_pressed(pair[0]) and not event.is_echo():
 			input_edges |= pair[1]
