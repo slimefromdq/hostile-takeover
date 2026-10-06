@@ -12,9 +12,9 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 |---|---|
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire |
-| Space | Jump (forgiving: pressing up to 0.12 s before landing or a wall still counts, and you can jump up to 0.12 s after walking off an edge); press again in the air to double jump (one per landing; wall kicks do not restore it), or against a wall to wall-kick; walk into a ledge (up to about 2.6 m) to mantle automatically: low ledges (under 1.3 m) are vaulted without losing speed; higher ledges reached in the air are grabbed for a moment, then pulled up (Space kicks off, S or Shift drops) |
+| Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
 | 1 | Air dash (about 4.5 m, independent of the double jump; 3 second cooldown) — **not sprint** |
-| Shift | Slide while moving on ground: a short boosted burst (about 4-5 m) that bleeds speed quickly; hold A/D or turn toward your wish direction to steer it, then it ends below walking pace. Jump out of a slide (or within 0.15 s after) to keep your speed with a small boost (capped, so slide-hops cannot snowball). Brief cooldown between slides |
+| Shift | Slide while moving on the ground (see Movement verbs) |
 | Q / E / F | Three class abilities |
 | R | Reload |
 | V | Switch camera shoulder |
@@ -22,7 +22,20 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | F1 / F2 / F3 | Toggle control hints / colour-blind palette / mute |
 | Escape | Class selector / resume menu |
 
-Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m. Airborne and running along a wall at speed with W held, you automatically wall run for about 0.9 s (longer with Hot Lap), sagging slowly; Space kicks off the wall, and a wall run restores neither double jump nor dash.
+Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m.
+
+### Movement verbs
+
+| Verb | How | Numbers |
+|---|---|---|
+| Slide | Hold Shift while moving on the ground at 5+ m/s | Short boosted burst: entry boost up to 9.5 m/s, then 8 m/s² of friction, so about 4-5 m on the flat (slopes extend it). Turn with A/D or the view: input rotates your velocity without costing speed. Ends on release or below 4.5 m/s; 0.6 s cooldown between slides |
+| Slide-jump | Jump out of a slide, or within 0.15 s after | Keeps your speed and adds up to 1.5 m/s (3 m/s with Hot Lap), capped at 12 m/s (14 with Hot Lap), so slide-hops cannot snowball |
+| Wall run | In the air, hold W moving along a wall at 5+ m/s (at most about 45 degrees into it) | Attaches automatically for 0.9 s (1.4 s with Hot Lap), keeps speed (cap 12/14 m/s), gravity drops to 15% and returns over the last 0.3 s. Space kicks off at full wall-kick strength. Restores neither double jump nor dash; 0.35 s cooldown |
+| Vault | Walk or run into a ledge under 1.3 m | Carries you over at your current speed (at least 4.5 m/s, cap 12) |
+| Ledge grab | Reach a ledge 1.3 to 2.6 m up while airborne | Hangs 0.2 s, then pulls up. Space kicks off, S or Shift drops (0.5 s before you can grab again). The same ledge from the ground pops up as a plain mantle |
+| Input forgiveness | Automatic | Jump presses are buffered 0.12 s (a press just before landing or touching a wall still counts, but only a fresh press spends the double jump), and a ground jump still works 0.12 s after walking off an edge. Wall-kick reach is 1.1 m |
+
+Try each verb in isolation on the Movement Course (`docs/MOVEMENT_COURSE.md`): choose it under **Map** in the start menu, then **Explore map**.
 
 Sprint activates automatically after 1.25 seconds without weapon use. Shooting and alternate fire return you to combat speed. Damage and nonweapon abilities do not reset sprint. Changes of class are accepted only in your depot or while dead. Respawn takes five seconds. The match continues while the menu is open.
 

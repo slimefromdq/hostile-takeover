@@ -40,7 +40,9 @@ cut-throughs as soft chokes. Every route family is verified to reach B and C fro
 
 ## Movement reach (current tuning)
 
-Jump apex about 1.9 m, double jump about +2.1 m, dash about 6 m, wall kick 10.5 m/s up, mantle up to about 2.6 m. The street,
+Jump apex about 1.9 m, double jump about +2.1 m, dash about 6 m, wall kick 10.5 m/s up, mantle up to about 2.6 m (ledges under 1.3 m
+are vaulted, 1.3-2.6 m grabbed then pulled up). A run-jump covers about 6.2 m on the flat and a slide-jump about 8.5 m; a wall run
+holds height for 0.9 s while keeping speed, so wall-to-wall corridors up to about 7 m wide chain. The street,
 gallery (3 m) and penthouses (2.8 m) are reachable on foot; 6 m roofs by wall-kick chains, grapple or ramps. Revisit parapet and
 ledge heights after playtests.
 
