@@ -4,6 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Godot project is the repo root (`project.godot` is at the top level). All paths and commands below are relative to it.
 
+## Git workflow (owner's standing rule)
+
+The owner only uses GitHub to continue work across devices. Commit and push every change **directly to `main`**. Do not create
+branches or pull requests, and do not wait for a merge. Before starting, `git pull origin main`; after finishing, push to `main`.
+If a session was handed a feature branch to develop on, this rule overrides it. Never commit conflict markers: resolve merges
+before committing (a stray `<<<<<<<` in `project.godot` once made Godot report the project as missing).
+
 ## What this is
 
 "Hostile Takeover": a Godot **4.7.x** (Forward+) GDScript graybox prototype — four fighter classes, five-point "Acquisition" objective, offline 6v6 bots, LAN host/join. No plugins or external assets required; art, map and sound are generated in code. `README.md` has controls, class kits and balance numbers; `MAP.md` has map design and geometry rules; `VALIDATION.md` lists what the automated checks cover.
