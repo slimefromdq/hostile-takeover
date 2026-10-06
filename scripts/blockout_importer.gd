@@ -10,6 +10,44 @@ extends RefCounted
 const FORMAT := 1
 const ACTIVE_PATH := "res://maps/blockout.json"
 const RAMP_DIRS := ["+x", "-x", "+z", "-z"]
+const SETTINGS_PATH := "user://settings.cfg"
+const MAPS_DIR := "res://maps"
+
+# The blockout in use: a developer override file (maps/blockout.json) wins, then the menu's choice, else none
+# (the built-in map).
+static func active_path() -> String:
+	if FileAccess.file_exists(ACTIVE_PATH):
+		return ACTIVE_PATH
+	return selected_path()
+
+static func selected_path() -> String:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) != OK:
+		return ""
+	var path: String = cfg.get_value("map", "path", "")
+	return path if path != "" and FileAccess.file_exists(path) else ""
+
+static func select(path: String) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("map", "path", path)
+	cfg.save(SETTINGS_PATH)
+
+# Menu entries: the built-in map first, then every maps/*.blockout.json that names itself with a "title".
+static func catalog() -> Array:
+	var out: Array = [{"path": "", "title": "Civic Dividend (built-in)"}]
+	var dir := DirAccess.open(MAPS_DIR)
+	if dir == null:
+		return out
+	var names: PackedStringArray = dir.get_files()
+	names.sort()
+	for file_name in names:
+		if not file_name.ends_with(".blockout.json"):
+			continue
+		var data := read("%s/%s" % [MAPS_DIR, file_name])
+		if not data.is_empty() and data.has("title"):
+			out.append({"path": "%s/%s" % [MAPS_DIR, file_name], "title": str(data.title)})
+	return out
 
 # Parsed document, or {} when the file is missing or not a supported format.
 static func read(path: String) -> Dictionary:
@@ -32,7 +70,7 @@ static func build(b: MapBuilder, data: Dictionary) -> Array[String]:
 
 # Everything replace mode needs besides geometry. Returns:
 #   graph {"nodes": {name: Vector3}, "links": [[a, b, tag]]}, points (west to east), goal_names (same order),
-#   spawn_nodes [west, east], bounds, spawn_x, spawn_z, spawn_step, depot_limit, test_lane, errors.
+#   spawn_nodes [west, east], bounds, spawn_x, spawn_z, spawn_step, depot_limit, test_lane, audit, errors.
 # Waypoints with "mirror" also create an "e_<name>" node at -x, and links touching a mirrored node are mirrored,
 # exactly like MapLayout.graph(). Waypoints flagged "point" are the five capture points; "spawn" marks the depot node.
 static func resolve(data: Dictionary) -> Dictionary:
@@ -100,9 +138,50 @@ static func resolve(data: Dictionary) -> Dictionary:
 		"spawn_z": float(settings.get("spawn_z", (nodes[spawn_nodes[0]].z - 7.0) if spawn_nodes.size() == 2 else 0.0)),
 		"spawn_step": float(settings.get("spawn_step", 2.8)),
 		"depot_limit": float(settings.get("depot_limit", spawn_x - 3.0)),
+		"ceiling": float(settings.get("ceiling", 40.0)),
 		"test_lane": test_lane,
+		"audit": settings.get("audit", {}),
 		"errors": errors,
 	}
+
+# Map verb features (see MapVerbs) with mirror applied: "mirror": true adds the copy reflected across x = 0.
+static func features(data: Dictionary) -> Array:
+	var out: Array = []
+	for f in data.get("features", []):
+		out.append(f)
+		if f.get("mirror", false):
+			out.append(_mirror_feature(f))
+	return out
+
+static func _flip(p: Array) -> Array:
+	return [-float(p[0]), p[1], p[2]]
+
+static func _mirror_feature(f: Dictionary) -> Dictionary:
+	var m: Dictionary = f.duplicate(true)
+	m.erase("mirror")
+	if m.has("tag"):
+		m.tag = str(m.tag) + "_e"
+	if m.has("min"):
+		var lo: Array = f.min
+		var hi: Array = f.max
+		m.min = [-float(hi[0]), lo[1], lo[2]]
+		m.max = [-float(lo[0]), hi[1], hi[2]]
+		if m.has("kick"):
+			m.kick = _flip(f.kick)
+	if m.has("face"):
+		m.face = {"+x": "-x", "-x": "+x"}.get(str(f.face), f.face)
+	if m.has("from"):
+		m["from"] = _flip(f["from"])
+		m["to"] = _flip(f["to"])
+	if m.has("keys"):
+		var keys: Array = []
+		for k in f.keys:
+			var key: Array = [k[0], _flip(k[1])]
+			if k.size() > 2:
+				key.append([k[2][0], -float(k[2][1]), -float(k[2][2])])
+			keys.append(key)
+		m.keys = keys
+	return m
 
 # Graph only, same shape as MapLayout.graph().
 static func graph(data: Dictionary) -> Dictionary:

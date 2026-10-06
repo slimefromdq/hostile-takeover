@@ -59,3 +59,5 @@ ledge heights after playtests.
 keep the same collider footprint, since collision comes from `MapBuilder`, not from imported meshes.
 
 Blockouts authored in Blender load through `scripts/blockout_importer.gd`; see `docs/BLENDER.md`.
+
+More maps: `docs/JUNGLE_GYM.md` (Concrete Canopy: four tiers, five districts, movement verbs and map events) and `docs/BLENDER.md`.

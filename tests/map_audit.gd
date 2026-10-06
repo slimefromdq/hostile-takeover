@@ -51,7 +51,9 @@ func run() -> void:
 
 func audit_registry() -> void:
 	var solids: Array = builder.solids
-	var bounds := AABB(Vector3(-92.01, -5.01, -60.01), Vector3(184.02, 45.02, 120.02))
+	var rb := CivicDividend.bounds
+	var y_min := -12.01 if CivicDividend.replaced else -5.01
+	var bounds := AABB(Vector3(rb.position.x - 0.01, y_min, rb.position.y - 0.01), Vector3(rb.size.x + 0.02, CivicDividend.ceiling + 0.01 - y_min, rb.size.y + 0.02))
 	var outside := 0
 	for s in solids:
 		if not bounds.encloses(s.aabb):
@@ -294,12 +296,15 @@ func audit_connectivity() -> void:
 					seen[e[0]] = true
 					queue.append(e[0])
 		check(seen.size() == graph.nodes.size(), "%s reaches every waypoint (%d/%d)" % [start, seen.size(), graph.nodes.size()])
+	var profile: Dictionary = CivicDividend.audit_profile
+	var all_families: Array = profile.get("route_families", ["blv", "roof", "trn", "aln"])
+	var need: int = int(profile.get("min_families", 4))
 	for target in CivicDividend.goal_names.slice(1):
 		var families := []
-		for family in ["blv", "roof", "trn", "aln"]:
+		for family in all_families:
 			if _reach_with_family(CivicDividend.spawn_nodes[0], target, family, adj):
 				families.append(family)
-		check(families.size() >= 4, "route families from the Helix depot to %s: %s" % [target, families])
+		check(families.size() >= need, "route families from the Helix depot to %s: %s (need %d)" % [target, families, need])
 
 func _reach_with_family(start: String, target: String, family: String, adj: Dictionary) -> bool:
 	# BFS on (node, used_family); a family counts only when a path uses at least one of its edges.
@@ -365,6 +370,10 @@ func audit_sightlines() -> void:
 	var across: Array = []
 	for d in [-60.0, -30.0, 30.0, 60.0, 120.0, 150.0, 210.0, 240.0]:
 		across.append(deg_to_rad(d))
+	if CivicDividend.audit_profile.has("lanes"):
+		audit_profile_lanes(along, across)
+		audit_spawn_and_points()
+		return
 	var xs := range(-78, 79, 4)
 	var blv := lane_stats("boulevard", xs, [-10, -6, -2, 2, 6, 10], 0.0, along, Rect2(-82, -12, 164, 24))
 	lane_stats("boulevard (cross)", xs, [-10, -2, 6], 0.0, across, Rect2(-82, -12, 164, 24))
@@ -378,17 +387,51 @@ func audit_sightlines() -> void:
 	check(not trn.is_empty() and trn.p90 <= 60.0, "trench p90 free run <= 60 m (%s)" % [trn.get("p90", -1)])
 	check(not aln_n.is_empty() and aln_n.p99 <= 60.0 and not aln_s.is_empty() and aln_s.p99 <= 60.0, "alley p99 free run <= 60 m")
 	check(not roof.is_empty() and roof.p99 <= 60.0, "roof route p99 free run <= 60 m (%s)" % [roof.get("p99", -1)])
-	# Spawn dogleg: nothing standing in the depot can see the open boulevard.
+	audit_spawn_and_points()
+
+# Lanes, budgets and spawn-sight targets from the map's own audit profile (blockout settings.audit).
+func audit_profile_lanes(along: Array, across: Array) -> void:
+	for lane in CivicDividend.audit_profile.lanes:
+		var xr: Array = lane.xs
+		var zs: Array = lane.zs
+		var r: Array = lane.rect
+		var azimuths: Array = along
+		if lane.get("azimuths", "along") == "across":
+			azimuths = across
+		elif lane.get("azimuths", "along") == "ns":
+			azimuths = []
+			for d in [-15.0, -7.0, 0.0, 7.0, 15.0]:
+				azimuths.append(deg_to_rad(90.0 + d))
+				azimuths.append(deg_to_rad(270.0 + d))
+		var stats := lane_stats(lane.label, range(int(xr[0]), int(xr[1]) + 1, int(xr[2])), zs, float(lane.get("y", 0.0)), azimuths, Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])))
+		if stats.is_empty():
+			check(false, "%s lane has no free sample points" % lane.label)
+			continue
+		for key in ["p50", "p90", "p99", "max"]:
+			if lane.has(key):
+				check(stats[key] <= float(lane[key]), "%s %s free run <= %s m (%s)" % [lane.label, key, lane[key], stats[key]])
+
+func audit_spawn_and_points() -> void:
+	# Spawn dogleg: nothing standing in the depot can see the open street.
 	var seen := 0
-	for sp_z in [-7.0, -4.2, -1.4, 1.4, 4.2, 7.0]:
+	var sight: Variant = CivicDividend.audit_profile.get("spawn_sight", true)
+	var sight_xs: Array = range(-70, 60, 10)
+	var sight_zs: Array = [-8, 0, 8]
+	if sight is Dictionary:
+		sight_xs = range(int(sight.xs[0]), int(sight.xs[1]) + 1, int(sight.xs[2]))
+		sight_zs = sight.zs
+	for spawn_index in range(6):
+		var sp_z := CivicDividend.spawn_z + spawn_index * CivicDividend.spawn_step
 		var from := Vector3(-CivicDividend.spawn_x, HEAD, sp_z)
-		for tx in range(-70, 60, 10):
-			for tz in [-8, 0, 8]:
+		if sight is bool and not sight:
+			break
+		for tx in sight_xs:
+			for tz in sight_zs:
 				var to := Vector3(tx, HEAD, tz)
 				var q := PhysicsRayQueryParameters3D.create(from, to, 1)
 				if space.intersect_ray(q).is_empty():
 					seen += 1
-	check(seen == 0, "spawn has no line of sight onto the boulevard (%d clear rays)" % seen)
+	check(seen == 0, "spawn has no line of sight onto the open street (%d clear rays)" % seen)
 	# No capture point sees a point two or more steps away.
 	var pts := CivicDividend.capture_points
 	var long_sight := 0

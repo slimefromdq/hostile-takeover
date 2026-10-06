@@ -54,6 +54,15 @@ var brake_time: float = 0.0
 var rush_time: float = 0.0
 var rush_hit: Array[int] = []
 var air_dash: bool = true
+# Map verbs (scripts/map_verbs.gd): cable riding, climbing and cooldowns.
+var zip_id: int = -1
+var zip_t: float = 0.0
+var zip_dir: int = 1
+var zip_speed: float = 0.0
+var zip_cd: float = 0.0
+var climbing: bool = false
+var climb_cd: float = 0.0
+var bounce_cd: float = 0.0
 var wall_normal: Vector3 = Vector3.ZERO
 var wall_repeats: int = 0
 var double_id: int = -1
@@ -206,6 +215,8 @@ func aim_point() -> Vector3:
 
 func simulate_movement(dt: float, movement_edges: int) -> void:
 	if hp <= 0:
+		zip_id = -1
+		climbing = false
 		return
 	idle_weapon += dt
 	if held & 3:
@@ -222,6 +233,13 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		air_dash = true
 		wall_repeats = 0
 		wall_normal = Vector3.ZERO
+	movement_edges = MapVerbs.pre_move(self, dt, movement_edges, grounded)
+	if zip_id >= 0:
+		MapVerbs.zip_move(self, dt, movement_edges)
+		move_and_slide()
+		MapVerbs.zip_after_slide(self)
+		update_visual()
+		return
 	var desired := Basis(Vector3.UP, yaw) * Vector3(movement.x, 0, movement.y)
 	var speed := 8.0 if idle_weapon >= 1.25 else 6.0
 	if class_id == 2 and held & 1:
@@ -302,6 +320,7 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		var rush := horizontal_direction() * 17.0
 		velocity.x = rush.x
 		velocity.z = rush.z
+	MapVerbs.post_move(self, dt)
 	# Held jump requests a mantle only against a low wall with clear headroom.
 	if held & 16 and not grounded and velocity.y <= 4.0:
 		var low: Dictionary = game.ray(global_position + Vector3.UP * 0.7, global_position + Vector3.UP * 0.7 + horizontal_direction() * 0.8, [get_rid()], 1 | 4)
@@ -411,7 +430,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths}
+	return {"id": fighter_id, "team": team, "class": class_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"]:
@@ -446,6 +465,11 @@ func unpack(data: Dictionary, local: bool) -> void:
 	spin = data.spin
 	gun_buff = data.gun_buff
 	melee_buff = data.melee_buff
+	zip_id = data.get("zip", -1)
+	zip_t = data.get("zt", 0.0)
+	zip_dir = data.get("zd", 1)
+	zip_speed = data.get("zs", 0.0)
+	climbing = data.get("climb", false)
 	kills = data.get("k", 0)
 	deaths = data.get("d", 0)
 	update_visual()

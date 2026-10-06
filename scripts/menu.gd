@@ -10,6 +10,7 @@ var cards: Array[Button] = []
 var spinners: Array[Node3D] = []
 var controls_panel: Label
 var display_button: Button
+var map_button: Button
 
 func setup(owner_game: Node3D) -> void:
 	game = owner_game
@@ -71,6 +72,13 @@ func setup(owner_game: Node3D) -> void:
 	toggle.add_theme_color_override("font_color", UiStyle.ACCENT)
 	toggle.add_theme_color_override("font_hover_color", UiStyle.TEXT)
 	options.add_child(toggle)
+	map_button = Button.new()
+	map_button.flat = true
+	map_button.add_theme_color_override("font_color", UiStyle.ACCENT)
+	map_button.add_theme_color_override("font_hover_color", UiStyle.TEXT)
+	map_button.pressed.connect(_cycle_map)
+	options.add_child(map_button)
+	_refresh_map_button()
 	display_button = Button.new()
 	display_button.flat = true
 	display_button.add_theme_color_override("font_color", UiStyle.ACCENT)
@@ -90,6 +98,28 @@ func setup(owner_game: Node3D) -> void:
 func _ready() -> void:
 	get_viewport().size_changed.connect(_center)
 	_center()
+
+func _current_map_index() -> int:
+	var maps := BlockoutImporter.catalog()
+	var path := BlockoutImporter.active_path()
+	for i in range(maps.size()):
+		if maps[i].path == path:
+			return i
+	return 0
+
+func _refresh_map_button() -> void:
+	var maps := BlockoutImporter.catalog()
+	var override := FileAccess.file_exists(BlockoutImporter.ACTIVE_PATH)
+	var title: String = "maps/blockout.json override" if override else maps[_current_map_index()].title
+	map_button.text = "Map: %s ▸ click to switch (everyone in a match must pick the same)" % title
+	map_button.disabled = override
+
+# Selecting a map saves the choice and reloads the scene, so the whole world rebuilds cleanly.
+func _cycle_map() -> void:
+	var maps := BlockoutImporter.catalog()
+	var next: int = (_current_map_index() + 1) % maps.size()
+	BlockoutImporter.select(maps[next].path)
+	game.get_tree().reload_current_scene()
 
 # Keep the panel centred whatever the window or fullscreen aspect ratio is.
 func _center() -> void:

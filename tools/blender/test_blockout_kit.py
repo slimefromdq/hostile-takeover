@@ -69,7 +69,7 @@ class KitTests(unittest.TestCase):
         return b
 
     def test_maps_validate_and_navigate(self):
-        for name in ("yard.py", "overpass.py"):
+        for name in ("yard.py", "overpass.py", "canopy.py"):
             b = self._generated(name)
             self.assertEqual(b.validate(), [], name)
             self.assertEqual(blockout_check.check(b.to_document()), [], name)

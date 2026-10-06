@@ -16,7 +16,7 @@ ROLE_COLORS = {
 }
 SETTING_PROPS = {
     "bounds": "ht_bounds", "spawn_x": "ht_spawn_x", "spawn_z": "ht_spawn_z", "spawn_step": "ht_spawn_step",
-    "depot_limit": "ht_depot_limit", "test_lane": "ht_test_lane",
+    "depot_limit": "ht_depot_limit", "test_lane": "ht_test_lane", "ceiling": "ht_ceiling",
 }
 MIRROR_DIR = {"+x": "-x", "-x": "+x", "+z": "+z", "-z": "-z"}
 
@@ -127,9 +127,14 @@ def build_scene(doc, clear=True):
     scene = bpy.context.scene
     scene.unit_settings.system = "METRIC"
     scene["ht_mode"] = doc.get("mode", "add")
+    if doc.get("title"):
+        scene["ht_title"] = doc["title"]
     for key, prop in SETTING_PROPS.items():
         if key in doc.get("settings", {}):
             scene[prop] = doc["settings"][key]
+    scene["ht_features"] = json.dumps(doc.get("features", []))
+    if doc.get("settings", {}).get("audit"):
+        scene["ht_audit"] = json.dumps(doc["settings"]["audit"])
     for rec in doc.get("objects", []):
         name = rec["tag"]
         col = _collection(bpy, scene, rec["role"].capitalize())

@@ -16,8 +16,12 @@ static var spawn_x: float = MapLayout.SPAWN_X
 static var spawn_z: float = -7.0
 static var spawn_step: float = 2.8
 static var depot_limit: float = MapLayout.DEPOT_LIMIT
+# Height above which fighters are killed (grapples and launch pads can never carry anyone out of the arena).
+static var ceiling: float = 40.0
 static var test_lane: Vector3 = MapLayout.TEST_LANE
 static var graph_data: Dictionary = {}
+# Optional audit profile from the blockout (sightline lanes, route families, spawn sight); {} means the built-in map's.
+static var audit_profile: Dictionary = {}
 static var replaced := false
 
 static func reset_settings() -> void:
@@ -29,8 +33,10 @@ static func reset_settings() -> void:
 	spawn_z = -7.0
 	spawn_step = 2.8
 	depot_limit = MapLayout.DEPOT_LIMIT
+	ceiling = 40.0
 	test_lane = MapLayout.TEST_LANE
 	graph_data = MapLayout.graph()
+	audit_profile = {}
 	replaced = false
 
 static func apply_settings(r: Dictionary) -> void:
@@ -42,8 +48,10 @@ static func apply_settings(r: Dictionary) -> void:
 	spawn_z = r.spawn_z
 	spawn_step = r.spawn_step
 	depot_limit = r.depot_limit
+	ceiling = r.ceiling
 	test_lane = r.test_lane
 	graph_data = r.graph
+	audit_profile = r.audit
 	replaced = true
 
 # Wall-mounted sign: flush on a face (`normal_z` = +1 faces south, -1 faces north), never billboarded,
@@ -76,7 +84,7 @@ static func build(root: Node3D) -> Array[Vector3]:
 	Visuals.build_environment(root)
 	builder = MapBuilder.new()
 	reset_settings()
-	var blockout := BlockoutImporter.read(BlockoutImporter.ACTIVE_PATH)
+	var blockout := BlockoutImporter.read(BlockoutImporter.active_path())
 	if blockout.get("mode", "add") == "replace":
 		var resolved := BlockoutImporter.resolve(blockout)
 		if resolved.errors.is_empty():
@@ -91,6 +99,9 @@ static func build(root: Node3D) -> Array[Vector3]:
 	for message in BlockoutImporter.build(builder, blockout):
 		push_warning("Blockout: " + message)
 	builder.finalize(root)
+	MapVerbs.clear()
+	if not blockout.is_empty():
+		MapVerbs.configure(BlockoutImporter.features(blockout), root)
 	footprints = builder.footprints()
 	sunken = builder.sunken
 	if not replaced:

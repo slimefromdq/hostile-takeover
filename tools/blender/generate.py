@@ -36,7 +36,7 @@ def main(argv=None):
     ap.add_argument("--strict", action="store_true", help="fail on validation warnings")
     args = ap.parse_args(argv)
     module = load_generator(args.script)
-    b = Blockout(mode=getattr(module, "MODE", "add"))
+    b = Blockout(mode=getattr(module, "MODE", "add"), title=getattr(module, "TITLE", None))
     module.build(b)
     warnings = b.validate()
     for w in warnings:

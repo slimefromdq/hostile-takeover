@@ -22,6 +22,9 @@ Conventions (full guide: docs/BLENDER.md)
   roof, trn, aln), `mirror`, `point` (capture point), `spawn` (depot node).
 - Scene custom properties (Scene tab > Custom Properties) become map settings: ht_mode ("add" | "replace"),
   ht_bounds (x, z, width, height), ht_spawn_x, ht_spawn_z, ht_spawn_step, ht_depot_limit, ht_test_lane (x, y, z).
+- Traversal-verb features (bounce, climb, cable, mover, event) and the audit profile are stored on the scene as JSON
+  strings (ht_features, ht_audit) by import_blockout.py and written back unchanged; edit them in the Scene tab or
+  regenerate the map from a generator script.
 - Objects in collections whose name starts with "_" (e.g. the mirror preview) and objects with `ht_preview` are skipped.
 """
 import json
@@ -36,7 +39,7 @@ KINDS = ("block", "ramp", "cylinder", "decor")
 RAMP_DIRS = ("+x", "-x", "+z", "-z")
 SCENE_SETTINGS = {
     "ht_bounds": "bounds", "ht_spawn_x": "spawn_x", "ht_spawn_z": "spawn_z", "ht_spawn_step": "spawn_step",
-    "ht_depot_limit": "depot_limit", "ht_test_lane": "test_lane",
+    "ht_depot_limit": "depot_limit", "ht_test_lane": "test_lane", "ht_ceiling": "ceiling",
 }
 
 
@@ -120,7 +123,7 @@ def parse_links(text):
     return out
 
 
-def build_document(objects, waypoints, mode="add", source="", settings=None):
+def build_document(objects, waypoints, mode="add", source="", settings=None, features=None, title=None):
     wps, links = [], []
     for w in waypoints:
         rec = {"name": w["name"], "pos": w["pos"]}
@@ -133,8 +136,10 @@ def build_document(objects, waypoints, mode="add", source="", settings=None):
         "format": FORMAT,
         "units": "m",
         "mode": mode,
+        **({"title": title} if title else {}),
         "source": source,
         "settings": settings or {},
+        "features": features or [],
         "objects": objects,
         "waypoints": wps,
         "links": links,
@@ -158,6 +163,8 @@ def scene_settings(scene):
     for key, name in SCENE_SETTINGS.items():
         if key in scene.keys():
             out[name] = _plain(scene[key])
+    if "ht_audit" in scene.keys():
+        out["audit"] = json.loads(scene["ht_audit"])
     return out
 
 
@@ -189,7 +196,8 @@ def export_scene(path, mode=None):
         if rec:
             objects.append(rec)
     mode = mode or str(scene.get("ht_mode", "add"))
-    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath), scene_settings(scene))
+    features = json.loads(scene["ht_features"]) if "ht_features" in scene.keys() else []
+    doc = build_document(objects, waypoints, mode, bpy.path.basename(bpy.data.filepath), scene_settings(scene), features, scene.get("ht_title"))
     with open(path, "w") as f:
         json.dump(doc, f, indent=1)
         f.write("\n")

@@ -25,7 +25,8 @@ static func from_layout() -> MapGraph:
 		g.adjacency[b].append([a, l[2], length])
 	return g
 
-# Nearest node on the same level (|dy| < 2.5), by horizontal distance.
+# Nearest node on the same level (|dy| < 2.5), by horizontal distance. A fighter mid-jump or riding a platform may have
+# no node on its level; then the closest node in 3D keeps the bot routable instead of leaving it without a path.
 func nearest(pos: Vector3) -> int:
 	var best := -1
 	var best_d := INF
@@ -37,6 +38,12 @@ func nearest(pos: Vector3) -> int:
 		if d < best_d:
 			best_d = d
 			best = i
+	if best < 0:
+		for i in range(positions.size()):
+			var d := positions[i].distance_to(pos)
+			if d < best_d:
+				best_d = d
+				best = i
 	return best
 
 func node(name: String) -> int:

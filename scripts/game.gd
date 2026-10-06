@@ -18,6 +18,9 @@ var beacon_meshes: Array[MeshInstance3D] = []
 var snapshot_timer := 0.0
 var input_edges := 0
 var simulation_tick := 0
+# Match clock for map movers and events (scripts/map_verbs.gd). The server owns it; clients follow snapshots.
+var map_clock := 0.0
+var map_clock_synced := false
 var menu: GameMenu
 var hud: Hud
 var address: LineEdit
@@ -135,6 +138,7 @@ func start_game(mode: String) -> void:
 			menu_status.text = "Only the host or offline player can restart a running round."
 			return
 		match_state.reset()
+		map_clock = 0.0
 		for e in entities.values():
 			remove_entity(e.entity_id)
 		for p in fighters.values():
@@ -322,6 +326,8 @@ func _physics_process(dt: float) -> void:
 	if not running:
 		return
 	simulation_tick += 1
+	map_clock += dt
+	MapVerbs.update(map_clock, self)
 	var p := local_player()
 	if p != null:
 		var motion := Input.get_vector("left", "right", "forward", "back") if not menu.visible else Vector2.ZERO
@@ -388,7 +394,7 @@ func _physics_process(dt: float) -> void:
 # Grapples and launch pads can never carry a fighter out of the arena.
 func out_of_bounds(pos: Vector3) -> bool:
 	var b := CivicDividend.bounds
-	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > 40.0
+	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling
 
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
@@ -432,7 +438,7 @@ func packed_world() -> Dictionary:
 		players.append(p.pack())
 	for e in entities.values():
 		deploys.append(e.pack())
-	return {"players": players, "entities": deploys, "match": match_state.pack(), "tick": simulation_tick}
+	return {"players": players, "entities": deploys, "match": match_state.pack(), "tick": simulation_tick, "mt": map_clock}
 
 func encode_world() -> PackedByteArray:
 	return var_to_bytes(packed_world()).compress(FileAccess.COMPRESSION_DEFLATE)
@@ -459,6 +465,14 @@ func apply_world(data: Dictionary) -> void:
 	if data.tick < last_world_tick:
 		return
 	last_world_tick = data.tick
+	if data.has("mt"):
+		# Follow the server's map clock; snap on a big error, otherwise ease so platforms never jerk.
+		var error: float = data.mt - map_clock
+		if not map_clock_synced or absf(error) > 0.25:
+			map_clock = data.mt
+			map_clock_synced = true
+		else:
+			map_clock += error * 0.1
 	var seen: Array = []
 	for state in data.players:
 		seen.append(state.id)
@@ -1033,6 +1047,9 @@ func bot_waypoint(p: Fighter, dt: float) -> Vector3:
 			p.edges |= 1
 		p.bot_progress_pos = p.global_position
 		p.bot_progress_time = 0.0
+	if p.bot_path.is_empty():
+		# The replan found no route (the bot is somewhere the graph does not cover): head for the point directly.
+		return p.bot_target
 	if p.bot_path_i >= p.bot_path.size() - 1:
 		return p.bot_target if Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 12.0 else p.bot_path[p.bot_path.size() - 1]
 	return p.bot_path[p.bot_path_i]
