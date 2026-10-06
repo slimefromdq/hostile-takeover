@@ -85,6 +85,7 @@ static func load_settings() -> void:
 static func set_colorblind(value: bool) -> void:
 	colorblind = value
 	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
 	cfg.set_value("display", "colorblind", value)
 	cfg.save(SETTINGS_PATH)
 
