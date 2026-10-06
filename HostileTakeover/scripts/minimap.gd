@@ -18,7 +18,7 @@ func to_map(x: float, z: float) -> Vector2:
 	return Vector2((x - bounds.position.x) / bounds.size.x * size.x, (z - bounds.position.y) / bounds.size.y * size.y)
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.05, 0.08, 0.62))
+	UiStyle.draw_panel(self, Rect2(Vector2.ZERO, size), Color(UiStyle.PANEL, 0.75), Color(0, 0, 0, 0))
 	for rect in CivicDividend.sunken:
 		var sa := to_map(rect.position.x, rect.position.y)
 		var sb := to_map(rect.end.x, rect.end.y)
@@ -27,7 +27,7 @@ func _draw() -> void:
 		var a := to_map(rect.position.x, rect.position.y)
 		var b := to_map(rect.end.x, rect.end.y)
 		draw_rect(Rect2(a, b - a), Color(0.55, 0.6, 0.68, 0.45))
-	draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.35), false, 1.5)
+	UiStyle.draw_panel(self, Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0), Color(UiStyle.ACCENT, 0.85))
 	if game == null:
 		return
 	var font := ThemeDB.fallback_font

@@ -130,6 +130,7 @@ func _draw() -> void:
 		_draw_waypoint(p)
 		_draw_crosshair(p)
 		_draw_player_panel(p)
+		_draw_health_bar(p)
 		_draw_ability_bar(p)
 	_draw_notice()
 	_draw_feed()
@@ -144,13 +145,14 @@ func _draw_objective_bar() -> void:
 	var cx := size.x / 2.0
 	var y := 40.0
 	var step := 74.0
+	UiStyle.draw_panel(self, Rect2(cx - 2.0 * step - 40.0, y - 34.0, 4.0 * step + 80.0, 98.0), UiStyle.PANEL, Color(UiStyle.ACCENT, 0.7))
 	for i in range(4):
 		draw_line(Vector2(cx + (i - 2) * step + 24, y), Vector2(cx + (i - 1) * step - 24, y), Color(1, 1, 1, 0.25), 3.0)
 	for i in range(5):
 		var c := Vector2(cx + (i - 2) * step, y)
 		var color := owner_color(state.owners[i])
 		var unlocked: bool = state.unlocked[i]
-		draw_circle(c, 23.0, Color(0.03, 0.05, 0.08, 0.8))
+		draw_circle(c, 23.0, UiStyle.SLOT)
 		draw_circle(c, 18.0, Color(color, 0.85 if unlocked else 0.25))
 		if unlocked:
 			draw_arc(c, 22.0, 0, TAU, 32, Color(1, 1, 1, 0.55), 2.0)
@@ -169,8 +171,11 @@ func _draw_objective_bar() -> void:
 	else:
 		centered(cx, 100.0, "%02d:%02d" % [seconds / 60, seconds % 60], 22)
 	var held_by := [state.owners.count(0), state.owners.count(1)]
-	text(Vector2(cx - 270, 46), "HELIX  %d" % held_by[0], 18, Visuals.team_color(0), HORIZONTAL_ALIGNMENT_RIGHT, 100.0)
-	text(Vector2(cx + 170, 46), "%d  MONARCH" % held_by[1], 18, Visuals.team_color(1))
+	var side_y := y - 34.0
+	UiStyle.draw_tag(self, Rect2(cx - 2.0 * step - 190.0, side_y + 22.0, 140.0, 28.0), Color(Visuals.team_color(0), 0.25))
+	UiStyle.draw_tag(self, Rect2(cx + 2.0 * step + 50.0, side_y + 22.0, 140.0, 28.0), Color(Visuals.team_color(1), 0.25))
+	text(Vector2(cx - 2.0 * step - 184.0, side_y + 43.0), "HELIX  %d" % held_by[0], 18, Visuals.team_color(0), HORIZONTAL_ALIGNMENT_RIGHT, 124.0)
+	text(Vector2(cx + 2.0 * step + 62.0, side_y + 43.0), "%d  MONARCH" % held_by[1], 18, Visuals.team_color(1))
 
 func _draw_waypoint(p: Fighter) -> void:
 	if p.hp <= 0 or game.match_state.winner != -2:
@@ -245,19 +250,9 @@ func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)
 	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
 	var base_y := size.y - 24.0
+	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 300.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
+	draw_rect(Rect2(12, base_y - 88.0, 4, 76.0), team_color)
 	text(Vector2(24, base_y - 70), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
-	var segments := int(ceil(p.spec.health / 20.0))
-	var total_w := 280.0
-	var seg_w := (total_w - (segments - 1) * 2.0) / segments
-	var fraction: float = p.hp / p.spec.health
-	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
-	for i in range(segments):
-		var x := 24.0 + i * (seg_w + 2.0)
-		draw_rect(Rect2(x, base_y - 56, seg_w, 16), Color(0.03, 0.05, 0.08, 0.75))
-		var f := clampf((p.hp - i * 20.0) / 20.0, 0.0, 1.0)
-		if f > 0.0:
-			draw_rect(Rect2(x, base_y - 56, seg_w * f, 16), fill)
-	text(Vector2(24 + total_w + 10, base_y - 42), "%d" % int(ceil(p.hp)), 20)
 	if p.reload_timer > 0.0:
 		text(Vector2(24, base_y - 12), "RELOADING", 18, Color("ffe2a3"))
 	else:
@@ -269,6 +264,37 @@ func _draw_player_panel(p: Fighter) -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
 		centered(size.x / 2.0, size.y / 2.0 + 10.0, "Respawn in %.1fs  ·  Esc to change class" % maxf(0.0, p.dead_time), 20)
+
+# Vertical HP bar anchored beside the player's on-screen model (segments of 20 HP, bottom up).
+func _draw_health_bar(p: Fighter) -> void:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null or p.hp <= 0:
+		return
+	var feet: Vector3 = p.global_position
+	var head: Vector3 = feet + Vector3.UP * 1.9
+	var side: Vector3 = camera.global_transform.basis.x * 0.65
+	if camera.is_position_behind(head + side):
+		return
+	var bottom := camera.unproject_position(feet + side)
+	var top := camera.unproject_position(head + side)
+	var h := clampf(bottom.y - top.y, 80.0, 360.0)
+	var mid := (bottom + top) * 0.5
+	var rect := Rect2(mid.x - 7.0, mid.y - h / 2.0, 14.0, h)
+	rect.position.x = clampf(rect.position.x, 40.0, size.x - 80.0)
+	rect.position.y = clampf(rect.position.y, 150.0, size.y - 160.0 - h)
+	var team_color := Visuals.team_color(p.team)
+	var fraction: float = clampf(p.hp / p.spec.health, 0.0, 1.0)
+	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
+	UiStyle.draw_panel(self, rect.grow(4.0), UiStyle.PANEL, Color(team_color, 0.85), 5.0, 1.5)
+	var segments := int(ceil(p.spec.health / 20.0))
+	var seg_h := (rect.size.y - (segments - 1) * 2.0) / segments
+	for i in range(segments):
+		var y := rect.end.y - (i + 1) * seg_h - i * 2.0
+		draw_rect(Rect2(rect.position.x, y, rect.size.x, seg_h), Color(1, 1, 1, 0.08))
+		var f := clampf((p.hp - i * 20.0) / 20.0, 0.0, 1.0)
+		if f > 0.0:
+			draw_rect(Rect2(rect.position.x, y + seg_h * (1.0 - f), rect.size.x, seg_h * f), fill)
+	text(Vector2(rect.position.x - 20.0, rect.position.y - 12.0), "%d" % int(ceil(p.hp)), 18, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 54.0)
 
 func _draw_ability_bar(p: Fighter) -> void:
 	var cx := size.x / 2.0
@@ -286,7 +312,7 @@ func _draw_ability_bar(p: Fighter) -> void:
 		elif p.class_id == 0 and i == 0 and p.grapple_time > 0.0:
 			state = "RELEASE"
 			cooldown = 0.0
-		draw_circle(c, 34.0, Color(0.03, 0.05, 0.08, 0.82))
+		draw_circle(c, 34.0, UiStyle.SLOT)
 		var icon := AssetLibrary.texture("icon_%s_%d" % [slug, i])
 		if icon != null:
 			draw_texture_rect(icon, Rect2(c - Vector2(24, 24), Vector2(48, 48)), false, Color(1, 1, 1, 0.35 if cooldown > 0.0 else 1.0))
@@ -302,8 +328,8 @@ func _draw_ability_bar(p: Fighter) -> void:
 			draw_arc(c, 34.0, 0, TAU, 40, glow, 3.0)
 		if state != "":
 			text(c + Vector2(-34, -38), state, 14, Color("ffe2a3"), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
-		draw_rect(Rect2(c + Vector2(-11, 26), Vector2(22, 20)), Color(0.02, 0.03, 0.05, 0.95))
-		text(c + Vector2(-11, 42), ["Q", "E", "F"][i], 15, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 22.0)
+		UiStyle.draw_tag(self, Rect2(c + Vector2(-14, 26), Vector2(28, 20)), UiStyle.ACCENT)
+		text(c + Vector2(-14, 42), ["Q", "E", "F"][i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
 		text(c + Vector2(-48, 62), label_name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
 	if quip_timer > 0.0:
 		centered(cx, cy - 56.0, quip_text, 18, Color(1, 1, 1, minf(1.0, quip_timer)))
@@ -338,7 +364,7 @@ func _draw_feed() -> void:
 		var killer_w := font.get_string_size(entry.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
 		var arrow_w := 26.0
 		var total := killer_w + arrow_w + victim_w + 12.0
-		draw_rect(Rect2(right - total, y, total, 22), Color(0.03, 0.05, 0.08, 0.55 * fade))
+		UiStyle.draw_tag(self, Rect2(right - total, y, total, 22), Color(UiStyle.PANEL, 0.8 * fade), 6.0)
 		var x := right - total + 6.0
 		text(Vector2(x, y + 17), entry.killer, 15, Color(Visuals.team_color(entry.kt), fade))
 		text(Vector2(x + killer_w, y + 17), " » ", 15, Color(1, 1, 1, fade), HORIZONTAL_ALIGNMENT_CENTER, arrow_w)
@@ -354,7 +380,9 @@ func _draw_help() -> void:
 
 func _draw_winner() -> void:
 	var winner: int = game.match_state.winner
-	draw_rect(Rect2(0, size.y * 0.25 - 40, size.x, 150), Color(0, 0, 0, 0.55))
+	draw_rect(Rect2(0, size.y * 0.25 - 40, size.x, 150), Color(UiStyle.PANEL, 0.8))
+	draw_rect(Rect2(0, size.y * 0.25 - 40, size.x, 3), Color(UiStyle.ACCENT, 0.8))
+	draw_rect(Rect2(0, size.y * 0.25 + 107, size.x, 3), Color(UiStyle.ACCENT, 0.8))
 	if winner == -1:
 		centered(size.x / 2.0, size.y * 0.25 + 20.0, "DRAW · Contract disputed", 40)
 	else:
@@ -376,8 +404,7 @@ static func scoreboard_rows(g: Node3D) -> Array:
 func _draw_scoreboard(p: Fighter) -> void:
 	var teams := scoreboard_rows(game)
 	var panel := Rect2(size.x / 2.0 - 400.0, 130.0, 800.0, 360.0)
-	draw_rect(panel, Color(0.03, 0.05, 0.08, 0.88))
-	draw_rect(panel, Color(1, 1, 1, 0.3), false, 1.5)
+	UiStyle.draw_panel(self, panel, Color(UiStyle.PANEL, 0.94), Color(UiStyle.ACCENT, 0.8), 16.0)
 	for t in range(2):
 		var x := panel.position.x + 20.0 + t * 390.0
 		var held: int = game.match_state.owners.count(t)
