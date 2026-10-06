@@ -139,6 +139,7 @@ func setup(owner_game: Node3D) -> void:
 
 func _ready() -> void:
 	get_viewport().size_changed.connect(_center)
+	resized.connect(_center)
 	_center()
 
 func _current_map_index() -> int:
