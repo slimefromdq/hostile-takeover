@@ -233,6 +233,8 @@ func _draw_crosshair(p: Fighter) -> void:
 	if p.reload_timer > 0.0:
 		var total: float = p.spec.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
 		draw_arc(c, 28.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - clampf(p.reload_timer / total, 0.0, 1.0)), 32, Color(1, 1, 1, 0.9), 3.0)
+	_draw_dash_icon(p, c + Vector2(-46.0, 0.0))
+	_draw_ammo(p, c + Vector2(0.0, 52.0))
 	if hit_timer > 0.0:
 		var color := Color.WHITE
 		var inner := 10.0
@@ -246,20 +248,33 @@ func _draw_crosshair(p: Fighter) -> void:
 		for dir in [Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]:
 			draw_line(c + dir.normalized() * inner, c + dir.normalized() * outer, color, 3.0)
 
+# Double chevron: white while the air dash / double jump charge is available, red once spent.
+func _draw_dash_icon(p: Fighter, c: Vector2) -> void:
+	var color := Color.WHITE if p.air_dash else UiStyle.DANGER
+	for k in range(2):
+		var o := Vector2(k * 7.0 - 7.0, 0.0)
+		var pts := PackedVector2Array([c + o + Vector2(-3, -7), c + o + Vector2(4, 0), c + o + Vector2(-3, 7)])
+		draw_polyline(PackedVector2Array([pts[0] + Vector2(1, 1), pts[1] + Vector2(1, 1), pts[2] + Vector2(1, 1)]), Color(0, 0, 0, 0.7), 4.0, true)
+		draw_polyline(pts, color, 2.5, true)
+
+func _draw_ammo(p: Fighter, c: Vector2) -> void:
+	if p.reload_timer > 0.0:
+		text(c + Vector2(-80, 0), "RELOADING", 18, UiStyle.HIGHLIGHT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
+		return
+	text(c + Vector2(-80, 0), "%d / %d" % [p.ammo, p.spec.magazine], 22, Color(UiStyle.DANGER) if p.ammo <= maxi(1, p.spec.magazine / 5) else UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
+	if p.spec.magazine <= 30:
+		var w := 5.0
+		var x0 := c.x - p.spec.magazine * (w + 3.0) / 2.0
+		for i in range(p.spec.magazine):
+			draw_rect(Rect2(x0 + i * (w + 3.0), c.y + 8.0, w, 12.0), Color.WHITE if i < p.ammo else Color(1, 1, 1, 0.2))
+
 func _draw_player_panel(p: Fighter) -> void:
 	var team_color := Visuals.team_color(p.team)
 	var mode := "SPRINT" if p.idle_weapon >= 1.25 else "COMBAT"
 	var base_y := size.y - 24.0
-	UiStyle.draw_panel(self, Rect2(12, base_y - 100.0, 344.0, 100.0), UiStyle.PANEL, Color(team_color, 0.85))
-	draw_rect(Rect2(12, base_y - 88.0, 4, 76.0), team_color)
-	text(Vector2(24, base_y - 70), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
-	if p.reload_timer > 0.0:
-		text(Vector2(24, base_y - 12), "RELOADING", 18, Color("ffe2a3"))
-	else:
-		text(Vector2(24, base_y - 12), "AMMO %d / %d" % [p.ammo, p.spec.magazine], 18)
-		if p.spec.magazine <= 30:
-			for i in range(p.spec.magazine):
-				draw_rect(Rect2(150.0 + i * 8.0, base_y - 26, 5, 14), Color.WHITE if i < p.ammo else Color(1, 1, 1, 0.2))
+	UiStyle.draw_panel(self, Rect2(12, base_y - 56.0, 300.0, 56.0), UiStyle.PANEL, Color(team_color, 0.85))
+	draw_rect(Rect2(12, base_y - 44.0, 4, 32.0), team_color)
+	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
 	if p.hp <= 0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
