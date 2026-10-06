@@ -26,7 +26,7 @@ One colour per verb, everywhere. Learn it once and it applies on the whole map.
 | Climb | Fire escapes, scaffolds, ladders, vent shaft, silo and spire ladders | Hold forward to climb at 6.5 m/s, back to descend, strafe to shuffle, jump to kick off; topping out steps you onto the platform | green |
 | Perch | Billboards, signs, dock roofs | Standing room with long sightlines; fed by a bounce pad or a ladder | yellow |
 | Moving platform | Elevators, trams, cranes, drawbridges, collapsing floors, the blimp | A platform on a keyframed timeline that carries whoever stands on it | violet |
-| Tunnel | Subway | A fast, tight flank under the boulevard | orange strips |
+| Tunnel | Subway, Foundation Line, culvert, cellars, sump | Fast, tight flanks under the whole map, with a deeper tier below the subway | orange strips |
 
 Every climb lane draws its own ladder and every cable draws its own wire, so the grammar needs no manual dressing.
 Tuning constants live at the top of `scripts/map_verbs.gd`.
@@ -35,10 +35,33 @@ Tuning constants live at the top of `scripts/map_verbs.gd`.
 
 | Tier | Height | What lives there | Connects to |
 |---|---|---|---|
-| Underground | y -6 | 180 m subway tunnel with staggered pillar pairs (tight, fast) | Street by three 20-degree stairwells, **roofs by the vent-tower shaft** (18 m climb) |
+| Sump | y -11 | **Pump hall** under A and the **cistern** under C (each entered by a 14 m ramp slot cut in the tunnel floor), 4 m ceilings | Tunnel by the ramp slots and the pump-hall ladder hatch |
+| Underground | y -6 | 180 m subway tunnel with staggered pillar pairs, plus three branches: the **Foundation Line** (north, to a pit under the tower frame and the hoist), the **culvert** (south, surfaces beside the canal) and the **market cellars** (south, under the alley) | Street by **four** 20-degree stairwells (S0 sits beside the depots), the culvert slot, **the hoist** (foundation stop), ladder hatches in the pit and the market hall, a **launch vent** at the end of the cellars; **roofs by the vent-tower shaft** (18 m climb) |
 | Street | y 0 | Boulevard with offset barrier chicanes, rail yard lanes, market alleys, the canal, construction yard | everything |
-| Mid-level | y 6 | Tram stations, tower plates, market bridges, hoist landings | Street (ladders, hoist, ramps), roofs (ladders, hoist) |
-| Rooftops and sky | y 12 to 40 | Roof garden (one connected plateau), tower top plates, silo tops, spire docks, billboard perches, the blimp at y 34 | Mid and street by ladders, bounce awnings, zips and the hoist |
+| Mid-level | y 6 | Tram stations, tower plates, market bridges, hoist landings, **The Span** over C | Street (ladders, hoist, ramps), roofs (ladders, hoist) |
+| Rooftops and sky | y 12 to 40 | Roof garden (one connected plateau), **north warehouse roofs**, **the Span's control booth**, tower top plates, silo tops, spire docks, billboard perches, the blimp at y 34 | Mid and street by ladders, bounce awnings, zips and the hoist |
+
+## The new vertical layer
+
+- **The Span (centre point C).** A 6 m deck at y 6 runs 22 m across the street over the capture disc, joined to two 4 m arms (one each side) that rest on pylons at the boulevard edges. A gatehouse of two walls carries a 14 x 10.5 m **control booth** at y 12. Up: ladders on all four pylon ends and on both gate walls, and a magenta launch pad on each side of the deck that throws you onto the booth. The disc itself stays flat and cover-free: the audit keeps every non-walk solid 4.5 m clear, so the gate walls and booth rails sit just outside that radius. Capture needs street level, so the Span defends the point without capturing it.
+- **North warehouse row.** Two 12 m warehouses in the north strip (x -86..-68) are the market roof garden's twin: a roof bridge, planters, bounce awnings on the street face and two fire escapes each.
+- **Yard gantries.** Two portal cranes at z = +-22 carry 52 m catwalks at y 9 over the rail-yard lanes, with a ladder on each west leg.
+- **Pump-house perch.** A ladder to the pump house roof (y 7) with cover, overlooking the approach to B.
+
+## The deeper underground
+
+Everything runs as `trn` waypoints so bots use it: S0, the Foundation Line, the culvert, the cellars, the pump hall and the cistern are all walk/ramp routes (the culvert comes up into the market's east-west alley, so it joins the street graph).
+
+| Piece | Where | What |
+|---|---|---|
+| Stairwell S0 | x -84..-76, north | Second northern exit, 25 m from the depot gates |
+| Foundation Line | x -42..-36, z -44..-7 | 37 m tunnel with offset baffles to a pit under the tower frame; the **hoist now has a foundation stop (y -6)** and a ladder hatch leads to the street |
+| Culvert | x -50..-44, z 7..40 | Runs under the pump house and surfaces on a 20-degree ramp beside the canal |
+| Market cellars | x -78..-72, z 7..62 | Spine under the market alley, a vault under the hall with a **ladder up into it**, and a **launch vent** at the far end |
+| Pump hall | x -90..-62, y -11 | Ramp slot down from the tunnel, tanks for cover, ladder hatch back up |
+| Cistern | x -28..28, y -11 | A ramp slot on each side meets under C; buttresses break its sightline |
+
+Moving between layers: stairs (slow, safe, bots use them), ladders (fast, exposed, one at a time), launch pads (up only) and the hoist.
 
 ## Five districts
 
@@ -74,9 +97,9 @@ Everything dynamic is a pure function of the match clock the server broadcasts, 
 
 | Check | Result |
 |---|---|
-| `tests/map_audit.gd` on this map | 30 checks, 0 failures (geometry, clearance, waypoint edges, spawns, capture discs, sightline budgets) |
+| `tests/map_audit.gd` on this map | 38 checks, 0 failures (geometry, clearance, waypoint edges, spawns, capture discs, sightline budgets including the sump, Foundation Line and cellar lanes) |
 | `tests/map_walk.gd` | Skyrunner and Enforcer walk 64 routes, 0 failures |
-| `tests/verbs_map.gd` | 333 checks, 0 failures: every one of 28 climb lanes tops out onto solid ground, 14 bounce pads reach their apex, 6 zips are ridden both ways and land the hero within 10 m of the far end, 4 grind rails carry the hero the full length, and every trams/hoist/blimp carries a standing hero; both heroes |
+| `tests/verbs_map.gd` | 461 checks, 0 failures: every one of 50 climb lanes tops out onto solid ground, 22 bounce pads reach their apex, 6 zips are ridden both ways and land the hero within 10 m of the far end, 4 grind rails carry the hero the full length, and every tram/hoist/blimp carries a standing hero; both heroes |
 | `tests/verbs_test.gd`, `run_tests.gd`, `network_test.gd`, `blockout_import.gd` | pass |
 | `match_smoke.gd` on this map | bots leave the depots, contest points and capture them |
 | Blender round trip (`tools/blender/test_roundtrip.py`, real Blender 5.0) | 183 objects, 60 waypoints and 37 features survive import and export unchanged |
@@ -88,7 +111,7 @@ the Enforcer's wider capsule clipped the blimp hull at the spire ladder (blimp d
 
 - **Hijackable elevators and shutters.** The hoist and tram are on a fixed timeline; letting a team call or hold them needs a small server state.
 - **Pickups at dead ends.** The game has no pickup system yet.
-- **Bots only use walk and ramp routes** (stairs, boulevard, alleys, tunnel). They do not use ziplines, ladders or bounce pads, so mid and roof tiers are for players.
+- **Bots only use walk and ramp routes** (stairs, boulevard, alleys, the tunnel, its branches and the sump). They do not use ziplines, ladders, launch pads or the hoist, so the mid and roof tiers (including the Span) are for players.
 - Water is a coloured floor; there is no swimming or slowing.
 - It has not been play-tested by people. The numbers (bounce power, zip speed, dwell times) are first guesses.
 

@@ -62,6 +62,7 @@ def build(b):
     stage_market(b)
     stage_industrial(b)
     stage_verbs(b)
+    stage_vertical(b)
     stage_graph(b)
 
 
@@ -366,6 +367,73 @@ def stage_industrial(b):
         b.cylinder(x, z, 1.75, 0, 3, "cover", "tank", mirror=True)
     # Pump house at the north end: the shoulder that makes the canal approach a chokepoint.
     b.block(-48, 14, -42, 24, 0, 7, "wall", "pump_house", mirror=True)
+
+
+# ---- verticality set pieces: The Span over C, the north warehouse row, yard gantries, the pump-house perch --------------
+
+def stage_vertical(b):
+    stage_span(b)
+    stage_north_row(b)
+    stage_gantries(b)
+    stage_perch(b)
+
+
+def stage_span(b):
+    """A mid-level (y 6) bridge over the centre point C with a gatehouse and a control booth at y 12 on top.
+    Everything stays overhead or well outside the 4.5 m capture disc; pylons stand clear of the S3 stair slot and the chicane routes."""
+    deck0, deck1 = MID - 0.5, MID
+    b.block(-11, -3, 0, 3, deck0, deck1, "walk", "span_deck", mirror=True)
+    b.block(-15, -11, -11, 11, deck0, deck1, "walk", "span_arm", mirror=True)
+    b.block(-15, -11, -11, -9, 0, deck0, "wall", "span_pylon_n", mirror=True)
+    b.block(-15, 9, -11, 11, 0, deck0, "wall", "span_pylon_s", mirror=True)
+    b.block(-15, -9, -14.5, 9, MID, MID + 1.1, "wall", "span_parapet", mirror=True, color=ORANGE)
+    # Gatehouse: two walls carry the booth and leave the deck open between them (5.5 m of headroom).
+    # (the audit keeps all non-walk solids 4.5 m from a capture point, so the gate walls and rails sit just outside that radius)
+    b.block(-7, -3, -6, 3, MID, ROOF - 0.5, "wall", "span_gate", mirror=True)
+    b.block(-7, -5.25, 7, 5.25, ROOF - 0.5, ROOF, "walk", "span_booth", color=PERCH)
+    b.block(-7, -5.25, 7, -4.75, ROOF, ROOF + 1.1, "wall", "span_booth_rail_n", color=ORANGE)
+    b.block(-7, 4.75, 7, 5.25, ROOF, ROOF + 1.1, "wall", "span_booth_rail_s", color=ORANGE)
+    # Up to the deck: a ladder on each pylon end. Up to the booth: a ladder on each gatehouse wall and a launch pad.
+    b.climb(-14, -12.2, -12, -11, 0, MID + 0.6, mirror=True, tag="span_ladder_n", face="+z")
+    b.decor(-14, -11.04, -12, -11, 0, MID, "accent", "flush", "span_ladder_n_strip", mirror=True, color=CLIMB)
+    b.climb(-14, 11, -12, 12.2, 0, MID + 0.6, mirror=True, tag="span_ladder_s", face="-z")
+    b.decor(-14, 11, -12, 11.04, 0, MID, "accent", "flush", "span_ladder_s_strip", mirror=True, color=CLIMB)
+    b.climb(-8.2, -1, -7, 1, MID, ROOF + 0.6, mirror=True, tag="span_booth_ladder", face="+x")
+    b.decor(-7.04, -1, -7, 1, MID, ROOF - 0.5, "accent", "flush", "span_booth_ladder_strip", mirror=True, color=CLIMB)
+    b.block(-10.5, -1.5, -8.5, 1.5, MID, MID + 0.3, "accent", "span_pad", mirror=True, color=BOUNCE)
+    b.bounce(-10.5, -1.5, -8.5, 1.5, MID + 0.3, MID + 1.0, power=23, kick=(4, 0, 0), mirror=True, tag="span_launch")
+
+
+def stage_north_row(b):
+    """Two 12 m warehouses in the north strip: the market's roof garden gets a northern twin."""
+    for x0, x1, tag in ((-86, -78, "w1"), (-75, -68, "w2")):
+        b.block(x0, -36, x1, -27, 0, ROOF, "tower", "warehouse_" + tag, mirror=True)
+        b.cylinder((x0 + x1) / 2.0, -31.5, 1.5, ROOF, ROOF + 1.2, "cover", "planter_" + tag, mirror=True)
+    b.block(-78, -34, -75, -30, ROOF - 0.5, ROOF, "walk", "roof_bridge_n", mirror=True)
+    # Awnings launch to the roofs (double jump gets you onto them); fire escapes climb the street face.
+    for x0, x1 in ((-86, -82), (-75, -72)):
+        b.block(x0, -27, x1, -25.5, 3.5, 4.0, "accent", "awning_n", mirror=True, color=BOUNCE)
+        b.bounce(x0, -27, x1, -25.5, 4.0, 4.7, power=23, mirror=True, tag="awning_n_bounce")
+    for x0, x1 in ((-81, -78), (-71, -68)):
+        b.climb(x0, -27, x1, -25.8, 0, ROOF + 0.6, mirror=True, tag="escape_nw", face="-z")
+        b.decor(x0, -26.96, x1, -26.92 + 0.0, 0, ROOF, "accent", "flush", "escape_nw_strip", mirror=True, color=CLIMB)
+
+
+def stage_gantries(b):
+    """Portal cranes over the rail-yard lanes: a 52 m catwalk at y 9, ladders on the west legs, one at each end of the yard."""
+    for z in (-22, 22):
+        b.block(-26, z - 1, -24, z + 1, 0, 8.5, "wall", "gantry_leg", mirror=True)
+        b.block(-26, z - 1, 0, z + 1, 8.5, 9, "walk", "gantry_beam", mirror=True, color=MOVER)
+        face = "+x"
+        b.climb(-27.2, z - 0.75, -26, z + 0.75, 0, 9.6, mirror=True, tag="gantry_ladder", face=face)
+        b.decor(-26.04, z - 0.75, -26, z + 0.75, 0, 8.5, "accent", "flush", "gantry_ladder_strip", mirror=True, color=CLIMB)
+
+
+def stage_perch(b):
+    """The pump house roof (y 7) becomes a sniper perch over the boulevard approach to B: a ladder on its north face and cover up top."""
+    b.climb(-47, 12.8, -45, 14, 0, 7.6, mirror=True, tag="pump_house_ladder", face="+z")
+    b.decor(-47, 13.96, -45, 14, 0, 7, "accent", "flush", "pump_house_ladder_strip", mirror=True, color=CLIMB)
+    b.block(-47, 17, -43, 18, 7, 8.2, "cover", "pump_house_cover", mirror=True)
 
 
 # ---- the verb layer: shaft, power lines, rails, billboards ---------------------------------------------

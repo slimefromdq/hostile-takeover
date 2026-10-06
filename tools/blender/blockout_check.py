@@ -186,8 +186,8 @@ def check(doc):
                 break
         for r in world.solids:
             lo, hi = r["min"], r["max"]
-            if lo[1] < -0.01 or hi[1] - lo[1] < 0.5:
-                continue
+            if r.get("role") == "walk" or lo[1] < -0.01 or hi[1] - lo[1] < 0.5:
+                continue      # same rule as tests/map_audit.gd: overhead walkways may cross a disc
             nx, nz = min(max(p[0], lo[0]), hi[0]), min(max(p[2], lo[2]), hi[2])
             if math.hypot(p[0] - nx, p[2] - nz) < 4.5:
                 problems.append("solid %s inside the capture radius of %s" % (r["tag"], p))

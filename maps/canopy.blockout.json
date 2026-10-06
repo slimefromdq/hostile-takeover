@@ -1442,6 +1442,187 @@
     0
    ],
    "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "span_ladder_n",
+   "face": "+z",
+   "min": [
+    -14,
+    0,
+    -12.2
+   ],
+   "max": [
+    -12,
+    6.6,
+    -11
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "span_ladder_s",
+   "face": "-z",
+   "min": [
+    -14,
+    0,
+    11
+   ],
+   "max": [
+    -12,
+    6.6,
+    12.2
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "span_booth_ladder",
+   "face": "+x",
+   "min": [
+    -8.2,
+    6.0,
+    -1
+   ],
+   "max": [
+    -7,
+    12.6,
+    1
+   ],
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "span_launch",
+   "min": [
+    -10.5,
+    6.3,
+    -1.5
+   ],
+   "max": [
+    -8.5,
+    7.0,
+    1.5
+   ],
+   "power": 23,
+   "kick": [
+    4,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_n_bounce",
+   "min": [
+    -86,
+    4.0,
+    -27
+   ],
+   "max": [
+    -82,
+    4.7,
+    -25.5
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "bounce",
+   "tag": "awning_n_bounce",
+   "min": [
+    -75,
+    4.0,
+    -27
+   ],
+   "max": [
+    -72,
+    4.7,
+    -25.5
+   ],
+   "power": 23,
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_nw",
+   "face": "-z",
+   "min": [
+    -81,
+    0,
+    -27
+   ],
+   "max": [
+    -78,
+    12.6,
+    -25.8
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "escape_nw",
+   "face": "-z",
+   "min": [
+    -71,
+    0,
+    -27
+   ],
+   "max": [
+    -68,
+    12.6,
+    -25.8
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "gantry_ladder",
+   "face": "+x",
+   "min": [
+    -27.2,
+    0,
+    -22.75
+   ],
+   "max": [
+    -26,
+    9.6,
+    -21.25
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "gantry_ladder",
+   "face": "+x",
+   "min": [
+    -27.2,
+    0,
+    21.25
+   ],
+   "max": [
+    -26,
+    9.6,
+    22.75
+   ],
+   "mirror": true
+  },
+  {
+   "type": "climb",
+   "tag": "pump_house_ladder",
+   "face": "+z",
+   "min": [
+    -47,
+    0,
+    12.8
+   ],
+   "max": [
+    -45,
+    7.6,
+    14
+   ],
+   "mirror": true
   }
  ],
  "objects": [
@@ -5880,6 +6061,508 @@
    ],
    "mirror": true,
    "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "span_deck",
+   "role": "walk",
+   "min": [
+    -11.0,
+    5.5,
+    -3.0
+   ],
+   "max": [
+    0.0,
+    6.0,
+    3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "span_arm",
+   "role": "walk",
+   "min": [
+    -15.0,
+    5.5,
+    -11.0
+   ],
+   "max": [
+    -11.0,
+    6.0,
+    11.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "span_pylon_n",
+   "role": "wall",
+   "min": [
+    -15.0,
+    0.0,
+    -11.0
+   ],
+   "max": [
+    -11.0,
+    5.5,
+    -9.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "span_pylon_s",
+   "role": "wall",
+   "min": [
+    -15.0,
+    0.0,
+    9.0
+   ],
+   "max": [
+    -11.0,
+    5.5,
+    11.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "span_parapet",
+   "role": "wall",
+   "min": [
+    -15.0,
+    6.0,
+    -9.0
+   ],
+   "max": [
+    -14.5,
+    7.0,
+    9.0
+   ],
+   "mirror": true,
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "block",
+   "tag": "span_gate",
+   "role": "wall",
+   "min": [
+    -7.0,
+    6.0,
+    -3.0
+   ],
+   "max": [
+    -6.0,
+    11.5,
+    3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "span_booth",
+   "role": "walk",
+   "min": [
+    -7.0,
+    11.5,
+    -5.25
+   ],
+   "max": [
+    7.0,
+    12.0,
+    5.25
+   ],
+   "color": "#ffc928"
+  },
+  {
+   "kind": "block",
+   "tag": "span_booth_rail_n",
+   "role": "wall",
+   "min": [
+    -7.0,
+    12.0,
+    -5.25
+   ],
+   "max": [
+    7.0,
+    13.0,
+    -4.75
+   ],
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "block",
+   "tag": "span_booth_rail_s",
+   "role": "wall",
+   "min": [
+    -7.0,
+    12.0,
+    4.75
+   ],
+   "max": [
+    7.0,
+    13.0,
+    5.25
+   ],
+   "color": "#ff6a2b"
+  },
+  {
+   "kind": "decor",
+   "tag": "span_ladder_n_strip",
+   "role": "accent",
+   "min": [
+    -14,
+    0,
+    -11.04
+   ],
+   "max": [
+    -12,
+    6.0,
+    -11
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "span_ladder_s_strip",
+   "role": "accent",
+   "min": [
+    -14,
+    0,
+    11
+   ],
+   "max": [
+    -12,
+    6.0,
+    11.04
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "span_booth_ladder_strip",
+   "role": "accent",
+   "min": [
+    -7.04,
+    6.0,
+    -1
+   ],
+   "max": [
+    -7,
+    11.5,
+    1
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "span_pad",
+   "role": "accent",
+   "min": [
+    -10.5,
+    6.0,
+    -1.5
+   ],
+   "max": [
+    -8.5,
+    6.25,
+    1.5
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "warehouse_w1",
+   "role": "tower",
+   "min": [
+    -86.0,
+    0.0,
+    -36.0
+   ],
+   "max": [
+    -78.0,
+    12.0,
+    -27.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_w1",
+   "role": "cover",
+   "min": [
+    -83.5,
+    12.0,
+    -33.0
+   ],
+   "max": [
+    -80.5,
+    13.25,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "warehouse_w2",
+   "role": "tower",
+   "min": [
+    -75.0,
+    0.0,
+    -36.0
+   ],
+   "max": [
+    -68.0,
+    12.0,
+    -27.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "cylinder",
+   "tag": "planter_w2",
+   "role": "cover",
+   "min": [
+    -73.0,
+    12.0,
+    -33.0
+   ],
+   "max": [
+    -70.0,
+    13.25,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "roof_bridge_n",
+   "role": "walk",
+   "min": [
+    -78.0,
+    11.5,
+    -34.0
+   ],
+   "max": [
+    -75.0,
+    12.0,
+    -30.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "awning_n",
+   "role": "accent",
+   "min": [
+    -86.0,
+    3.5,
+    -27.0
+   ],
+   "max": [
+    -82.0,
+    4.0,
+    -25.5
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "block",
+   "tag": "awning_n",
+   "role": "accent",
+   "min": [
+    -75.0,
+    3.5,
+    -27.0
+   ],
+   "max": [
+    -72.0,
+    4.0,
+    -25.5
+   ],
+   "mirror": true,
+   "color": "#ff3fa4"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_nw_strip",
+   "role": "accent",
+   "min": [
+    -81,
+    0,
+    -26.96
+   ],
+   "max": [
+    -78,
+    12.0,
+    -26.92
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "escape_nw_strip",
+   "role": "accent",
+   "min": [
+    -71,
+    0,
+    -26.96
+   ],
+   "max": [
+    -68,
+    12.0,
+    -26.92
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "gantry_leg",
+   "role": "wall",
+   "min": [
+    -26.0,
+    0.0,
+    -23.0
+   ],
+   "max": [
+    -24.0,
+    8.5,
+    -21.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "gantry_beam",
+   "role": "walk",
+   "min": [
+    -26.0,
+    8.5,
+    -23.0
+   ],
+   "max": [
+    0.0,
+    9.0,
+    -21.0
+   ],
+   "mirror": true,
+   "color": "#a38bff"
+  },
+  {
+   "kind": "decor",
+   "tag": "gantry_ladder_strip",
+   "role": "accent",
+   "min": [
+    -26.04,
+    0,
+    -22.75
+   ],
+   "max": [
+    -26,
+    8.5,
+    -21.25
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "gantry_leg",
+   "role": "wall",
+   "min": [
+    -26.0,
+    0.0,
+    21.0
+   ],
+   "max": [
+    -24.0,
+    8.5,
+    23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "gantry_beam",
+   "role": "walk",
+   "min": [
+    -26.0,
+    8.5,
+    21.0
+   ],
+   "max": [
+    0.0,
+    9.0,
+    23.0
+   ],
+   "mirror": true,
+   "color": "#a38bff"
+  },
+  {
+   "kind": "decor",
+   "tag": "gantry_ladder_strip",
+   "role": "accent",
+   "min": [
+    -26.04,
+    0,
+    21.25
+   ],
+   "max": [
+    -26,
+    8.5,
+    22.75
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "decor",
+   "tag": "pump_house_ladder_strip",
+   "role": "accent",
+   "min": [
+    -47,
+    0,
+    13.96
+   ],
+   "max": [
+    -45,
+    7,
+    14
+   ],
+   "mirror": true,
+   "color": "#3fd96b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "pump_house_cover",
+   "role": "cover",
+   "min": [
+    -47.0,
+    7.0,
+    17.0
+   ],
+   "max": [
+    -43.0,
+    8.25,
+    18.0
+   ],
+   "mirror": true
   }
  ],
  "waypoints": [
