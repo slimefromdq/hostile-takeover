@@ -94,9 +94,11 @@ class Blockout:
         x0, x1 = min(x0, x1), max(x0, x1)
         z0, z1 = min(z0, z1), max(z0, z1)
         t = thickness
+        # West and east walls run the full depth; north and south walls fit between them, so no wall ends
+        # a short gap from a neighbouring block (the audit rejects 0.05-2 m gaps).
         sides = {
-            "n": (x0, z0, x1, z0 + t, "x"), "s": (x0, z1 - t, x1, z1, "x"),
-            "w": (x0, z0 + t, x0 + t, z1 - t, "z"), "e": (x1 - t, z0 + t, x1, z1 - t, "z"),
+            "n": (x0 + t, z0, x1 - t, z0 + t, "x"), "s": (x0 + t, z1 - t, x1 - t, z1, "x"),
+            "w": (x0, z0, x0 + t, z1, "z"), "e": (x1 - t, z0, x1, z1, "z"),
         }
         for side, (ax0, az0, ax1, az1, along) in sides.items():
             cuts = sorted((c - w / 2.0, c + w / 2.0, h) for s, c, w, h in openings if s == side)
@@ -141,6 +143,49 @@ class Blockout:
             if key not in ("bounds", "spawn_x", "spawn_z", "spawn_step", "depot_limit", "test_lane"):
                 raise ValueError("unknown setting %r" % key)
             self.settings[key] = list(value) if isinstance(value, (tuple, list)) else value
+
+    # ---- traversal verbs (docs/JUNGLE_GYM.md, scripts/map_verbs.gd) ------------------------------
+
+    def _feature(self, **fields):
+        rec = {k: v for k, v in fields.items() if v is not None}
+        self.features.append(rec)
+        return rec
+
+    def bounce(self, x0, z0, x1, z1, y0, y1, power=15.0, kick=None, mirror=False, tag="bounce"):
+        """Trigger box that launches anyone landing in it. Put it just above a solid slab (the awning)."""
+        return self._feature(type="bounce", tag=tag, min=[min(x0, x1), min(y0, y1), min(z0, z1)],
+                             max=[max(x0, x1), max(y0, y1), max(z0, z1)], power=power, kick=kick,
+                             mirror=True if mirror else None)
+
+    def climb(self, x0, z0, x1, z1, y0, y1, mirror=False, tag="climb", face=None):
+        """Climbable volume (fire escape, scaffolding). Extend it about 0.6 m above the platform you top out onto.
+        `face` is the direction you look to climb it ("+x", "-x", "+z", "-z"); tests use it."""
+        return self._feature(type="climb", tag=tag, face=face, min=[min(x0, x1), min(y0, y1), min(z0, z1)],
+                             max=[max(x0, x1), max(y0, y1), max(z0, z1)], mirror=True if mirror else None)
+
+    def cable(self, a, b, mode="zip", speed=None, mirror=False, tag="cable", color=None):
+        """Power line. mode "zip" hangs you from the wire, "grind" rides it standing. Jump releases."""
+        if mode not in ("zip", "grind"):
+            raise ValueError("%s: cable mode must be zip or grind" % tag)
+        return self._feature(type="cable", tag=tag, mode=mode, speed=speed, color=color,
+                             **{"from": list(a), "to": list(b)}, mirror=True if mirror else None)
+
+    def mover(self, tag, size, keys, role="accent", color=None, period=0.0, phase=0.0, ease=True, mirror=False):
+        """Platform on a keyframed timeline: keys = [(seconds, (x, y, z)), (seconds, (x, y, z), (rx, ry, rz)), ...].
+        period > 0 loops (first and last key should match); period 0 plays once and holds the last key."""
+        ks = [[k[0], list(k[1])] + ([list(k[2])] if len(k) > 2 else []) for k in keys]
+        return self._feature(type="mover", tag=tag, size=list(size), role=role, color=color, keys=ks,
+                             period=period or None, phase=phase or None, ease=None if ease else False,
+                             mirror=True if mirror else None)
+
+    def event(self, time, text):
+        """Announcement at match time `time` seconds."""
+        return self._feature(type="event", time=time, text=text)
+
+    def audit(self, **profile):
+        """Audit profile: lanes=[{label, xs:[a,b,step], zs:[...], y, rect:[x,z,w,h], p50/p90/p99/max}],
+        route_families=[...], min_families=n, spawn_sight={xs:[a,b,step], zs:[...]} or False."""
+        self.settings["audit"] = profile
 
     # ---- output ----------------------------------------------------------------
 

@@ -51,7 +51,9 @@ func run() -> void:
 
 func audit_registry() -> void:
 	var solids: Array = builder.solids
-	var bounds := AABB(Vector3(-92.01, -5.01, -60.01), Vector3(184.02, 45.02, 120.02))
+	var rb := CivicDividend.bounds
+	var y_min := -12.01 if CivicDividend.replaced else -5.01
+	var bounds := AABB(Vector3(rb.position.x - 0.01, y_min, rb.position.y - 0.01), Vector3(rb.size.x + 0.02, 40.01 - y_min, rb.size.y + 0.02))
 	var outside := 0
 	for s in solids:
 		if not bounds.encloses(s.aabb):

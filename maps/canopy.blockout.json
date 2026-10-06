@@ -1,0 +1,1540 @@
+{
+ "format": 1,
+ "units": "m",
+ "mode": "replace",
+ "source": "canopy.py",
+ "settings": {
+  "bounds": [
+   -96,
+   -64,
+   192,
+   128
+  ],
+  "spawn_x": 90,
+  "spawn_z": -7,
+  "spawn_step": 2.8,
+  "depot_limit": 86,
+  "audit": {
+   "route_families": [
+    "blv",
+    "aln",
+    "trn"
+   ],
+   "min_families": 3,
+   "lanes": [
+    {
+     "label": "boulevard",
+     "xs": [
+      -88,
+      88,
+      4
+     ],
+     "zs": [
+      -10,
+      -6,
+      -2,
+      2,
+      6,
+      10
+     ],
+     "y": 0,
+     "rect": [
+      -96,
+      -12,
+      192,
+      24
+     ],
+     "p50": 30,
+     "p90": 60,
+     "max": 100
+    },
+    {
+     "label": "tunnel",
+     "xs": [
+      -88,
+      88,
+      4
+     ],
+     "zs": [
+      -3,
+      0,
+      3
+     ],
+     "y": -6,
+     "rect": [
+      -96,
+      -5,
+      192,
+      10
+     ],
+     "p90": 60,
+     "p99": 80
+    }
+   ]
+  }
+ },
+ "features": [],
+ "objects": [
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -96.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -64.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -64.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -56.0,
+    0.0,
+    -23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -64.0,
+    -1.0,
+    -7.0
+   ],
+   "max": [
+    -56.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -56.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -36.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -36.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -28.0,
+    0.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -36.0,
+    -1.0,
+    23.0
+   ],
+   "max": [
+    -28.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -28.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    -4.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -4.0,
+    -1.0,
+    -64.0
+   ],
+   "max": [
+    0.0,
+    0.0,
+    -23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "floor",
+   "role": "walk",
+   "min": [
+    -4.0,
+    -1.0,
+    -7.0
+   ],
+   "max": [
+    0.0,
+    0.0,
+    64.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "wall_n",
+   "role": "tower",
+   "min": [
+    -96.0,
+    0.0,
+    -64.0
+   ],
+   "max": [
+    96.0,
+    34.0,
+    -62.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "wall_s",
+   "role": "tower",
+   "min": [
+    -96.0,
+    0.0,
+    62.0
+   ],
+   "max": [
+    96.0,
+    34.0,
+    64.0
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "depot_back",
+   "role": "tower",
+   "min": [
+    -96.0,
+    0.0,
+    -62.0
+   ],
+   "max": [
+    -93.0,
+    34.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "end_mass_n",
+   "role": "tower",
+   "min": [
+    -93.0,
+    0.0,
+    -62.0
+   ],
+   "max": [
+    -86.0,
+    14.0,
+    -8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "end_mass_s",
+   "role": "tower",
+   "min": [
+    -93.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    -86.0,
+    14.0,
+    62.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "depot_roof",
+   "role": "tower",
+   "min": [
+    -93.0,
+    6.0,
+    -8.0
+   ],
+   "max": [
+    -86.0,
+    14.0,
+    8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "gate_n",
+   "role": "wall",
+   "min": [
+    -87.0,
+    0.0,
+    -8.0
+   ],
+   "max": [
+    -86.0,
+    6.0,
+    -3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "gate_s",
+   "role": "wall",
+   "min": [
+    -87.0,
+    0.0,
+    3.0
+   ],
+   "max": [
+    -86.0,
+    6.0,
+    8.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "gate_lintel",
+   "role": "wall",
+   "min": [
+    -87.0,
+    4.0,
+    -3.0
+   ],
+   "max": [
+    -86.0,
+    6.0,
+    3.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "baffle",
+   "role": "wall",
+   "min": [
+    -84.0,
+    0.0,
+    -2.5
+   ],
+   "max": [
+    -82.0,
+    3.5,
+    2.5
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_n",
+   "role": "wall",
+   "min": [
+    -76.0,
+    0.0,
+    -12.0
+   ],
+   "max": [
+    -75.0,
+    3.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_s",
+   "role": "wall",
+   "min": [
+    -72.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    -71.0,
+    3.0,
+    12.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "chicane_cap",
+   "role": "accent",
+   "min": [
+    -76,
+    3.0,
+    -12
+   ],
+   "max": [
+    -75,
+    3.1,
+    1
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_n",
+   "role": "wall",
+   "min": [
+    -48.0,
+    0.0,
+    -12.0
+   ],
+   "max": [
+    -47.0,
+    3.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_s",
+   "role": "wall",
+   "min": [
+    -44.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    -43.0,
+    3.0,
+    12.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "chicane_cap",
+   "role": "accent",
+   "min": [
+    -48,
+    3.0,
+    -12
+   ],
+   "max": [
+    -47,
+    3.1,
+    1
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_n",
+   "role": "wall",
+   "min": [
+    -20.0,
+    0.0,
+    -12.0
+   ],
+   "max": [
+    -19.0,
+    3.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "chicane_s",
+   "role": "wall",
+   "min": [
+    -16.0,
+    0.0,
+    -1.0
+   ],
+   "max": [
+    -15.0,
+    3.0,
+    12.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "chicane_cap",
+   "role": "accent",
+   "min": [
+    -20,
+    3.0,
+    -12
+   ],
+   "max": [
+    -19,
+    3.1,
+    1
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_floor",
+   "role": "walk",
+   "min": [
+    -90.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    0.0,
+    -6.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_end",
+   "role": "wall",
+   "min": [
+    -92.0,
+    -7.0,
+    -7.0
+   ],
+   "max": [
+    -90.0,
+    -1.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_n",
+   "role": "wall",
+   "min": [
+    -90.0,
+    -6.0,
+    -7.0
+   ],
+   "max": [
+    -64.0,
+    -1.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_n",
+   "role": "wall",
+   "min": [
+    -56.0,
+    -6.0,
+    -7.0
+   ],
+   "max": [
+    -4.0,
+    -1.0,
+    -5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_s",
+   "role": "wall",
+   "min": [
+    -90.0,
+    -6.0,
+    5.0
+   ],
+   "max": [
+    -36.0,
+    -1.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_wall_s",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -6.0,
+    5.0
+   ],
+   "max": [
+    0.0,
+    -1.0,
+    7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "stair_s1",
+   "role": "walk",
+   "min": [
+    -64.0,
+    -7.0,
+    -23.0
+   ],
+   "max": [
+    -56.0,
+    0.0,
+    -7.0
+   ],
+   "mirror": true,
+   "dir": "-z",
+   "y_floor": -7.0,
+   "y_start": -6.0,
+   "y_end": 0.0
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s1_wall_w",
+   "role": "wall",
+   "min": [
+    -66.0,
+    -6.0,
+    -23.0
+   ],
+   "max": [
+    -64.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s1_wall_e",
+   "role": "wall",
+   "min": [
+    -56.0,
+    -6.0,
+    -23.0
+   ],
+   "max": [
+    -54.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "stair_s2",
+   "role": "walk",
+   "min": [
+    -36.0,
+    -7.0,
+    7.0
+   ],
+   "max": [
+    -28.0,
+    0.0,
+    23.0
+   ],
+   "mirror": true,
+   "dir": "+z",
+   "y_floor": -7.0,
+   "y_start": -6.0,
+   "y_end": 0.0
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s2_wall_w",
+   "role": "wall",
+   "min": [
+    -38.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -36.0,
+    -1.0,
+    23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s2_wall_e",
+   "role": "wall",
+   "min": [
+    -28.0,
+    -6.0,
+    7.0
+   ],
+   "max": [
+    -26.0,
+    -1.0,
+    23.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "stair_s3",
+   "role": "walk",
+   "min": [
+    -4.0,
+    -7.0,
+    -23.0
+   ],
+   "max": [
+    4.0,
+    0.0,
+    -7.0
+   ],
+   "dir": "-z",
+   "y_floor": -7.0,
+   "y_start": -6.0,
+   "y_end": 0.0
+  },
+  {
+   "kind": "block",
+   "tag": "stair_s3_wall",
+   "role": "wall",
+   "min": [
+    -6.0,
+    -6.0,
+    -23.0
+   ],
+   "max": [
+    -4.0,
+    -1.0,
+    -7.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_a",
+   "role": "wall",
+   "min": [
+    -80.0,
+    -6.0,
+    -5.0
+   ],
+   "max": [
+    -78.0,
+    -1.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_b",
+   "role": "wall",
+   "min": [
+    -74.0,
+    -6.0,
+    -1.0
+   ],
+   "max": [
+    -72.0,
+    -1.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_a",
+   "role": "wall",
+   "min": [
+    -50.0,
+    -6.0,
+    -5.0
+   ],
+   "max": [
+    -48.0,
+    -1.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_b",
+   "role": "wall",
+   "min": [
+    -44.0,
+    -6.0,
+    -1.0
+   ],
+   "max": [
+    -42.0,
+    -1.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_a",
+   "role": "wall",
+   "min": [
+    -22.0,
+    -6.0,
+    -5.0
+   ],
+   "max": [
+    -20.0,
+    -1.0,
+    1.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "block",
+   "tag": "tunnel_pillar_b",
+   "role": "wall",
+   "min": [
+    -16.0,
+    -6.0,
+    -1.0
+   ],
+   "max": [
+    -14.0,
+    -1.0,
+    5.0
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "tunnel_strip_n",
+   "role": "accent",
+   "min": [
+    -90,
+    -5.0,
+    -5.04
+   ],
+   "max": [
+    0,
+    -4.75,
+    -5
+   ],
+   "mirror": true,
+   "color": "#ff6a2b",
+   "mode": "flush"
+  }
+ ],
+ "waypoints": [
+  {
+   "name": "S",
+   "pos": [
+    -90,
+    0,
+    0
+   ],
+   "mirror": true,
+   "spawn": true
+  },
+  {
+   "name": "gt",
+   "pos": [
+    -85.5,
+    0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "q1",
+   "pos": [
+    -85,
+    0,
+    -4.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "q2",
+   "pos": [
+    -80,
+    0,
+    -4.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1a",
+   "pos": [
+    -77,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1p",
+   "pos": [
+    -73.5,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1m",
+   "pos": [
+    -73.5,
+    0,
+    -2.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c1b",
+   "pos": [
+    -69.5,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "A",
+   "pos": [
+    -64,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "c2a",
+   "pos": [
+    -49,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2p",
+   "pos": [
+    -45.5,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2m",
+   "pos": [
+    -45.5,
+    0,
+    -2.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c2b",
+   "pos": [
+    -41.5,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "B",
+   "pos": [
+    -32,
+    0,
+    0
+   ],
+   "mirror": true,
+   "point": true
+  },
+  {
+   "name": "c3a",
+   "pos": [
+    -21,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c3p",
+   "pos": [
+    -17.5,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c3m",
+   "pos": [
+    -17.5,
+    0,
+    -2.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "c3b",
+   "pos": [
+    -13.5,
+    0,
+    -4
+   ],
+   "mirror": true
+  },
+  {
+   "name": "C",
+   "pos": [
+    0,
+    0,
+    0
+   ],
+   "point": true
+  },
+  {
+   "name": "tW",
+   "pos": [
+    -86,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p1a",
+   "pos": [
+    -79,
+    -6,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p1b",
+   "pos": [
+    -76,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p1c",
+   "pos": [
+    -73,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p2a",
+   "pos": [
+    -49,
+    -6,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p2b",
+   "pos": [
+    -46,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p2c",
+   "pos": [
+    -43,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p3a",
+   "pos": [
+    -21,
+    -6,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p3b",
+   "pos": [
+    -18,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "p3c",
+   "pos": [
+    -15,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "tA",
+   "pos": [
+    -60,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "tB",
+   "pos": [
+    -32,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "tC",
+   "pos": [
+    0,
+    -6,
+    0
+   ]
+  },
+  {
+   "name": "s1b",
+   "pos": [
+    -60,
+    -6,
+    -6
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s1m",
+   "pos": [
+    -60,
+    -3,
+    -15
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s1t",
+   "pos": [
+    -60,
+    0,
+    -23
+   ],
+   "mirror": true
+  },
+  {
+   "name": "n1a",
+   "pos": [
+    -60,
+    0,
+    -25
+   ],
+   "mirror": true
+  },
+  {
+   "name": "n1b",
+   "pos": [
+    -68,
+    0,
+    -25
+   ],
+   "mirror": true
+  },
+  {
+   "name": "n1c",
+   "pos": [
+    -68,
+    0,
+    -12
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s2b",
+   "pos": [
+    -32,
+    -6,
+    6
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s2m",
+   "pos": [
+    -32,
+    -3,
+    15
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s2t",
+   "pos": [
+    -32,
+    0,
+    23
+   ],
+   "mirror": true
+  },
+  {
+   "name": "s3b",
+   "pos": [
+    0,
+    -6,
+    -6
+   ]
+  },
+  {
+   "name": "s3m",
+   "pos": [
+    0,
+    -3,
+    -15
+   ]
+  },
+  {
+   "name": "s3t",
+   "pos": [
+    0,
+    0,
+    -23
+   ]
+  },
+  {
+   "name": "n3a",
+   "pos": [
+    0,
+    0,
+    -25
+   ]
+  },
+  {
+   "name": "n3b",
+   "pos": [
+    -8,
+    0,
+    -25
+   ],
+   "mirror": true
+  },
+  {
+   "name": "n3c",
+   "pos": [
+    -8,
+    0,
+    -12
+   ],
+   "mirror": true
+  }
+ ],
+ "links": [
+  [
+   "S",
+   "gt",
+   "blv"
+  ],
+  [
+   "gt",
+   "q1",
+   "blv"
+  ],
+  [
+   "q1",
+   "q2",
+   "blv"
+  ],
+  [
+   "q2",
+   "c1a",
+   "blv"
+  ],
+  [
+   "c1a",
+   "c1p",
+   "blv"
+  ],
+  [
+   "c1p",
+   "c1m",
+   "blv"
+  ],
+  [
+   "c1m",
+   "c1b",
+   "blv"
+  ],
+  [
+   "c1b",
+   "A",
+   "blv"
+  ],
+  [
+   "A",
+   "c2a",
+   "blv"
+  ],
+  [
+   "c2a",
+   "c2p",
+   "blv"
+  ],
+  [
+   "c2p",
+   "c2m",
+   "blv"
+  ],
+  [
+   "c2m",
+   "c2b",
+   "blv"
+  ],
+  [
+   "c2b",
+   "B",
+   "blv"
+  ],
+  [
+   "B",
+   "c3a",
+   "blv"
+  ],
+  [
+   "c3a",
+   "c3p",
+   "blv"
+  ],
+  [
+   "c3p",
+   "c3m",
+   "blv"
+  ],
+  [
+   "c3m",
+   "c3b",
+   "blv"
+  ],
+  [
+   "c3b",
+   "C",
+   "blv"
+  ],
+  [
+   "tW",
+   "p1a",
+   "trn"
+  ],
+  [
+   "p1a",
+   "p1b",
+   "trn"
+  ],
+  [
+   "p1b",
+   "p1c",
+   "trn"
+  ],
+  [
+   "p1c",
+   "tA",
+   "trn"
+  ],
+  [
+   "p2a",
+   "p2b",
+   "trn"
+  ],
+  [
+   "p2b",
+   "p2c",
+   "trn"
+  ],
+  [
+   "p2c",
+   "tB",
+   "trn"
+  ],
+  [
+   "p3a",
+   "p3b",
+   "trn"
+  ],
+  [
+   "p3b",
+   "p3c",
+   "trn"
+  ],
+  [
+   "p3c",
+   "tC",
+   "trn"
+  ],
+  [
+   "tA",
+   "p2a",
+   "trn"
+  ],
+  [
+   "tA",
+   "s1b",
+   "trn"
+  ],
+  [
+   "tB",
+   "p3a",
+   "trn"
+  ],
+  [
+   "tB",
+   "s2b",
+   "trn"
+  ],
+  [
+   "tC",
+   "s3b",
+   "trn"
+  ],
+  [
+   "s1b",
+   "s1m",
+   "trn"
+  ],
+  [
+   "s1m",
+   "s1t",
+   "trn"
+  ],
+  [
+   "s1t",
+   "n1a",
+   "aln"
+  ],
+  [
+   "n1a",
+   "n1b",
+   "aln"
+  ],
+  [
+   "n1b",
+   "n1c",
+   "aln"
+  ],
+  [
+   "n1c",
+   "A",
+   "aln"
+  ],
+  [
+   "s2b",
+   "s2m",
+   "trn"
+  ],
+  [
+   "s2m",
+   "s2t",
+   "trn"
+  ],
+  [
+   "s3b",
+   "s3m",
+   "trn"
+  ],
+  [
+   "s3m",
+   "s3t",
+   "trn"
+  ],
+  [
+   "s3t",
+   "n3a",
+   "aln"
+  ],
+  [
+   "n3a",
+   "n3b",
+   "aln"
+  ],
+  [
+   "n3b",
+   "n3c",
+   "aln"
+  ],
+  [
+   "n3c",
+   "C",
+   "aln"
+  ]
+ ]
+}
