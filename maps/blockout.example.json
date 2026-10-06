@@ -1,0 +1,109 @@
+{
+ "format": 1,
+ "units": "m",
+ "mode": "add",
+ "source": "example",
+ "objects": [
+  {
+   "kind": "block",
+   "tag": "plaza_floor",
+   "role": "walk",
+   "min": [
+    -30,
+    -1,
+    45
+   ],
+   "max": [
+    -10,
+    0,
+    59
+   ]
+  },
+  {
+   "kind": "block",
+   "tag": "plaza_wall",
+   "role": "wall",
+   "min": [
+    -30,
+    0,
+    45
+   ],
+   "max": [
+    -29,
+    4,
+    59
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "ramp",
+   "tag": "plaza_ramp",
+   "role": "walk",
+   "min": [
+    -28,
+    0,
+    47
+   ],
+   "max": [
+    -22,
+    3,
+    53
+   ],
+   "dir": "+x",
+   "y_floor": 0.0,
+   "y_start": 0.0,
+   "y_end": 3.0
+  },
+  {
+   "kind": "cylinder",
+   "tag": "plaza_column",
+   "role": "tower",
+   "min": [
+    -18,
+    0,
+    50
+   ],
+   "max": [
+    -16,
+    3,
+    52
+   ],
+   "mirror": true
+  },
+  {
+   "kind": "decor",
+   "tag": "plaza_stripe",
+   "role": "accent",
+   "min": [
+    -29.04,
+    1,
+    48
+   ],
+   "max": [
+    -29,
+    1.25,
+    52
+   ],
+   "mode": "flush"
+  }
+ ],
+ "waypoints": {
+  "p1": [
+   -26,
+   0,
+   50
+  ],
+  "p2": [
+   -20,
+   0,
+   50
+  ]
+ },
+ "links": [
+  [
+   "p1",
+   "p2",
+   "blv"
+  ]
+ ]
+}

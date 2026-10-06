@@ -57,3 +57,5 @@ ledge heights after playtests.
 
 `assets/README.md` documents the folder layout. Authored building/prop meshes replace procedural stand-ins only if they
 keep the same collider footprint, since collision comes from `MapBuilder`, not from imported meshes.
+
+Blockouts authored in Blender load through `scripts/blockout_importer.gd`; see `docs/BLENDER.md`.

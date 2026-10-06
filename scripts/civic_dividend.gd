@@ -37,7 +37,11 @@ static func sign_text(root: Node3D, pos: Vector3, value: String, color: Color, s
 static func build(root: Node3D) -> Array[Vector3]:
 	Visuals.build_environment(root)
 	builder = MapBuilder.new()
-	MapLayout.build(builder)
+	var blockout := BlockoutImporter.read(BlockoutImporter.ACTIVE_PATH)
+	if blockout.get("mode", "add") != "replace":
+		MapLayout.build(builder)
+	for message in BlockoutImporter.build(builder, blockout):
+		push_warning("Blockout: " + message)
 	builder.finalize(root)
 	footprints = builder.footprints()
 	sunken = builder.sunken
