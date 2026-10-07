@@ -195,15 +195,21 @@ var equipment: Node3D
 var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
 
-# Right mouse held = aim down sights (a local view effect only): the shoulder camera pulls in and
-# narrows, and your own body fades so it stops covering the crosshair. Alt fire itself is unchanged.
-const ADS_FOV := 55.0
-const ADS_ARM_LENGTH := 2.0
-const ADS_ALPHA := 0.12
+# Right mouse held = aim down sights: the shoulder camera pulls in, zooms hard and slides out to the side, so your own
+# body is pushed toward the left screen edge, and a near depth-of-field blur softens it. Alt fire itself is unchanged.
+# The server reconstructs the same camera from the held button (aim_point), so the crosshair stays true.
+const ADS_FOV := 42.0
+const ADS_ARM_LENGTH := 2.2
+const HIP_SIDE := 0.65
+const ADS_SIDE := 1.1
+const ADS_BLUR_DISTANCE := 3.4
+const ADS_BLUR_TRANSITION := 1.6
+const ADS_BLUR_AMOUNT := 0.2
 const ADS_BLEND_RATE := 10.0
 const HIP_FOV := 80.0
 const HIP_ARM_LENGTH := 3.6
 var ads_blend: float = 0.0
+var _ads_blur: CameraAttributesPractical
 
 func _update_ads(dt: float) -> void:
 	var want := 1.0 if held & 2 and hp > 0 and not game.menu.visible else 0.0
@@ -212,6 +218,16 @@ func _update_ads(dt: float) -> void:
 	ads_blend = move_toward(ads_blend, want, dt * ADS_BLEND_RATE)
 	camera.fov = lerpf(HIP_FOV, ADS_FOV, ads_blend)
 	(pivot.get_child(0) as SpringArm3D).spring_length = lerpf(HIP_ARM_LENGTH, ADS_ARM_LENGTH, ads_blend)
+	if ads_blend > 0.0:
+		if _ads_blur == null:
+			_ads_blur = CameraAttributesPractical.new()
+			_ads_blur.dof_blur_near_enabled = true
+			_ads_blur.dof_blur_near_distance = ADS_BLUR_DISTANCE
+			_ads_blur.dof_blur_near_transition = ADS_BLUR_TRANSITION
+		_ads_blur.dof_blur_amount = ADS_BLUR_AMOUNT * ads_blend
+		camera.attributes = _ads_blur
+	else:
+		camera.attributes = null
 	update_visual()
 
 func _process(dt: float) -> void:
@@ -355,7 +371,8 @@ func aim_point() -> Vector3:
 	var origin := global_position + Vector3.UP * 1.55
 	# Reconstruct the shoulder camera on the authority; clients cannot submit hits.
 	var basis := Basis.from_euler(Vector3(pitch, yaw, 0))
-	var back := basis * Vector3(0.65 * shoulder, 0, 3.6)
+	var ads := 1.0 if held & 2 != 0 else 0.0
+	var back := basis * Vector3(lerpf(HIP_SIDE, ADS_SIDE, ads) * shoulder, 0, lerpf(HIP_ARM_LENGTH, ADS_ARM_LENGTH, ads))
 	var wall: Dictionary = game.ray(origin, origin + back, [get_rid()], 1 | 4)
 	var cam: Vector3 = origin + back if wall.is_empty() else wall.position + wall.normal * 0.2
 	var aim_reach := maxf(spec.reach, weapon.reach)
@@ -797,7 +814,7 @@ func update_visual() -> void:
 		return
 	equipment.rotation.y = yaw
 	pivot.rotation = Vector3(pitch, yaw, 0)
-	pivot.get_child(0).position.x = 0.65 * shoulder
+	pivot.get_child(0).position.x = lerpf(HIP_SIDE, ADS_SIDE, ads_blend) * shoulder
 	var hidden := hp <= 0
 	var local_side: int = game.local_team()
 	var is_ally: bool = team == local_side or fighter_id == game.local_id
@@ -812,8 +829,6 @@ func update_visual() -> void:
 			alpha = 0.3
 		elif distance > 5.0:
 			shown = false
-	if fighter_id == game.local_id:
-		alpha = minf(alpha, lerpf(1.0, ADS_ALPHA, ads_blend))
 	equipment.visible = shown
 	CharacterRig.set_alpha(equipment, alpha)
 	var plate: bool = shown and fighter_id != game.local_id and (is_ally or distance < 25.0 or reveal > 0)
