@@ -288,7 +288,7 @@ func _draw_player_panel(p: Fighter) -> void:
 	var base_y := size.y - 24.0
 	UiStyle.draw_panel(self, Rect2(12, base_y - 56.0, 300.0, 56.0), UiStyle.PANEL, Color(team_color, 0.85))
 	draw_rect(Rect2(12, base_y - 44.0, 4, 32.0), team_color)
-	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.spec.title.to_upper(), mode], 20)
+	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.spec.display_name().to_upper(), mode], 20)
 	if p.hp <= 0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
@@ -333,38 +333,64 @@ func _draw_ability_bar(p: Fighter) -> void:
 	var cy := size.y - 78.0
 	var slug := CharacterRig.slug(p.class_id)
 	var team_color := Visuals.team_color(p.team)
-	for i in range(3):
-		var c := Vector2(cx + (i - 1) * 96.0, cy)
-		var cooldown: float = p.cooldowns[i]
-		var label_name: String = p.spec.abilities[i]
+	var keys := ["Q", "E", "F"]
+	# Heroes differ in ability count: draw one slot per ability, plus the ultimate when the hero has one.
+	var slot_count: int = mini(p.spec.abilities.size(), keys.size()) + (1 if p.spec.ultimate != "" else 0)
+	for i in range(slot_count):
+		var is_ult: bool = i >= p.spec.abilities.size()
+		var c := Vector2(cx + (i - (slot_count - 1) / 2.0) * 96.0, cy)
+		var cooldown: float = 0.0 if is_ult else p.cooldowns[i]
+		var label_name: String = p.spec.ultimate if is_ult else p.spec.abilities[i]
 		var state := ""
-		if p.class_id == 3 and i == 0 and game.entities.has(p.double_id) and not game.entities[p.double_id].used:
+		if is_ult:
+			state = "READY" if Tension.can_spend(p.meter) else ""
+		elif p.class_id == 3 and i == 0 and game.entities.has(p.double_id) and not game.entities[p.double_id].used:
 			state = "SWAP"
 			cooldown = 0.0
 		elif p.class_id == 0 and i == 0 and p.grapple_time > 0.0:
 			state = "RELEASE"
 			cooldown = 0.0
 		draw_circle(c, 34.0, UiStyle.SLOT)
-		var icon := AssetLibrary.texture("icon_%s_%d" % [slug, i])
+		var icon := AssetLibrary.texture("icon_%s_%s" % [slug, "ult" if is_ult else str(i)])
+		var spent: bool = is_ult and not Tension.can_spend(p.meter)
 		if icon != null:
-			draw_texture_rect(icon, Rect2(c - Vector2(24, 24), Vector2(48, 48)), false, Color(1, 1, 1, 0.35 if cooldown > 0.0 else 1.0))
+			draw_texture_rect(icon, Rect2(c - Vector2(24, 24), Vector2(48, 48)), false, Color(1, 1, 1, 0.35 if cooldown > 0.0 or spent else 1.0))
 		elif cooldown <= 0.0:
-			text(c + Vector2(-20, 13), label_name.substr(0, 1), 38, Color(1, 1, 1, 0.9), HORIZONTAL_ALIGNMENT_CENTER, 40.0)
-		var total: float = p.spec.cooldowns[i]
-		if cooldown > 0.0:
-			pie(c, 33.0, cooldown / total, Color(0, 0, 0, 0.62))
-			text(c + Vector2(-24, 8), "%.0f" % cooldown if cooldown >= 1.0 else "%.1f" % cooldown, 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 48.0)
+			text(c + Vector2(-20, 13), label_name.substr(0, 1), 38, Color(1, 1, 1, 0.35 if spent else 0.9), HORIZONTAL_ALIGNMENT_CENTER, 40.0)
+		if is_ult:
+			# The ring fills toward the 50% cost; once affordable it glows like a ready ability.
+			var fill := clampf(p.meter / Tension.ULTIMATE_COST, 0.0, 1.0)
 			draw_arc(c, 34.0, 0, TAU, 40, Color(1, 1, 1, 0.25), 2.0)
+			draw_arc(c, 34.0, -PI / 2.0, -PI / 2.0 + TAU * fill, 40, Color("ffe2a3") if fill >= 1.0 else team_color, 3.0)
 		else:
-			var glow := Color("ffe2a3") if state != "" else team_color
-			draw_arc(c, 34.0, 0, TAU, 40, glow, 3.0)
+			var total: float = p.spec.cooldowns[i]
+			if cooldown > 0.0:
+				pie(c, 33.0, cooldown / total, Color(0, 0, 0, 0.62))
+				text(c + Vector2(-24, 8), "%.0f" % cooldown if cooldown >= 1.0 else "%.1f" % cooldown, 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 48.0)
+				draw_arc(c, 34.0, 0, TAU, 40, Color(1, 1, 1, 0.25), 2.0)
+			else:
+				var glow := Color("ffe2a3") if state != "" else team_color
+				draw_arc(c, 34.0, 0, TAU, 40, glow, 3.0)
 		if state != "":
 			text(c + Vector2(-34, -38), state, 14, Color("ffe2a3"), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
 		UiStyle.draw_tag(self, Rect2(c + Vector2(-14, 26), Vector2(28, 20)), UiStyle.ACCENT)
-		text(c + Vector2(-14, 42), ["Q", "E", "F"][i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
+		text(c + Vector2(-14, 42), "X" if is_ult else keys[i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
 		text(c + Vector2(-48, 62), label_name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
+	_draw_tension(Vector2(cx + (slot_count / 2.0) * 96.0 + 4.0, cy), p)
 	if quip_timer > 0.0:
 		centered(cx, cy - 56.0, quip_text, 18, Color(1, 1, 1, minf(1.0, quip_timer)))
+
+# Shared Tension meter: a slim vertical bar beside the ability slots, with a tick where ultimates become affordable.
+func _draw_tension(origin: Vector2, p: Fighter) -> void:
+	var bar := Rect2(origin + Vector2(0, -34), Vector2(8, 68))
+	draw_rect(bar, UiStyle.SLOT)
+	var fraction := clampf(p.meter / Tension.MAX, 0.0, 1.0)
+	var ready := Tension.can_spend(p.meter)
+	var fill := Color("ffe2a3") if ready else Visuals.team_color(p.team)
+	draw_rect(Rect2(bar.position.x, bar.end.y - bar.size.y * fraction, bar.size.x, bar.size.y * fraction), fill)
+	var tick_y := bar.end.y - bar.size.y * (Tension.ULTIMATE_COST / Tension.MAX)
+	draw_line(Vector2(bar.position.x - 3.0, tick_y), Vector2(bar.end.x + 3.0, tick_y), Color(1, 1, 1, 0.8), 2.0)
+	text(origin + Vector2(-14, 50), "TENSION", 9, Color(1, 1, 1, 0.55), HORIZONTAL_ALIGNMENT_CENTER, 36.0)
 
 func _draw_notice() -> void:
 	if notice_timer > 0.0:
@@ -406,7 +432,7 @@ func _draw_feed() -> void:
 func _draw_help() -> void:
 	if not help_shown():
 		return
-	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q / E / F abilities · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
+	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q / E / F abilities · X ultimate · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
 	for i in range(lines.size()):
 		text(Vector2(size.x - 420.0, size.y - 138.0 + i * 20.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 404.0)
 
@@ -428,7 +454,7 @@ static func scoreboard_rows(g: Node3D) -> Array:
 	var teams: Array = [[], []]
 	for p in g.fighters.values():
 		var shown_name := "You" if p.fighter_id == g.local_id else (("Bot %d" % p.fighter_id) if p.bot else ("Player %d" % p.fighter_id))
-		teams[p.team].append({"name": shown_name, "class": p.spec.title, "k": p.kills, "d": p.deaths, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
+		teams[p.team].append({"name": shown_name, "class": p.spec.display_name(), "k": p.kills, "d": p.deaths, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
 	for team in teams:
 		team.sort_custom(func(a, b): return a.k > b.k)
 	return teams

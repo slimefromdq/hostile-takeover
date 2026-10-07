@@ -1,6 +1,6 @@
 # Hostile Takeover
 
-A playable Godot 4.7 graybox prototype: four fighter classes, shared parkour, server-authoritative combat, five-point Acquisition, offline 10v10 bots, and LAN host/join.
+A playable Godot 4.7 graybox prototype: five heroes (four classes plus the Gunblade), shared parkour, server-authoritative combat, five-point Acquisition, offline 10v10 bots, and LAN host/join.
 
 ## Play
 
@@ -15,7 +15,8 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
 | 1 | Air dash (about 4.5 m, independent of the double jump; 3 second cooldown) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
-| Q / E / F | Three class abilities |
+| Q / E / F | Hero abilities (a hero has one to three) |
+| X | Ultimate; costs half the Tension meter |
 | R | Reload |
 | V | Switch camera shoulder |
 | Tab | Hold for the scoreboard |
@@ -45,6 +46,12 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 - **Field Engineer:** forgiving electric hose with line-of-sight aim assistance; alternate fire repairs friendly machinery. Q places one directional turret; E places a launch pad usable by either team; F recalls the nearest owned installation and refunds half its deployment cooldown. Owned machinery condition is visible through walls and nearby idle machinery slowly repairs. Health: 200.
 - **Enforcer:** minigun with a 0.6-second spin-up; alternate fire swings a heavy melee attack. Q rushes forward; E places destructible cover; F slams a forward cone and pushes enemies. Melee hits improve spin-up; sustained gun hits improve melee recovery. Firing slows movement; frontal knockback is reduced while spun up. Health: 280.
 - **Mirage Agent:** accurate six-shot revolver that bounces once off geometry; alternate fire previews the bounce. Q places one physical double; Q again exchanges positions once, within 25 metres. The double lasts eight seconds, can be destroyed, cannot block fighters or capture points, and echoes harmless firing effects. E throws an arcing capsule (35 direct damage / 15 splash). F creates departure smoke and grants 2.5 seconds of concealment; attacks end it, damage briefly reveals the agent, and close opponents can see them. Swapping preserves velocity and facing, reloads one round, and enables sprint. Health: 180.
+
+- **Reave, the Gunblade:** a tank-leaning hero built around one idea: the gun builds damage, the blade spends it. Primary is a shotgun (8 pellets x 8 damage, 6 degree spread, gentle falloff from 8 m to 50% at 24 m, 4 shells, 0.7 s between shots). Hold alternate fire to **Guard**: she plants the blade and absorbs hits from the front 120 degrees (shots from behind, or steeply from above or below, go through), turns at about 100 degrees per second, and cannot fire. Absorbed damage becomes **Charge** on the blade, capped at 100 (hits of 40 or more count 1.5x, hits under 10 count half), and visibly lights the blade. Guarding costs stamina (100; 6 per second plus 0.6 per point absorbed); an empty bar breaks the guard, stuns her for 1.2 s and loses the Charge. Release alternate fire to **Slash**, a half-circle arc: a tap deals 25 within 3 m, keeps the Charge, and refills the shotgun if it connects; releasing a guard held 0.3 s or more with Charge stored cashes it all in (25 + 0.9 x Charge within 4.5 m), refills the shotgun, and spends the Charge. Q **Breach** (8 s): a 5 m blast that deals 20, launches enemies, breaks a guard, cancels an Enforcer spin-up and deals triple damage to deployables. Ultimate **Pyre Edge** (50 Tension): a blade of fire flies 30 m forward, piercing fighters for 70 damage and setting them burning (5 per second for 3 s); it stops on geometry, and an enemy Reave's guard swallows it. Reave carries only her own shotgun (the shared weapons are not offered to her). Health: 300.
+
+## Tension and ultimates
+
+Every hero shares a **Tension** meter (0 to 100, shown beside the ability slots; the tick marks 50). It charges passively at 0.8 per second and faster in combat: +0.20 per point of damage dealt, +0.10 per point taken (absorbed damage counts), +10 per kill, +5 per assist (a hit on the victim within 6 seconds), +1.5 per second while contesting an open point you do not own. It is kept through death and reset by swapping hero. **Ultimates cost 50% of the bar** (X), so they can be chained when fights are hot, and are tuned a little weaker to compensate. Nothing but ultimates spends Tension yet. Rules live in `scripts/tension.gd`; see `docs/HEROES.md` for the hero design philosophy.
 
 ## Weapons (experimental)
 
@@ -82,6 +89,7 @@ Against a 200-HP body-shot target, measured authoritative firing times are:
 | Mirage Agent | 2.250 s |
 | Field Engineer | 2.800 s |
 | Enforcer, already spun up | 2.600 s |
+| Reave (shotgun, point blank, every pellet landing) | 2.100 s |
 
 All measurements include firing cadence and any required reload. Enforcer spin-up adds approximately 0.6 seconds from rest. Headshots multiply damage by 1.35 except for the electric hose. A capsule plus one revolver headshot cannot eliminate even the lowest-health class.
 
