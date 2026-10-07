@@ -24,7 +24,7 @@ A hero is a `ClassSpec` resource (`resources/*.tres`) plus whatever `class_id` b
 |---|---|
 | Identity | `hero_name`, `epithet`, `tagline`, `quips`. The corporate setting (Helix, Monarch, Civic Dividend) is background lore, not the voice of the roster. |
 | Weapon | Signature gun from the spec: damage, pellets, spread, falloff, magazine. Some heroes lock out the shared weapons (Reave). |
-| Ability count | 0 to 3 abilities (Q / E / F) plus an optional ultimate. Skyrunner, Engineer, Enforcer and Mirage have three; Reave has one. HUD, menu and `activate` all cope with fewer. |
+| Ability count | 0 to 3 abilities (Q / E / F) plus an optional ultimate. Skyrunner, Engineer, Enforcer and Mirage have three; Reave has one (Breach, on E; her Q is the held guard/slash, RMB is aim down sights and F is her ultimate). HUD, menu and `activate` all cope with fewer. |
 | Alternate fire | Free for the hero to define (charge shot, repair beam, melee, guard). Primary is suppressed while alternate fire is held. |
 | Resource and win condition | Charge on Reave's blade, spin on the Enforcer, a placed double for the Mirage. Anything that needs replicating goes in `Fighter.pack` / `unpack`, and should only be sent while it matters because snapshots are already larger than the MTU. |
 

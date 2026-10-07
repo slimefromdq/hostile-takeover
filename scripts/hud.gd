@@ -333,7 +333,7 @@ func _draw_ability_bar(p: Fighter) -> void:
 	var cy := size.y - 78.0
 	var slug := CharacterRig.slug(p.class_id)
 	var team_color := Visuals.team_color(p.team)
-	var keys := ["Q", "E", "F"]
+	var keys: Array = p.ability_keys()
 	# Heroes differ in ability count: draw one slot per ability, plus the ultimate when the hero has one.
 	var slot_count: int = mini(p.spec.abilities.size(), keys.size()) + (1 if p.spec.ultimate != "" else 0)
 	for i in range(slot_count):
@@ -374,7 +374,7 @@ func _draw_ability_bar(p: Fighter) -> void:
 		if state != "":
 			text(c + Vector2(-34, -38), state, 14, Color("ffe2a3"), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
 		UiStyle.draw_tag(self, Rect2(c + Vector2(-14, 26), Vector2(28, 20)), UiStyle.ACCENT)
-		text(c + Vector2(-14, 42), "X" if is_ult else keys[i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
+		text(c + Vector2(-14, 42), p.ultimate_key() if is_ult else keys[i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
 		text(c + Vector2(-48, 62), label_name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
 	_draw_tension(Vector2(cx + (slot_count / 2.0) * 96.0 + 4.0, cy), p)
 	if quip_timer > 0.0:
@@ -432,7 +432,7 @@ func _draw_feed() -> void:
 func _draw_help() -> void:
 	if not help_shown():
 		return
-	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q / E / F abilities · X ultimate · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
+	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q / E / F abilities · X ultimate (Reave: Q guard, E Breach, F ultimate) · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
 	for i in range(lines.size()):
 		text(Vector2(size.x - 420.0, size.y - 138.0 + i * 20.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 404.0)
 

@@ -361,6 +361,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32], ["ultimate", 64]]:
 		if event.is_action_pressed(pair[0]) and not event.is_echo():
 			input_edges |= pair[1]
+	if p.class_id == Fighter.REAVE_ID:
+		# Reave: Q is the held guard (a button, not an edge), E is Breach, F is the ultimate.
+		input_edges &= ~(8 | 32)
+		if event.is_action_pressed("ability3") and not event.is_echo():
+			input_edges |= 64
+		if event.is_action_pressed("ultimate"):
+			input_edges &= ~64
 	if event.is_action_pressed("shoulder"):
 		p.shoulder *= -1
 
@@ -375,7 +382,7 @@ func _physics_process(dt: float) -> void:
 		var motion := Input.get_vector("left", "right", "forward", "back") if not menu.visible else Vector2.ZERO
 		var buttons := 0
 		if not menu.visible:
-			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (4 if Input.is_action_pressed("ability3") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0)
+			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (4 if Input.is_action_pressed("ability3") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0) | (Fighter.GUARD_BIT if Input.is_action_pressed("ability1") else 0)
 		p.movement = motion
 		p.held = buttons
 		limit_guard_turn(p, dt)
@@ -624,9 +631,13 @@ func combat_tick(p: Fighter, dt: float) -> void:
 		p.reload_timer -= dt
 		if p.reload_timer <= 0:
 			p.ammo = w.magazine
-	for i in range(3):
-		if p.edges & (8 << i):
-			activate(p, i)
+	if p.class_id == Fighter.REAVE_ID:
+		if p.edges & 16:
+			activate(p, 0)  # Breach lives on E; Q is the held guard
+	else:
+		for i in range(3):
+			if p.edges & (8 << i):
+				activate(p, i)
 	if p.edges & 64:
 		activate_ultimate(p)
 	if p.class_id == 2:
@@ -663,7 +674,7 @@ func combat_tick(p: Fighter, dt: float) -> void:
 			p.conceal = 0
 			p.idle_weapon = 0
 			fire_ray(p, w.damage, false)
-	elif p.held & 1 and not p.held & 2 and p.shot_timer <= 0.00001 and p.reload_timer <= 0 and (p.class_id != 2 or p.weapon_id != 0 or p.spin >= 0.99):
+	elif p.held & 1 and not (p.held & 2 and p.class_id != Fighter.REAVE_ID) and not p.is_guarding() and p.shot_timer <= 0.00001 and p.reload_timer <= 0 and (p.class_id != 2 or p.weapon_id != 0 or p.spin >= 0.99):
 		if p.ammo <= 0:
 			p.reload_timer = w.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
 		else:
@@ -1042,12 +1053,12 @@ func reave_tick(p: Fighter, dt: float) -> void:
 			break_guard(p)
 	else:
 		p.guard_regen_wait = maxf(0.0, p.guard_regen_wait - dt)
-		if p.guard_regen_wait <= 0.0 and not p.held & 2:
+		if p.guard_regen_wait <= 0.0 and not p.held & Fighter.GUARD_BIT:
 			p.guard_stamina = minf(Fighter.GUARD_STAMINA_MAX, p.guard_stamina + Fighter.GUARD_REGEN * dt)
-	var released: bool = (p.prev_held & 2) != 0 and (p.held & 2) == 0
+	var released: bool = (p.prev_held & Fighter.GUARD_BIT) != 0 and (p.held & Fighter.GUARD_BIT) == 0
 	if released and p.stun <= 0.0 and p.alt_timer <= 0.0 and p.hp > 0:
 		reave_slash(p, p.guard_hold >= REAVE_CASH_IN_HOLD and p.blade_charge > 0.0)
-	if not p.held & 2:
+	if not p.held & Fighter.GUARD_BIT:
 		p.guard_hold = 0.0
 	p.prev_held = p.held
 
@@ -1384,12 +1395,12 @@ func bot_input(p: Fighter, dt: float) -> void:
 			# Guard while under fire at range (feeding the blade), then let go to Slash once an enemy is close.
 			var gap := target_diff.length()
 			if gap > 4.5 and not p.damagers.is_empty() and p.guard_stamina > 25.0 and p.stun <= 0.0:
-				p.held = 2
+				p.held = Fighter.GUARD_BIT
 			if gap < 4.5 and rng.randf() < dt * 1.5:
-				p.edges |= 8
+				p.edges |= 16
 			if p.meter >= Tension.ULTIMATE_COST and gap > 6.0 and gap < 26.0 and rng.randf() < dt * 0.6:
 				p.edges |= 64
-		if rng.randf() < dt * 0.25:
+		if p.class_id != Fighter.REAVE_ID and rng.randf() < dt * 0.25:
 			p.edges |= 16
 	if aim.length() > 0.01:
 		p.yaw = lerp_angle(p.yaw, atan2(-aim.x, -aim.z), minf(1, dt * 9))

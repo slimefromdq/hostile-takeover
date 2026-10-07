@@ -20,5 +20,5 @@ falloff_end = 24.0
 falloff_min = 0.5
 abilities = PackedStringArray("Breach")
 cooldowns = PackedFloat32Array(8)
-passive = "BANKED FIRE · RMB guards the front and banks absorbed damage in the blade. Release to Slash; Slash refills the shotgun."
+passive = "BANKED FIRE · Hold Q to guard the front and bank absorbed damage in the blade. Release to Slash; Slash refills the shotgun. RMB aims down sights."
 quips = PackedStringArray("Hold the line.", "You knocked. I answered.", "Cinders don't argue.")

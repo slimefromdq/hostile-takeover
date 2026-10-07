@@ -79,6 +79,7 @@ const GUARD_ABSORB_COST := 0.6  # stamina per point of damage absorbed
 const GUARD_REGEN := 20.0
 const GUARD_REGEN_DELAY := 1.0
 const GUARD_BREAK_STUN := 1.2
+const GUARD_BIT := 32  # held bit: ability1 (Q), which is Reave's guard
 const GUARD_TURN_RATE := 1.8  # rad/s while guarding (about 100 degrees per second)
 const CHARGE_MAX := 100.0
 const BURN_DPS := 5.0
@@ -198,7 +199,7 @@ var outline_side: int = -1
 # narrows, and your own body fades so it stops covering the crosshair. Alt fire itself is unchanged.
 const ADS_FOV := 55.0
 const ADS_ARM_LENGTH := 2.0
-const ADS_ALPHA := 0.25
+const ADS_ALPHA := 0.12
 const ADS_BLEND_RATE := 10.0
 const HIP_FOV := 80.0
 const HIP_ARM_LENGTH := 3.6
@@ -319,8 +320,15 @@ func refresh_outline() -> void:
 static func body_radius(id: int) -> float:
 	return 0.52 if id == 2 else (0.46 if id == REAVE_ID else 0.38)
 
+# Key labels for the HUD and menu. Reave's Q is the held guard/slash, so her Breach sits on E and her ultimate on F.
+func ability_keys() -> Array:
+	return ["E"] if class_id == REAVE_ID else ["Q", "E", "F"]
+
+func ultimate_key() -> String:
+	return "F" if class_id == REAVE_ID else "X"
+
 func is_guarding() -> bool:
-	return class_id == REAVE_ID and hp > 0 and stun <= 0.0 and guard_stamina > 0.0 and held & 2 != 0
+	return class_id == REAVE_ID and hp > 0 and stun <= 0.0 and guard_stamina > 0.0 and held & GUARD_BIT != 0
 
 # Does the guard stop a hit that struck from `origin`? Only the front arc, and not steep shots from above or below.
 func guard_blocks(origin: Vector3) -> bool:

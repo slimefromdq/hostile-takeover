@@ -130,7 +130,7 @@ func setup(owner_game: Node3D) -> void:
 		sens_label.text = "Aim sensitivity: %.2f" % v)
 	sens_row.add_child(sens_slider)
 	column.add_child(sens_row)
-	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q / E / F abilities · X ultimate · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
+	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate / aim down sights · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q / E / F abilities · X ultimate (Reave: Q guard/slash, E Breach, F ultimate) · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
 	toggle.pressed.connect(func():
@@ -216,11 +216,14 @@ func _make_card(index: int, group: ButtonGroup) -> Button:
 	if spec.hero_name != "":
 		box.add_child(_label("%s · %s" % [spec.epithet, spec.title] if spec.epithet != "" else spec.title, 12, Color(1, 1, 1, 0.7)))
 	box.add_child(_label("HP %d  ·  %.1fs to kill" % [int(spec.health), spec.body_ttk()], 13, Color(1, 1, 1, 0.8)))
-	var keys := ["Q", "E", "F"]
+	var reave: bool = index == Fighter.REAVE_ID
+	var keys := ["E"] if reave else ["Q", "E", "F"]
+	if reave:
+		box.add_child(_label("Q  Guard / Slash (hold, release)", 13))
 	for i in range(mini(spec.abilities.size(), keys.size())):
 		box.add_child(_label("%s  %s" % [keys[i], spec.abilities[i]], 13))
 	if spec.ultimate != "":
-		box.add_child(_label("X  %s (ULT)" % spec.ultimate, 13, UiStyle.ACCENT))
+		box.add_child(_label(("F" if reave else "X") + "  %s (ULT)" % spec.ultimate, 13, UiStyle.ACCENT))
 	var passive := _label(spec.passive, 11, Color(1, 1, 1, 0.65))
 	passive.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	passive.custom_minimum_size.x = 190

@@ -374,7 +374,7 @@ func test_reave() -> void:
 	await process_frame
 	await process_frame
 	# Guard: front hits become Charge and stamina cost; from behind or above they go through.
-	p.held = 2
+	p.held = Fighter.GUARD_BIT
 	p.meter = 0
 	check(p.is_guarding(), "holding secondary guards")
 	var landed: bool = game.damage_fighter(p, 40.0, foe.fighter_id)
@@ -403,8 +403,8 @@ func test_reave() -> void:
 	p.stun = 0
 	p.guard_stamina = Fighter.GUARD_STAMINA_MAX
 	# Guard drains stamina while held and regenerates after a delay when released.
-	p.held = 2
-	p.prev_held = 2
+	p.held = Fighter.GUARD_BIT
+	p.prev_held = Fighter.GUARD_BIT
 	p.hp = 300
 	game.reave_tick(p, 1.0)
 	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - Fighter.GUARD_DRAIN) and p.guarding, "holding guard drains stamina")
@@ -415,7 +415,7 @@ func test_reave() -> void:
 	game.reave_tick(p, 0.6)
 	check(p.guard_stamina > drained and not p.guarding, "stamina regenerates once the guard is down")
 	# Turn rate is capped while guarding.
-	p.held = 2
+	p.held = Fighter.GUARD_BIT
 	p.yaw = 1.0
 	game.guard_yaw = 0.0
 	game.limit_guard_turn(p, 1.0 / 60.0)
@@ -452,8 +452,8 @@ func test_reave() -> void:
 	await physics_frame
 	await process_frame
 	p.alt_timer = 0
-	p.held = 2
-	p.prev_held = 2
+	p.held = Fighter.GUARD_BIT
+	p.prev_held = Fighter.GUARD_BIT
 	p.guard_hold = 0.5
 	p.blade_charge = 40.0
 	p.held = 0
@@ -465,7 +465,7 @@ func test_reave() -> void:
 	foe.hp = 300
 	foe.global_position = O + Vector3(-7, 0, -21)
 	foe.yaw = PI / 2
-	foe.held = 2
+	foe.held = Fighter.GUARD_BIT
 	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
 	await physics_frame
 	await process_frame
@@ -523,7 +523,7 @@ func test_reave() -> void:
 	foe.change_class(4)
 	foe.global_position = O + Vector3(0, 0, -21)
 	foe.yaw = PI / 2
-	foe.held = 2
+	foe.held = Fighter.GUARD_BIT
 	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
 	p.meter = 80.0
 	game.activate_ultimate(p)
