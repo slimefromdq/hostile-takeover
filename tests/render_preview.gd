@@ -14,17 +14,17 @@ func run() -> void:
 	await create_timer(3).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/previews/preview.png")
-	# Lineup: all four classes, allies (left row) and enemies (right row) facing the camera.
+	# Lineup: every hero, allies (left row) and enemies (right row) facing the camera.
 	for p in game.fighters.values():
 		p.global_position = Vector3(0, -50, 80)
 	var spots := []
-	for i in range(4):
+	for i in range(Fighter.SPECS.size()):
 		var ally: Fighter = game.fighters[1] if i == 0 else game.fighters[100 + i - 1]
 		spots.append(ally)
-	var x := -4.5
+	var x := -6.0
 	game.set_physics_process(false)
-	var order := [0, 1, 2, 3]
-	for i in range(4):
+	var order := range(Fighter.SPECS.size())
+	for i in range(Fighter.SPECS.size()):
 		var f: Fighter = spots[i]
 		f.team = 0
 		f.change_class(order[i])

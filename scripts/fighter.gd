@@ -1,7 +1,7 @@
 class_name Fighter
 extends CharacterBody3D
 
-const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resources/engineer.tres"), preload("res://resources/enforcer.tres"), preload("res://resources/mirage.tres")]
+const SPECS = [preload("res://resources/skyrunner.tres"), preload("res://resources/engineer.tres"), preload("res://resources/enforcer.tres"), preload("res://resources/mirage.tres"), preload("res://resources/reave.tres")]
 # Weapon ids: 0 is the class Signature gun (built from its ClassSpec); 1..3 are shared by every class.
 const WEAPONS = [null, preload("res://resources/weapons/breacher.tres"), preload("res://resources/weapons/longshot.tres"), preload("res://resources/weapons/chatterbox.tres")]
 # Movement tuning (Source-style: momentum on the ground, strafe-steered air control).
@@ -69,6 +69,19 @@ const MANTLE_HEAD_CLEARANCE := 2.6
 const MANTLE_REACH := 1.2
 const MANTLE_PROBE_HEIGHTS := [0.45, 1.0, 1.5]
 const MANTLE_PROBE_ANGLES := [0.0, 0.5, -0.5]
+# Reave (class 4): the Gunblade. Guard blocks the front arc, turns slowly, and stores absorbed damage as Charge.
+const REAVE_ID := 4
+const GUARD_ARC_DOT := 0.5  # cos 60 degrees: the blade covers 120 degrees ahead
+const GUARD_MAX_ELEVATION := 0.7  # |sin(elevation)| of the shot direction; steeper hits go over the blade
+const GUARD_STAMINA_MAX := 100.0
+const GUARD_DRAIN := 6.0  # per second while held
+const GUARD_ABSORB_COST := 0.6  # stamina per point of damage absorbed
+const GUARD_REGEN := 20.0
+const GUARD_REGEN_DELAY := 1.0
+const GUARD_BREAK_STUN := 1.2
+const GUARD_TURN_RATE := 1.8  # rad/s while guarding (about 100 degrees per second)
+const CHARGE_MAX := 100.0
+const BURN_DPS := 5.0
 var game: Node3D
 var fighter_id: int = 0
 var team: int = 0
@@ -135,6 +148,17 @@ var wall_normal: Vector3 = Vector3.ZERO
 var wall_repeats: int = 0
 var double_id: int = -1
 var alt_timer: float = 0.0
+var meter: float = 0.0  # shared Tension meter (scripts/tension.gd); kept through death, reset on a hero swap
+var prev_held: int = 0
+var guarding: bool = false  # replicated so remote players can see the stance; the owner derives it from held
+var guard_stamina: float = GUARD_STAMINA_MAX
+var guard_hold: float = 0.0  # seconds the guard has been held, to tell a tap from a cash-in
+var guard_regen_wait: float = 0.0
+var blade_charge: float = 0.0
+var stun: float = 0.0
+var burn: float = 0.0
+var burn_source: int = -1
+var damagers: Dictionary = {}  # attacker id -> seconds since last hit (server only, for assists)
 enum BotRole { ATTACK, ROAM, DEFEND }
 var spawn_slot: int = 0
 var bot_role: int = BotRole.ATTACK
@@ -176,7 +200,7 @@ func _process(dt: float) -> void:
 	if is_instance_valid(equipment) and hp > 0:
 		var planar := Vector2(velocity.x, velocity.z).length()
 		var slide: bool = held & 8 != 0 and is_on_floor() and planar > 5.0
-		CharacterRig.animate(equipment, dt, class_id, planar, is_on_floor(), pitch, spin, slide)
+		CharacterRig.animate(equipment, dt, class_id, planar, is_on_floor(), pitch, blade_charge / CHARGE_MAX if class_id == REAVE_ID else spin, slide, guarding if fighter_id != game.local_id else is_guarding())
 
 func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: bool, weapon_choice: int = 0) -> void:
 	game = owner_game
@@ -193,7 +217,7 @@ func configure(owner_game: Node3D, id: int, side: int, archetype: int, is_bot: b
 	collision_mask = 1 | 2 | 4
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.38 if class_id != 2 else 0.52
+	capsule.radius = body_radius(class_id)
 	capsule.height = 1.9
 	shape.shape = capsule
 	shape.position.y = 0.95
@@ -271,6 +295,24 @@ func refresh_outline() -> void:
 	for outline in outlines:
 		outline.set_shader_parameter("outline_color", color)
 
+static func body_radius(id: int) -> float:
+	return 0.52 if id == 2 else (0.46 if id == REAVE_ID else 0.38)
+
+func is_guarding() -> bool:
+	return class_id == REAVE_ID and hp > 0 and stun <= 0.0 and guard_stamina > 0.0 and held & 2 != 0
+
+# Does the guard stop a hit that struck from `origin`? Only the front arc, and not steep shots from above or below.
+func guard_blocks(origin: Vector3) -> bool:
+	if not is_guarding():
+		return false
+	var offset := origin - (global_position + Vector3.UP * 1.2)
+	var flat := Vector3(offset.x, 0.0, offset.z)
+	if flat.length() < 0.05 or offset.length() < 0.05:
+		return false
+	if absf(offset.y) / offset.length() > GUARD_MAX_ELEVATION:
+		return false
+	return horizontal_direction().dot(flat.normalized()) >= GUARD_ARC_DOT
+
 func direction() -> Vector3:
 	return Basis.from_euler(Vector3(pitch, yaw, 0.0)) * Vector3.FORWARD
 
@@ -300,6 +342,9 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		vault_time = 0.0
 		hang_time = 0.0
 		return
+	if stun > 0.0:
+		movement = Vector2.ZERO
+		movement_edges = 0
 	idle_weapon += dt
 	if held & 3:
 		idle_weapon = 0.0
@@ -662,11 +707,12 @@ func _air_steer(desired: Vector3, dt: float) -> void:
 			velocity.z = limited.y
 
 func equip_weapon(value: int) -> void:
-	weapon_id = clampi(value, 0, WEAPONS.size() - 1)
+	# The Gunblade is one weapon: her shotgun is half the kit, so the shared guns are not offered to her.
+	weapon_id = 0 if class_id == REAVE_ID else clampi(value, 0, WEAPONS.size() - 1)
 	weapon = WeaponSpec.from_class(spec, class_id) if weapon_id == 0 else WEAPONS[weapon_id]
 
 func change_class(value: int, weapon_choice: int = -1) -> void:
-	class_id = clampi(value, 0, 3)
+	class_id = clampi(value, 0, SPECS.size() - 1)
 	spec = SPECS[class_id]
 	equip_weapon(weapon_id if weapon_choice < 0 else weapon_choice)
 	hp = spec.health
@@ -701,8 +747,18 @@ func change_class(value: int, weapon_choice: int = -1) -> void:
 	melee_buff = 0
 	gun_buff = 0
 	consecutive_hits = 0
+	guarding = false
+	guard_stamina = GUARD_STAMINA_MAX
+	guard_hold = 0.0
+	guard_regen_wait = 0.0
+	blade_charge = 0.0
+	stun = 0.0
+	burn = 0.0
+	burn_source = -1
+	prev_held = 0
+	damagers.clear()
 	if is_instance_valid(equipment):
-		get_child(0).shape.radius = 0.52 if class_id == 2 else 0.38
+		get_child(0).shape.radius = body_radius(class_id)
 		equipment.queue_free()
 		build_rig()
 	update_visual()
@@ -735,7 +791,7 @@ func update_visual() -> void:
 	if plate:
 		CharacterRig.update_nameplate(nameplate, hp / spec.health, Visuals.team_color(team) if is_ally else Visuals.ENEMY_OUTLINE)
 	refresh_outline()
-	marker.text = "%s%s" % ["BOT · " if bot else "", spec.title]
+	marker.text = "%s%s" % ["BOT · " if bot else "", spec.display_name()]
 	if class_id == 0 and grapple_time > 0 and not hidden and is_inside_tree():
 		var hand := muzzle()
 		var span := grapple - hand
@@ -754,7 +810,19 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	return {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	var state := {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	# Optional state is only sent while it matters (snapshots are already past the MTU); unpack supplies defaults.
+	if meter >= 1.0:
+		state["meter"] = int(meter)  # floored so a client never shows an ultimate ready before the server does
+	if class_id == REAVE_ID:
+		state["guard"] = guarding
+		state["gs"] = int(guard_stamina)
+		state["bc"] = int(blade_charge)
+	if stun > 0.0:
+		state["stun"] = stun
+	if burn > 0.0:
+		state["burn"] = burn
+	return state
 
 func unpack(data: Dictionary, local: bool) -> void:
 	if class_id != data["class"] or weapon_id != data.get("w", 0):
@@ -803,6 +871,12 @@ func unpack(data: Dictionary, local: bool) -> void:
 	zip_dir = data.get("zd", 1)
 	zip_speed = data.get("zs", 0.0)
 	climbing = data.get("climb", false)
+	meter = float(data.get("meter", 0))
+	guarding = data.get("guard", false)
+	guard_stamina = float(data.get("gs", GUARD_STAMINA_MAX))
+	blade_charge = float(data.get("bc", 0))
+	stun = data.get("stun", 0.0)
+	burn = data.get("burn", 0.0)
 	kills = data.get("k", 0)
 	deaths = data.get("d", 0)
 	update_visual()

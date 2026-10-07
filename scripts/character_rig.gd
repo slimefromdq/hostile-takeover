@@ -5,7 +5,7 @@ extends RefCounted
 # replaces the procedural parts (see assets/README.md); animation then degrades gracefully
 # because every part lookup tolerates a missing node.
 
-const SLUGS := ["skyrunner", "field_engineer", "enforcer", "mirage_agent"]
+const SLUGS := ["skyrunner", "field_engineer", "enforcer", "mirage_agent", "reave"]
 const DARK := Color("28323f")
 const CREAM := Color("e7e9df")
 
@@ -117,6 +117,7 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 		0: _skyrunner(ctx, legs, body)
 		1: _engineer(ctx, legs, body)
 		2: _enforcer(ctx, legs, body)
+		4: _reave(ctx, legs, body)
 		_: _mirage(ctx, legs, body)
 	if weapon_id > 0:
 		_swap_weapon(ctx, body, weapon_id)
@@ -259,8 +260,33 @@ static func _mirage(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
 	box(weapon, Vector3(0, -0.02, -0.38), Vector3(0.06, 0.1, 0.22), ctx.lit(Color("8a949c")))
 	cylinder(weapon, Vector3(0, -0.01, -0.5), 0.03, 0.03, 0.14, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
 
+static func _reave(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
+	var plate := Color("4a2f38")
+	var ember := Color("ff7a3a")
+	_legs(ctx, legs, 0.2, 0.13, DARK)
+	capsule(body, Vector3(0, 0.45, 0), 0.34, 0.9, ctx.lit(plate, 0.035))
+	box(body, Vector3(0, 0.52, -0.33), Vector3(0.46, 0.42, 0.08), ctx.lit(DARK))
+	box(body, Vector3(0, 0.52, -0.375), Vector3(0.26, 0.08, 0.02), ctx.glow(ctx.team_color, 1.2))
+	_head(ctx, body, 0.16, 0.98, ember)
+	# Broad pauldrons and a heavy brow-plate make a wide, forward-leaning silhouette.
+	for side in [-1, 1]:
+		sphere(body, Vector3(side * 0.46, 0.78, 0), 0.22, ctx.lit(plate.lightened(0.1), 0.03), 0.75)
+	_free_arm(ctx, body, Vector3(-0.46, 0.7, 0), 0.11, plate)
+	var weapon := _weapon_arm(ctx, body, Vector3(0.46, 0.7, 0), 0.11, plate)
+	# Shotgun: stubby, wide-mouthed barrel with an ember-lit muzzle.
+	box(weapon, Vector3(0, -0.04, -0.4), Vector3(0.16, 0.16, 0.5), ctx.lit(DARK))
+	cylinder(weapon, Vector3(0, -0.04, -0.7), 0.075, 0.095, 0.18, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
+	box(weapon, Vector3(0, 0.0, -0.8), Vector3(0.05, 0.05, 0.04), ctx.glow(ember, 2.0))
+	# The blade rides on the back at rest, swings in front to guard, and glows with stored Charge.
+	var blade := pivot(body, "Blade", Vector3(-0.25, 0.55, 0.32))
+	var heat := ctx.glow(ember, 0.4)
+	box(blade, Vector3(0, 0.0, 0), Vector3(0.34, 1.5, 0.07), ctx.lit(Color("8a949c"), 0.02))
+	box(blade, Vector3(0, 0.0, -0.045), Vector3(0.06, 1.42, 0.02), heat)
+	box(blade, Vector3(0, -0.8, 0), Vector3(0.14, 0.16, 0.1), ctx.lit(DARK))
+	blade.set_meta("heat", heat)
+
 # Per-frame procedural pose from synced state only (velocity, pitch, spin).
-static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float, grounded: bool, pitch: float, spin: float, sliding: bool) -> void:
+static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float, grounded: bool, pitch: float, spin: float, sliding: bool, guard: bool = false) -> void:
 	if root == null or not is_instance_valid(root) or root.has_meta("authored"):
 		return
 	var phase: float = root.get_meta("phase", 0.0)
@@ -315,6 +341,16 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	var vanes: Node3D = body.get_node_or_null("Vanes")
 	if vanes != null:
 		vanes.rotation.x = 0.1 + run * 0.35 + (0.0 if grounded else 0.3)
+	var blade: Node3D = body.get_node_or_null("Blade")
+	if blade != null:
+		# `spin` carries the stored Charge fraction for Reave; the blade swings forward while she guards.
+		var rest := Vector3(-0.25, 0.55, 0.32)
+		var held_pos := Vector3(0.0, 0.5, -0.62)
+		blade.position = blade.position.lerp(held_pos if guard else rest, blend)
+		blade.rotation.z = lerpf(blade.rotation.z, 0.0 if guard else 0.25, blend)
+		blade.rotation.x = lerpf(blade.rotation.x, 0.0 if guard else 0.1, blend)
+		var blade_heat: StandardMaterial3D = blade.get_meta("heat")
+		blade_heat.emission_energy_multiplier = 0.4 + spin * 4.0
 	if weapon != null:
 		var spinner: Node3D = weapon.get_node_or_null("Spinner")
 		if spinner != null:

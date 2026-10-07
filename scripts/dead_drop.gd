@@ -53,7 +53,7 @@ func _physics_process(dt: float) -> void:
 			var sight: Dictionary = game.ray(global_position + Vector3.UP * 0.05, target.global_position + Vector3.UP, [source_rid])
 			if sight.is_empty() or sight.collider == target:
 				var direct: bool = not hit.is_empty() and hit.collider == target
-				game.damage_fighter(target, 35 if direct else 15, source_id)
+				game.damage_fighter(target, 35 if direct else 15, source_id, global_position)
 		game.show_ring(global_position, 2.5, Color("ffde8d"))
 		game.show_trace(global_position, global_position + Vector3.UP * 2.5, Color.WHITE, Vfx.Style.LINE, true)
 		game.play_sfx(global_position, Sfx.Kind.EXPLODE)

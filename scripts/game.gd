@@ -1,6 +1,6 @@
 extends Node3D
 
-const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://scenes/field_engineer.tscn"), preload("res://scenes/enforcer.tscn"), preload("res://scenes/mirage_agent.tscn")]
+const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://scenes/field_engineer.tscn"), preload("res://scenes/enforcer.tscn"), preload("res://scenes/mirage_agent.tscn"), preload("res://scenes/reave.tscn")]
 const PORT = 27847
 # Health packs (blockout "pickup" features): an instant heal, then a regen that enemy hero damage cancels.
 const PACK_HEAL := 60.0
@@ -20,6 +20,7 @@ const BOT_POINT_RING := 3.4  # attackers hold spots inside the 4.5 m capture rad
 const BOT_PAUSE_MIN := 0.8
 const BOT_PAUSE_MAX := 2.5
 const BOT_SIGHT := 30.0
+const ASSIST_WINDOW := 6.0  # seconds a recent attacker still counts for an assist
 var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
@@ -113,7 +114,7 @@ func _ready() -> void:
 		start_game("join")
 
 func setup_inputs() -> void:
-	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "shoulder": KEY_V, "scoreboard": KEY_TAB}
+	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "ultimate": KEY_X, "shoulder": KEY_V, "scoreboard": KEY_TAB}
 	for action in bindings:
 		InputMap.add_action(action)
 		var key := InputEventKey.new()
@@ -203,7 +204,7 @@ func start_game(mode: String) -> void:
 	spawn_fighter(1, 0, selected_class, false, selected_weapon)
 	if not explore:
 		for i in range(CivicDividend.TEAM_SIZE * 2 - 1):
-			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, i % 4, true, bot_weapon(i))
+			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, i % Fighter.SPECS.size(), true, bot_weapon(i))
 	spawn_pickups()
 	running = true
 	menu.hide()
@@ -249,7 +250,7 @@ func peer_disconnected(id: int) -> void:
 	var replacement := 100
 	while fighters.has(replacement):
 		replacement += 1
-	spawn_fighter(replacement, side, replacement % 4, true, bot_weapon(replacement))
+	spawn_fighter(replacement, side, replacement % Fighter.SPECS.size(), true, bot_weapon(replacement))
 
 @rpc("any_peer", "call_remote", "reliable")
 func join_request(class_choice: int, weapon_choice: int = 0) -> void:
@@ -269,7 +270,7 @@ func join_request(class_choice: int, weapon_choice: int = 0) -> void:
 			fighters.erase(p.fighter_id)
 			p.queue_free()
 			break
-	spawn_fighter(id, side, clampi(class_choice, 0, 3), false, clampi(weapon_choice, 0, Fighter.WEAPONS.size() - 1))
+	spawn_fighter(id, side, clampi(class_choice, 0, Fighter.SPECS.size() - 1), false, clampi(weapon_choice, 0, Fighter.WEAPONS.size() - 1))
 	initial_sync.rpc_id(id, encode_world())
 
 # Lowest depot slot on the team that no teammate holds, so a full team never shares a spawn (peer ids are arbitrary).
@@ -324,6 +325,7 @@ func apply_class(id: int, index: int, weapon_choice: int = 0) -> void:
 		return
 	remove_owned(id)
 	p.double_id = -1
+	p.meter = 0.0  # a hero swap starts the meter over; respawning as the same hero keeps it
 	p.change_class(index, weapon_choice)
 	p.dead_time = 0
 	p.global_position = spawn_position(p)
@@ -356,7 +358,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var look := 0.0025 * DisplayPrefs.sensitivity
 		p.yaw -= event.relative.x * look
 		p.pitch = clampf(p.pitch - event.relative.y * look, -1.25, 1.2)
-	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32]]:
+	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32], ["ultimate", 64]]:
 		if event.is_action_pressed(pair[0]) and not event.is_echo():
 			input_edges |= pair[1]
 	if event.is_action_pressed("shoulder"):
@@ -376,6 +378,7 @@ func _physics_process(dt: float) -> void:
 			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (4 if Input.is_action_pressed("ability3") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0)
 		p.movement = motion
 		p.held = buttons
+		limit_guard_turn(p, dt)
 		if authoritative:
 			p.edges |= input_edges
 		else:
@@ -443,6 +446,16 @@ func out_of_bounds(pos: Vector3) -> bool:
 	var b := CivicDividend.bounds
 	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling
 
+# Guarding slows Reave's turn rate. The owner clamps the yaw it submits and the server clamps what it accepts, so
+# prediction and authority agree; both sides allow the same rate.
+var guard_yaw := 0.0
+
+func limit_guard_turn(p: Fighter, dt: float) -> void:
+	if p.is_guarding():
+		var step := clampf(wrapf(p.yaw - guard_yaw, -PI, PI), -Fighter.GUARD_TURN_RATE * dt, Fighter.GUARD_TURN_RATE * dt)
+		p.yaw = wrapf(guard_yaw + step, -PI, PI)
+	guard_yaw = p.yaw
+
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		submit_input.rpc_id(1, motion, aim_yaw, aim_pitch, buttons, shoulder_value)
@@ -464,7 +477,13 @@ func submit_input(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: in
 		return
 	var p: Fighter = fighters[id]
 	p.movement = motion.limit_length(1.0)
-	p.yaw = wrapf(aim_yaw, -PI, PI)
+	var now := Time.get_ticks_msec()
+	var wanted_yaw := wrapf(aim_yaw, -PI, PI)
+	if p.is_guarding():
+		var elapsed := clampf((now - request_times.get(id, now)) / 1000.0, 0.0, 0.1)
+		var allowed := Fighter.GUARD_TURN_RATE * 1.6 * elapsed
+		wanted_yaw = wrapf(p.yaw + clampf(wrapf(wanted_yaw - p.yaw, -PI, PI), -allowed, allowed), -PI, PI)
+	p.yaw = wanted_yaw
 	p.pitch = clampf(aim_pitch, -1.25, 1.2)
 	p.held = buttons & 31
 	p.shoulder = 1.0 if shoulder_value >= 0 else -1.0
@@ -476,7 +495,7 @@ func submit_actions(pressed: int) -> void:
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if fighters.has(id):
-		fighters[id].edges |= pressed & 63
+		fighters[id].edges |= pressed & 127
 
 func packed_world() -> Dictionary:
 	var players: Array = []
@@ -576,6 +595,22 @@ func respawn(p: Fighter) -> void:
 func combat_tick(p: Fighter, dt: float) -> void:
 	for i in range(3):
 		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
+	p.meter = Tension.passive(p.meter, dt)
+	for attacker in p.damagers.keys():
+		p.damagers[attacker] += dt
+		if p.damagers[attacker] > ASSIST_WINDOW:
+			p.damagers.erase(attacker)
+	if p.burn > 0.0:
+		p.burn = maxf(0.0, p.burn - dt)
+		damage_fighter(p, Fighter.BURN_DPS * dt, p.burn_source, Vector3.INF, false)
+		if p.hp <= 0:
+			return
+	if p.stun > 0.0:
+		p.stun = maxf(0.0, p.stun - dt)
+		p.held = 0
+		p.edges = 0
+	if p.class_id == Fighter.REAVE_ID:
+		reave_tick(p, dt)
 	p.shot_timer = maxf(0, p.shot_timer - dt)
 	p.alt_timer = maxf(0, p.alt_timer - dt)
 	p.conceal = maxf(0, p.conceal - dt)
@@ -592,6 +627,8 @@ func combat_tick(p: Fighter, dt: float) -> void:
 	for i in range(3):
 		if p.edges & (8 << i):
 			activate(p, i)
+	if p.edges & 64:
+		activate_ultimate(p)
 	if p.class_id == 2:
 		p.spin = move_toward(p.spin, 1.0 if p.held & 1 else 0.0, dt / (0.25 if p.melee_buff > 0 else 0.6))
 	if p.held & 2:
@@ -669,8 +706,8 @@ func fire_ray(p: Fighter, amount: float, ricochet: bool, alt: bool = false) -> v
 	var cue: int
 	var style: int
 	if signature:
-		cue = [Sfx.Kind.SHOT_SKYRUNNER, Sfx.Kind.SHOT_ENGINEER, Sfx.Kind.SHOT_ENFORCER, Sfx.Kind.SHOT_MIRAGE][p.class_id]
-		style = [Vfx.Style.SKYRUNNER, Vfx.Style.ARC, Vfx.Style.ENFORCER, Vfx.Style.MIRAGE][p.class_id]
+		cue = [Sfx.Kind.SHOT_SKYRUNNER, Sfx.Kind.SHOT_ENGINEER, Sfx.Kind.SHOT_ENFORCER, Sfx.Kind.SHOT_MIRAGE, Sfx.Kind.SHOT_BREACHER][p.class_id]
+		style = [Vfx.Style.SKYRUNNER, Vfx.Style.ARC, Vfx.Style.ENFORCER, Vfx.Style.MIRAGE, Vfx.Style.PELLET][p.class_id]
 		if alt:
 			cue = Sfx.Kind.SHOT_CHARGED
 			style = Vfx.Style.CHARGED
@@ -756,17 +793,31 @@ func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 	else:
 		p.consecutive_hits = 0
 
-func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
+# Returns true when the damage reached the target's health; an enemy Reave's guard can absorb it instead.
+# `origin` is where the hit struck from (defaults to the attacker), which decides whether a guard covers it.
+func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, blockable: bool = true) -> bool:
 	if target.hp <= 0 or not authoritative:
-		return
+		return false
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
 	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0:
-		return
-	target.hp = maxf(0, target.hp - amount)
-	target.reveal = 0.65
+		return false
 	var source: Fighter = fighters.get(attacker)
+	if blockable and attacker >= 0:
+		var struck_from := origin
+		if struck_from == Vector3.INF and source != null:
+			struck_from = source.global_position + Vector3.UP * 1.2
+		if struck_from != Vector3.INF and target.guard_blocks(struck_from):
+			absorb_hit(target, amount, source)
+			return false
+	var before := target.hp
+	target.hp = maxf(0, target.hp - amount)
+	var dealt := before - target.hp
+	target.reveal = 0.65
+	target.meter = Tension.taken(target.meter, dealt)
 	if source != null and source != target and source.team != target.team:
 		target.heal_left = 0
+		source.meter = Tension.dealt(source.meter, dealt)
+		target.damagers[attacker] = 0.0
 	if source != null and not target.bot:
 		if target.fighter_id == local_id:
 			hud.damaged(source.global_position)
@@ -778,19 +829,51 @@ func damage_fighter(target: Fighter, amount: float, attacker: int) -> void:
 		target.velocity = Vector3.ZERO
 		target.grapple_time = 0
 		target.conceal = 0
+		target.burn = 0
+		target.stun = 0
 		remove_owned(target.fighter_id)
 		target.double_id = -1
 		target.update_visual()
 		if source != null:
 			source.kills += 1
-			kill_feed(source.spec.title, source.team, target.spec.title, target.team)
+			source.meter = Tension.kill(source.meter)
+			for helper_id in target.damagers:
+				var helper: Fighter = fighters.get(helper_id)
+				if helper != null and helper != source and helper.team != target.team:
+					helper.meter = Tension.assist(helper.meter)
+			kill_feed(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
 			if multiplayer.get_peers().size() > 0:
-				kill_feed.rpc(source.spec.title, source.team, target.spec.title, target.team)
+				kill_feed.rpc(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
 			var line: String = source.spec.quips[rng.randi_range(0, source.spec.quips.size() - 1)]
 			if attacker == local_id:
 				character_quip(line)
 			elif not source.bot:
 				character_quip.rpc_id(attacker, line)
+		target.damagers.clear()
+	return true
+
+# A guarded hit becomes Charge on the blade and costs stamina; an emptied stamina bar breaks the guard.
+func absorb_hit(target: Fighter, amount: float, source: Fighter) -> void:
+	var weight := 1.5 if amount >= 40.0 else (0.5 if amount < 10.0 else 1.0)  # big hits charge faster, chip barely counts
+	target.blade_charge = minf(Fighter.CHARGE_MAX, target.blade_charge + amount * weight)
+	target.guard_stamina = maxf(0.0, target.guard_stamina - amount * Fighter.GUARD_ABSORB_COST)
+	target.meter = Tension.taken(target.meter, amount)
+	play_sfx(target.global_position, Sfx.Kind.IMPACT)
+	show_ring(target.global_position + target.horizontal_direction() * 0.8 + Vector3.UP * 1.1, 0.6, Color("ffb070"))
+	if source != null:
+		hit_feedback(source.fighter_id)
+	if target.guard_stamina <= 0.0:
+		break_guard(target)
+
+func break_guard(target: Fighter) -> void:
+	target.guard_stamina = 0.0
+	target.blade_charge = 0.0
+	target.stun = Fighter.GUARD_BREAK_STUN
+	target.guard_regen_wait = Fighter.GUARD_BREAK_STUN + Fighter.GUARD_REGEN_DELAY
+	target.guarding = false
+	target.guard_hold = 0.0
+	show_ring(target.global_position + Vector3.UP, 1.6, Color("ff4a2a"))
+	play_sfx(target.global_position, Sfx.Kind.BREACH)
 
 func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push: float) -> int:
 	var hits := 0
@@ -808,7 +891,7 @@ func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push
 	return hits
 
 func activate(p: Fighter, slot: int) -> void:
-	if p.hp <= 0:
+	if p.hp <= 0 or p.stun > 0.0 or slot >= p.spec.abilities.size():
 		return
 	if p.class_id == 0 and slot == 0 and p.grapple_time > 0:
 		p.grapple_time = 0
@@ -897,6 +980,10 @@ func activate(p: Fighter, slot: int) -> void:
 					show_ring(p.global_position, 5.0, team_color(p.team))
 					show_trace(p.global_position + Vector3.UP * 0.6, p.global_position + Vector3.UP * 0.6 + p.horizontal_direction() * 5, Color("ffd9a0"), Vfx.Style.SWOOSH)
 					play_sfx(p.global_position, Sfx.Kind.EVICT)
+		4:
+			match slot:
+				0:
+					reave_breach(p)
 		3:
 			match slot:
 				0:
@@ -919,6 +1006,95 @@ func activate(p: Fighter, slot: int) -> void:
 		p.cooldowns[slot] = p.spec.cooldowns[slot]
 		if p.fighter_id == local_id:
 			announce(p.spec.abilities[slot])
+
+# Ultimates cost Tension.ULTIMATE_COST (half the bar). Spending goes through the pure rules object.
+func activate_ultimate(p: Fighter) -> void:
+	if p.hp <= 0 or p.stun > 0.0 or p.spec.ultimate == "":
+		return
+	if not Tension.can_spend(p.meter):
+		if p.fighter_id == local_id:
+			announce("%s needs %d%% Tension." % [p.spec.ultimate, int(Tension.ULTIMATE_COST)])
+		return
+	match p.class_id:
+		Fighter.REAVE_ID:
+			var blade := preload("res://scripts/pyre_edge.gd").new()
+			blade.configure(self, p)
+			add_child(blade)
+			blade.global_position = p.muzzle()
+			show_ring(p.global_position + Vector3.UP, 2.2, Color("ff7a3a"))
+			play_sfx(p.global_position, Sfx.Kind.EVICT)
+		_:
+			return
+	p.meter = Tension.spend(p.meter)
+	p.idle_weapon = 0.0
+	if p.fighter_id == local_id:
+		announce(p.spec.ultimate)
+
+# Reave's per-tick state: guard stamina, the guard hold timer, and Slash on release.
+func reave_tick(p: Fighter, dt: float) -> void:
+	p.guarding = p.is_guarding()
+	if p.guarding:
+		p.guard_hold += dt
+		p.guard_regen_wait = Fighter.GUARD_REGEN_DELAY
+		p.guard_stamina = maxf(0.0, p.guard_stamina - Fighter.GUARD_DRAIN * dt)
+		p.conceal = 0
+		if p.guard_stamina <= 0.0:
+			break_guard(p)
+	else:
+		p.guard_regen_wait = maxf(0.0, p.guard_regen_wait - dt)
+		if p.guard_regen_wait <= 0.0 and not p.held & 2:
+			p.guard_stamina = minf(Fighter.GUARD_STAMINA_MAX, p.guard_stamina + Fighter.GUARD_REGEN * dt)
+	var released: bool = (p.prev_held & 2) != 0 and (p.held & 2) == 0
+	if released and p.stun <= 0.0 and p.alt_timer <= 0.0 and p.hp > 0:
+		reave_slash(p, p.guard_hold >= REAVE_CASH_IN_HOLD and p.blade_charge > 0.0)
+	if not p.held & 2:
+		p.guard_hold = 0.0
+	p.prev_held = p.held
+
+const REAVE_CASH_IN_HOLD := 0.3  # a guard held this long, with Charge stored, releases as the big Slash
+
+# Slash: a half-circle arc. Tap swings small and keeps the Charge; a held guard cashes every point in at once.
+func reave_slash(p: Fighter, big: bool) -> void:
+	var damage := 25.0 + 0.9 * p.blade_charge if big else 25.0
+	var reach := 4.5 if big else 3.0
+	var hits := cone_attack(p, reach, damage, 0.0, 9.0 if big else 4.0)
+	show_ring(p.global_position + p.horizontal_direction() * 1.2, reach * 0.6, Color("ff7a3a") if big else Color.WHITE)
+	show_trace(p.global_position + Vector3.UP * 1.1, p.global_position + Vector3.UP * 1.1 + p.horizontal_direction() * reach, Color("ffb070"), Vfx.Style.SWOOSH)
+	play_sfx(p.global_position, Sfx.Kind.EVICT)
+	p.alt_timer = 0.9 if big else 0.6
+	p.shot_timer = maxf(p.shot_timer, p.alt_timer)
+	p.idle_weapon = 0.0
+	if big or hits > 0:
+		p.ammo = p.weapon.magazine
+		p.reload_timer = 0.0
+		p.burst_left = 0
+	if big:
+		p.blade_charge = 0.0
+	p.guard_hold = 0.0
+
+# Breach: a close blast that launches enemies, breaks guards and spin-ups, and wrecks deployables.
+func reave_breach(p: Fighter) -> void:
+	var forward := p.horizontal_direction()
+	for target in fighters.values():
+		var diff: Vector3 = target.global_position - p.global_position
+		if target.team == p.team or target.hp <= 0 or diff.length() > 5.0 or forward.dot(diff.normalized()) < 0.5:
+			continue
+		var sight := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
+		if sight.is_empty() or sight.collider != target:
+			continue
+		if target.is_guarding():
+			break_guard(target)
+		target.spin = 0.0
+		damage_fighter(target, 20.0, p.fighter_id)
+		target.velocity += diff.normalized() * 14.0 + Vector3.UP * 4.0
+	for e in entities.values():
+		var diff: Vector3 = e.global_position - p.global_position
+		if e.team != p.team and e.kind in ["cover", "turret", "pad", "double"] and diff.length() <= 5.0 and forward.dot(diff.normalized()) >= 0.5:
+			e.hp -= 60.0
+			e.last_damage = e.age
+	show_ring(p.global_position + forward * 1.5, 3.0, Color("ff7a3a"))
+	show_trace(p.global_position + Vector3.UP * 0.4, p.global_position + Vector3.UP * 0.4 + forward * 5.0, Color("ffd9a0"), Vfx.Style.SWOOSH)
+	play_sfx(p.global_position, Sfx.Kind.BREACH)
 
 func placement(p: Fighter, reach: float) -> Vector3:
 	var origin := p.global_position + Vector3.UP * 1.5
@@ -1038,7 +1214,7 @@ func entities_tick(dt: float) -> void:
 					continue
 				var hit := ray(from, target.global_position + Vector3.UP, [e.get_rid()])
 				if not hit.is_empty() and hit.collider == target:
-					damage_fighter(target, 6, e.owner_id)
+					damage_fighter(target, 6, e.owner_id, from)
 					e.timer = 0.3
 					show_trace(from, hit.position, team_color(e.team), Vfx.Style.SKYRUNNER, true)
 					play_sfx(from, Sfx.Kind.TURRET)
@@ -1056,11 +1232,15 @@ func throw_capsule(p: Fighter) -> void:
 
 func objectives_tick(dt: float) -> void:
 	var occupancy: Array = []
-	for point in points:
+	for i in range(points.size()):
+		var point := points[i]
 		var counts := [0, 0]
 		for p in fighters.values():
 			if p.hp > 0 and Vector2(p.global_position.x - point.x, p.global_position.z - point.z).length() < 4.5 and absf(p.global_position.y - point.y) < 2.0:
 				counts[p.team] += 1
+				# Fighting over a point that is open and not yet yours charges Tension.
+				if match_state.unlocked[i] and match_state.owners[i] != p.team:
+					p.meter = Tension.on_point(p.meter, dt)
 		occupancy.append(counts)
 	match_state.tick(dt, occupancy)
 	for capture in match_state.captures:
@@ -1200,6 +1380,15 @@ func bot_input(p: Fighter, dt: float) -> void:
 			p.held = 1
 		if p.class_id == 2 and target_diff.length() < 3:
 			p.held = 2
+		if p.class_id == Fighter.REAVE_ID:
+			# Guard while under fire at range (feeding the blade), then let go to Slash once an enemy is close.
+			var gap := target_diff.length()
+			if gap > 4.5 and not p.damagers.is_empty() and p.guard_stamina > 25.0 and p.stun <= 0.0:
+				p.held = 2
+			if gap < 4.5 and rng.randf() < dt * 1.5:
+				p.edges |= 8
+			if p.meter >= Tension.ULTIMATE_COST and gap > 6.0 and gap < 26.0 and rng.randf() < dt * 0.6:
+				p.edges |= 64
 		if rng.randf() < dt * 0.25:
 			p.edges |= 16
 	if aim.length() > 0.01:

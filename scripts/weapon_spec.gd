@@ -29,9 +29,14 @@ static func from_class(spec: ClassSpec, class_id: int) -> WeaponSpec:
 	w.magazine = spec.magazine
 	w.reload_time = spec.reload_time
 	w.reach = spec.reach
+	w.pellets = spec.pellets
+	w.spread_deg = spec.spread_deg
+	w.falloff_start = spec.falloff_start
+	w.falloff_end = spec.falloff_end
+	w.falloff_min = spec.falloff_min
 	w.burst = spec.burst
 	w.burst_gap = spec.burst_gap
-	w.headshot_mult = 1.0 if class_id == 1 else 1.35  # the electric hose cannot headshot
+	w.headshot_mult = 1.0 if class_id == 1 else spec.headshot_mult  # the electric hose cannot headshot
 	return w
 
 # Damage multiplier for a pellet that travelled `dist` metres.

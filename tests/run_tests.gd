@@ -26,6 +26,7 @@ func run() -> void:
 	test_objectives()
 	test_specs()
 	test_weapon_specs()
+	test_tension()
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
@@ -40,6 +41,7 @@ func run() -> void:
 	await test_weapons()
 	await test_shared_weapons()
 	await test_mirage()
+	await test_reave()
 	await test_machinery()
 	test_healpack()
 	test_authority_and_respawn()
@@ -119,12 +121,14 @@ func test_objectives() -> void:
 	check(copy.owners == state.owners and copy.unlocked == state.unlocked, "match snapshot round trip")
 
 func test_specs() -> void:
-	var expected := [2.07, 2.8, 2.6, 2.2]
-	for i in range(4):
+	var expected := [2.07, 2.8, 2.6, 2.2, 2.1]
+	for i in range(Fighter.SPECS.size()):
 		var spec: ClassSpec = Fighter.SPECS[i]
 		print("MODEL TTK %s: %.3fs" % [spec.title, spec.body_ttk()])
 		check(absf(spec.body_ttk() - expected[i]) < 0.02, "weapon model target: " + spec.title)
-		check(spec.abilities.size() == 3, "three active abilities: " + spec.title)
+		check(spec.abilities.size() == spec.cooldowns.size() and spec.abilities.size() <= 3, "ability names and cooldowns line up: " + spec.title)
+		check(i >= 4 or spec.abilities.size() == 3, "the four original fighters keep three abilities: " + spec.title)
+		check(spec.display_name() != "" and spec.quips.size() > 0, "every hero has a name and lines: " + spec.title)
 	check(Fighter.SPECS[0].body_ttk() < Fighter.SPECS[3].body_ttk(), "Skyrunner fastest primary")
 	check(35 + Fighter.SPECS[3].damage * 1.35 < 160, "capsule plus one headshot cannot instant kill lowest-health class")
 	var limited := ClassSpec.new()
@@ -165,7 +169,7 @@ func test_movement() -> void:
 	for i in range(190):
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.air_dash, "dash recharges after its 3 s cooldown")
-	for archetype in range(4):
+	for archetype in range(Fighter.SPECS.size()):
 		p.change_class(archetype)
 		p.global_position = O + Vector3(88.8, 3, 20)
 		p.wall_repeats = 0
@@ -246,14 +250,15 @@ func test_weapons() -> void:
 	var p: Fighter = game.local_player()
 	var target: Fighter = game.fighters[105]
 	target.team = 1 - p.team  # with 10v10 rosters bot 105 starts as a teammate
-	for class_index in range(4):
+	for class_index in range(Fighter.SPECS.size()):
 		p.change_class(class_index)
 		p.global_position = O + Vector3(-10, 0, -21)
 		p.velocity = Vector3.ZERO
 		p.held = 1
 		p.spin = 1
 		target.change_class(1)
-		target.global_position = O + Vector3(0, 0, -21)
+		# Shotguns are modelled point blank (every pellet lands); the Gunblade is measured inside her spread.
+		target.global_position = O + Vector3(0 if class_index != Fighter.REAVE_ID else -7.5, 0, -21)
 		target.hp = 200
 		target.update_visual()
 		await physics_frame
@@ -337,6 +342,237 @@ func test_mirage() -> void:
 	game.activate(p, 1)
 	check(p.conceal == 0, "Dead Drop ends concealment")
 	await create_timer(0.2).timeout
+
+func test_tension() -> void:
+	check(is_equal_approx(Tension.passive(0.0, 10.0), 8.0), "tension charges passively")
+	check(is_equal_approx(Tension.dealt(0.0, 100.0), 20.0) and is_equal_approx(Tension.taken(0.0, 100.0), 10.0), "combat charges faster than idling: dealt 0.20, taken 0.10 per point")
+	check(is_equal_approx(Tension.kill(0.0), 10.0) and is_equal_approx(Tension.assist(0.0), 5.0), "kills and assists charge the meter")
+	check(Tension.dealt(95.0, 100.0) == Tension.MAX, "tension clamps at 100")
+	check(not Tension.can_spend(49.9) and Tension.can_spend(50.0), "ultimates cost half the bar")
+	check(Tension.spend(49.0) == 49.0 and is_equal_approx(Tension.spend(80.0), 30.0), "spending is all or nothing and costs 50")
+	check(Tension.on_point(0.0, 2.0) > Tension.passive(0.0, 2.0), "fighting over a point charges faster than idling")
+
+func test_reave() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	var helper: Fighter = game.fighters[106]
+	foe.team = 1 - p.team
+	helper.team = p.team
+	foe.change_class(1)
+	helper.change_class(1)
+	p.change_class(4, 2)
+	check(p.class_id == 4 and p.weapon_id == 0 and p.hp == 300.0, "Reave is 300 HP and keeps her own shotgun whatever weapon is requested")
+	check(p.spec.ultimate == "Pyre Edge" and p.spec.abilities.size() == 1, "Reave has one ability plus an ultimate")
+	p.global_position = O + Vector3(-10, 0, -21)
+	p.velocity = Vector3.ZERO
+	p.yaw = -PI / 2
+	p.pitch = 0
+	foe.global_position = O + Vector3(-4, 0, -21)
+	helper.global_position = O + Vector3(60, 0, 20)
+	foe.hp = 200
+	await physics_frame
+	await process_frame
+	await process_frame
+	# Guard: front hits become Charge and stamina cost; from behind or above they go through.
+	p.held = 2
+	p.meter = 0
+	check(p.is_guarding(), "holding secondary guards")
+	var landed: bool = game.damage_fighter(p, 40.0, foe.fighter_id)
+	check(not landed and p.hp == 300.0, "guard absorbs a front hit")
+	check(is_equal_approx(p.blade_charge, 60.0), "a big hit (40+) charges 1.5x")
+	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - 24.0), "absorbing costs 0.6 stamina per point")
+	check(is_equal_approx(p.meter, 4.0), "absorbed damage still charges Tension")
+	game.damage_fighter(p, 5.0, foe.fighter_id)
+	check(is_equal_approx(p.blade_charge, 62.5), "chip damage (<10) charges at half rate")
+	game.damage_fighter(p, 9.0, foe.fighter_id, O + Vector3(-16, 0, -21))
+	check(is_equal_approx(p.hp, 291.0), "a hit from behind goes straight through")
+	game.damage_fighter(p, 9.0, foe.fighter_id, O + Vector3(-9.5, 12, -21))
+	check(is_equal_approx(p.hp, 282.0), "a steep hit from above goes over the blade")
+	game.damage_fighter(p, 10.0, foe.fighter_id, Vector3.INF, false)
+	check(is_equal_approx(p.hp, 272.0), "unblockable damage ignores the guard")
+	for i in range(5):
+		game.damage_fighter(p, 45.0, foe.fighter_id)
+	check(p.blade_charge == Fighter.CHARGE_MAX or p.stun > 0.0, "Charge is capped at 100")
+	# Breaking the guard stuns and loses the Charge.
+	p.stun = 0
+	p.guard_stamina = 5.0
+	p.blade_charge = 70.0
+	game.damage_fighter(p, 20.0, foe.fighter_id)
+	check(p.stun >= Fighter.GUARD_BREAK_STUN - 0.001 and p.blade_charge == 0.0 and p.guard_stamina == 0.0, "an emptied stamina bar breaks the guard: stun, Charge lost")
+	check(not p.is_guarding(), "a broken guard cannot guard")
+	p.stun = 0
+	p.guard_stamina = Fighter.GUARD_STAMINA_MAX
+	# Guard drains stamina while held and regenerates after a delay when released.
+	p.held = 2
+	p.prev_held = 2
+	p.hp = 300
+	game.reave_tick(p, 1.0)
+	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - Fighter.GUARD_DRAIN) and p.guarding, "holding guard drains stamina")
+	p.held = 0
+	p.alt_timer = 1.0  # keep the release from also swinging
+	game.reave_tick(p, 0.5)
+	var drained := p.guard_stamina
+	game.reave_tick(p, 0.6)
+	check(p.guard_stamina > drained and not p.guarding, "stamina regenerates once the guard is down")
+	# Turn rate is capped while guarding.
+	p.held = 2
+	p.yaw = 1.0
+	game.guard_yaw = 0.0
+	game.limit_guard_turn(p, 1.0 / 60.0)
+	check(p.yaw <= Fighter.GUARD_TURN_RATE / 60.0 + 0.0001, "guarding caps the turn rate")
+	p.held = 0
+	p.yaw = -PI / 2
+	game.guard_yaw = p.yaw
+	# Slash: tap is small and keeps the Charge; a held guard cashes it in and refills the shells.
+	p.alt_timer = 0
+	p.blade_charge = 60.0
+	p.ammo = 0
+	foe.hp = 200
+	foe.global_position = O + Vector3(-8, 0, -21)
+	await physics_frame
+	await process_frame
+	game.reave_slash(p, false)
+	check(is_equal_approx(foe.hp, 175.0), "tap Slash deals 25")
+	check(p.blade_charge == 60.0 and p.ammo == p.weapon.magazine, "a tap that connects keeps the Charge and refills the shotgun")
+	foe.hp = 200
+	p.ammo = 0
+	game.reave_slash(p, true)
+	check(is_equal_approx(foe.hp, 200.0 - (25.0 + 0.9 * 60.0)), "big Slash scales with stored Charge")
+	check(p.blade_charge == 0.0 and p.ammo == p.weapon.magazine, "big Slash spends the Charge and refills the shotgun")
+	foe.hp = 200
+	foe.global_position = O + Vector3(-16, 0, -21)
+	await physics_frame
+	await process_frame
+	p.ammo = 0
+	game.reave_slash(p, false)
+	check(foe.hp == 200.0 and p.ammo == 0, "a whiffed tap neither hits nor refills")
+	# Release detection wires the Slash into the tick: guard held long enough with Charge becomes the big swing.
+	foe.hp = 200
+	foe.global_position = O + Vector3(-8, 0, -21)
+	await physics_frame
+	await process_frame
+	p.alt_timer = 0
+	p.held = 2
+	p.prev_held = 2
+	p.guard_hold = 0.5
+	p.blade_charge = 40.0
+	p.held = 0
+	game.reave_tick(p, 1.0 / 60.0)
+	check(is_equal_approx(foe.hp, 200.0 - (25.0 + 0.9 * 40.0)) and p.blade_charge == 0.0, "releasing a held guard with Charge cashes it in")
+	# Breach breaks a Reave guard and cancels Enforcer spin-up.
+	p.cooldowns[0] = 0
+	foe.change_class(4)
+	foe.hp = 300
+	foe.global_position = O + Vector3(-7, 0, -21)
+	foe.yaw = PI / 2
+	foe.held = 2
+	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
+	await physics_frame
+	await process_frame
+	check(foe.is_guarding(), "enemy Reave is guarding the shooter")
+	game.activate(p, 0)
+	check(foe.stun > 0.0 and foe.hp == 280.0 and foe.velocity.length() > 5.0, "Breach breaks the guard, damages and launches")
+	check(p.cooldowns[0] == 8.0, "Breach has an 8 s cooldown")
+	foe.change_class(2)
+	foe.hp = 200
+	foe.held = 0
+	foe.spin = 1.0
+	p.cooldowns[0] = 0
+	game.activate(p, 0)
+	check(foe.spin == 0.0, "Breach cancels Enforcer spin-up")
+	# Tension: damage dealt, kills and assists.
+	foe.change_class(1)
+	foe.hp = 200
+	p.meter = 0
+	foe.meter = 0
+	game.damage_fighter(foe, 100.0, p.fighter_id)
+	check(is_equal_approx(p.meter, 20.0) and is_equal_approx(foe.meter, 10.0), "damage charges the attacker 0.20 and the victim 0.10 per point")
+	helper.meter = 0
+	foe.hp = 30
+	game.damage_fighter(foe, 5.0, helper.fighter_id)
+	game.damage_fighter(foe, 30.0, p.fighter_id)
+	check(foe.hp <= 0 and p.kills >= 1, "Reave scores a kill")
+	check(helper.meter > 5.0 - 0.001, "a recent attacker is credited with an assist")
+	check(foe.meter > 0.0, "Tension is kept through death")
+	foe.hp = 200
+	foe.dead_time = 0
+	# Pyre Edge: costs half the bar, pierces, burns, is stopped by an enemy guard.
+	foe.change_class(1)
+	foe.hp = 200
+	foe.global_position = O + Vector3(0, 0, -21)
+	foe.velocity = Vector3.ZERO
+	p.yaw = -PI / 2
+	p.pitch = 0
+	p.stun = 0
+	p.meter = 49.0
+	var before := game.get_child_count()
+	game.activate_ultimate(p)
+	check(p.meter == 49.0 and game.get_child_count() == before, "Pyre Edge is refused below 50 Tension")
+	p.meter = 80.0
+	game.activate_ultimate(p)
+	check(is_equal_approx(p.meter, 30.0) and game.get_child_count() == before + 1, "Pyre Edge spends 50 Tension and fires a blade")
+	var blade = game.get_child(game.get_child_count() - 1)
+	for i in range(60):
+		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
+			blade._physics_process(1.0 / 30.0)
+	check(is_equal_approx(foe.hp, 130.0) and foe.burn > 0.0, "Pyre Edge hits for 70 and sets the target burning")
+	game.combat_tick(foe, 1.0)
+	check(foe.hp < 130.0, "burning deals damage over time")
+	foe.hp = 200
+	foe.burn = 0
+	foe.change_class(4)
+	foe.global_position = O + Vector3(0, 0, -21)
+	foe.yaw = PI / 2
+	foe.held = 2
+	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
+	p.meter = 80.0
+	game.activate_ultimate(p)
+	blade = game.get_child(game.get_child_count() - 1)
+	for i in range(60):
+		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
+			blade._physics_process(1.0 / 30.0)
+	check(foe.hp == 300.0 and foe.burn == 0.0 and foe.blade_charge > 0.0, "an enemy Reave's guard swallows Pyre Edge and banks the Charge")
+	# Snapshot round trip carries the Tension meter and her guard state, and omits them when idle.
+	p.change_class(4)
+	p.meter = 61.7
+	p.blade_charge = 42.0
+	p.guard_stamina = 71.0
+	p.guarding = true
+	p.stun = 0.5
+	p.burn = 2.0
+	var packed: Dictionary = p.pack()
+	var mirror: Fighter = game.fighters[107]
+	mirror.unpack(packed, false)
+	check(mirror.class_id == 4 and mirror.meter == 61.0 and mirror.blade_charge == 42.0 and mirror.guard_stamina == 71.0, "snapshot carries meter, Charge and stamina (meter floored)")
+	check(mirror.guarding and mirror.stun == 0.5 and mirror.burn == 2.0, "snapshot carries guard, stun and burn")
+	mirror.change_class(1)
+	p.change_class(0)
+	p.meter = 0.0
+	check(not p.pack().has("meter") and not p.pack().has("guard") and not p.pack().has("burn"), "idle non-Reave snapshots carry no extra fields")
+	p.meter = 33.0
+	# Switching hero clears her state but not the meter.
+	foe.held = 0
+	p.blade_charge = 50.0
+	p.stun = 1.0
+	p.meter = 33.0
+	p.change_class(0)
+	check(p.blade_charge == 0.0 and p.stun == 0.0 and p.meter == 33.0, "leaving Reave clears guard state and keeps Tension")
+	p.hp = 0
+	game.apply_class(p.fighter_id, 4)
+	check(p.meter == 0.0 and p.class_id == 4, "a hero swap starts the meter over")
+	p.change_class(0)
+	foe.change_class(1)
+	foe.hp = 200
+	foe.held = 0
+	p.held = 0
+	p.alt_timer = 0
+	p.shot_timer = 0
+	p.cooldowns.fill(0.0)
+	for child in game.get_children():
+		if child.get_script() != null and child.get_script().resource_path.ends_with("pyre_edge.gd"):
+			child.queue_free()
+	await physics_frame
+	await process_frame
 
 func test_healpack() -> void:
 	var p: Fighter = game.local_player()
@@ -429,7 +665,7 @@ func test_weapon_specs() -> void:
 	var longshot: WeaponSpec = Fighter.WEAPONS[2]
 	var chatterbox: WeaponSpec = Fighter.WEAPONS[3]
 	check(Fighter.WEAPONS[0] == null and Fighter.WEAPONS.size() == 4, "weapon table: signature plus three shared guns")
-	for i in range(4):
+	for i in range(Fighter.SPECS.size()):
 		var signature := WeaponSpec.from_class(Fighter.SPECS[i], i)
 		check(absf(signature.body_ttk() - Fighter.SPECS[i].body_ttk()) < 0.001, "signature weapon mirrors class gun: " + Fighter.SPECS[i].title)
 	check(WeaponSpec.from_class(Fighter.SPECS[1], 1).headshot_mult == 1.0, "engineer signature cannot headshot")
