@@ -158,17 +158,19 @@ func test_movement() -> void:
 	p.held = 0
 	p.global_position = O + Vector3(-10, 4, -21)
 	p.air_dash = true
+	p.meter = 100
 	p.simulate_movement(1.0 / 60, 0)
 	p.simulate_movement(1.0 / 60, 2)
+	check(is_equal_approx(p.meter, 75.0), "dash costs 25 Tension")
 	check(not p.air_dash and p.velocity.x > 14, "air dash consumed and propels")
 	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
-	check(not p.air_dash and p.dash_cd > 2.0, "landing does not restore the dash; 3 s cooldown applies")
-	for i in range(190):
+	check(not p.air_dash and p.dash_cd > 0.5, "landing does not restore the dash; 1 s cooldown applies")
+	for i in range(60):
 		p.simulate_movement(1.0 / 60, 0)
-	check(p.air_dash, "dash recharges after its 3 s cooldown")
+	check(p.air_dash, "dash recharges after its 1 s cooldown")
 	for archetype in range(Fighter.SPECS.size()):
 		p.change_class(archetype)
 		p.global_position = O + Vector3(88.8, 3, 20)
@@ -1132,6 +1134,7 @@ func test_air_movement() -> void:
 	p.simulate_movement(1.0 / 60, 0)
 	p.air_jump = true
 	p.air_dash = true
+	p.meter = 100
 	p.simulate_movement(1.0 / 60, 1)
 	check(p.velocity.y > 9.0 and not p.air_jump and p.air_dash, "double jump lifts and leaves the dash charge alone")
 	p.simulate_movement(1.0 / 60, 2)
@@ -1143,6 +1146,7 @@ func test_air_movement() -> void:
 	p.yaw = -PI / 2
 	p.movement = Vector2(0, -1)
 	p.air_dash = true
+	p.meter = 100
 	var start_x := p.global_position.x
 	p.simulate_movement(1.0 / 60, 2)
 	for i in range(30):

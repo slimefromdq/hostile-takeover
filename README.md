@@ -13,7 +13,7 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire (holding right also zooms in over the shoulder and fades your own body so the crosshair stays clear) |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
-| 1 | Air dash (about 4.5 m, independent of the double jump; 3 second cooldown) — **not sprint** |
+| 1 | Air dash (about 4.5 m, independent of the double jump; 1 second cooldown, costs 25 Tension, holds vertical speed so you hover through it) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
 | Q / E / F | Hero abilities (a hero has one to three) |
 | X | Ultimate; costs half the Tension meter |
@@ -51,7 +51,7 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 
 ## Tension and ultimates
 
-Every hero shares a **Tension** meter (0 to 100, shown beside the ability slots; the tick marks 50). It charges passively at 0.8 per second and faster in combat: +0.20 per point of damage dealt, +0.10 per point taken (absorbed damage counts), +10 per kill, +5 per assist (a hit on the victim within 6 seconds), +1.5 per second while contesting an open point you do not own. It is kept through death and reset by swapping hero. **Ultimates cost 50% of the bar** (X), so they can be chained when fights are hot, and are tuned a little weaker to compensate. Nothing but ultimates spends Tension yet. Rules live in `scripts/tension.gd`; see `docs/HEROES.md` for the hero design philosophy.
+Every hero shares a **Tension** meter (0 to 100, shown beside the ability slots; the tick marks 50). It charges passively at 0.8 per second and faster in combat: +0.20 per point of damage dealt, +0.10 per point taken (absorbed damage counts), +10 per kill, +5 per assist (a hit on the victim within 6 seconds), +1.5 per second while contesting an open point you do not own. It is kept through death and reset by swapping hero. **Ultimates cost 50% of the bar** (X), so they can be chained when fights are hot, and are tuned a little weaker to compensate. Ultimates and the air dash (25) spend it. Rules live in `scripts/tension.gd`; see `docs/HEROES.md` for the hero design philosophy.
 
 ## Weapons (experimental)
 
@@ -126,3 +126,7 @@ Art is generated primitive geometry (class rigs, effects and the map are code-bu
 `tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 20-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Character meshes are low-poly (about 10x fewer triangles than the first pass), the sun uses a single shadow cascade, small character details do not cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.
+
+## Test cheats (offline or host only)
+
+F6 toggles disabled cooldowns (abilities, dash, slide), F7 locks Tension at 100, F8 toggles taking damage, F9 fully heals you.

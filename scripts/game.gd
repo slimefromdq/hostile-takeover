@@ -25,6 +25,10 @@ var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
 var local_id := 1
+# Test cheats (F6 cooldowns, F7 Tension, F8 damage, F9 full heal); host/offline only.
+var cheat_no_cooldowns := false
+var cheat_full_tension := false
+var cheat_invulnerable := false
 var selected_class := 0
 var selected_weapon := 0
 var fighters: Dictionary = {}
@@ -337,6 +341,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
 		Sfx.set_muted(not Sfx.muted)
 		announce("Sound %s." % ("muted" if Sfx.muted else "on"))
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_F6, KEY_F7, KEY_F8, KEY_F9]:
+		_toggle_cheat(event.keycode)
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F2:
 		Visuals.set_colorblind(not Visuals.colorblind)
 		announce("Colour-blind palette %s · applies as fighters respawn." % ("on" if Visuals.colorblind else "off"))
@@ -599,7 +605,35 @@ func respawn(p: Fighter) -> void:
 	p.held = 0
 	p.edges = 0
 
+func _toggle_cheat(keycode: int) -> void:
+	if not authoritative:
+		announce("Test cheats are only available offline or as host.")
+		return
+	match keycode:
+		KEY_F6:
+			cheat_no_cooldowns = not cheat_no_cooldowns
+			announce("Test: cooldowns %s." % ("disabled" if cheat_no_cooldowns else "normal"))
+		KEY_F7:
+			cheat_full_tension = not cheat_full_tension
+			announce("Test: Tension %s." % ("locked at 100" if cheat_full_tension else "normal"))
+		KEY_F8:
+			cheat_invulnerable = not cheat_invulnerable
+			announce("Test: damage %s." % ("off" if cheat_invulnerable else "on"))
+		KEY_F9:
+			var p := local_player()
+			if p != null and p.hp > 0:
+				p.hp = p.spec.health
+				announce("Test: full heal.")
+
 func combat_tick(p: Fighter, dt: float) -> void:
+	if p.fighter_id == local_id:
+		if cheat_no_cooldowns:
+			p.cooldowns.assign([0.0, 0.0, 0.0])
+			p.dash_cd = 0.0
+			p.air_dash = true
+			p.slide_cd = 0.0
+		if cheat_full_tension:
+			p.meter = Tension.MAX
 	for i in range(3):
 		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
 	p.meter = Tension.passive(p.meter, dt)
@@ -820,6 +854,8 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		if struck_from != Vector3.INF and target.guard_blocks(struck_from):
 			absorb_hit(target, amount, source)
 			return false
+	if cheat_invulnerable and target.fighter_id == local_id:
+		return false
 	var before := target.hp
 	target.hp = maxf(0, target.hp - amount)
 	var dealt := before - target.hp

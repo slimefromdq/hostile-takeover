@@ -11,9 +11,11 @@ const DOUBLE_JUMP_SPEED := 13.5
 const WALL_KICK_UP := 10.5
 const WALL_KICK_PUSH := 7.5
 const WALL_KICK_PUSH_SKYRUNNER := 9.0
-const DASH_SPEED := 19.0
-const DASH_TIME := 0.24
-const DASH_COOLDOWN := 3.0
+const DASH_SPEED := 23.0
+const DASH_TIME := 0.28
+const DASH_COOLDOWN := 1.0
+const DASH_TENSION_COST := 25.0
+const DASH_MIN_VERTICAL := -3.0  # a falling dash still hovers: downward speed is capped when the dash begins
 const GROUND_ACCEL := 20.0
 const GROUND_FRICTION := 14.0
 const AIR_CAP := 1.2
@@ -189,6 +191,7 @@ var has_remote_target := false
 var step_timer := 0.0
 var dash_time := 0.0
 var dash_velocity := Vector3.ZERO
+var dash_vertical := 0.0  # vertical speed held for the whole dash (no gravity)
 var kills: int = 0
 var deaths: int = 0
 var equipment: Node3D
@@ -439,12 +442,13 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	elif dash_time > 0.0:
 		velocity.x = dash_velocity.x
 		velocity.z = dash_velocity.z
+		velocity.y = dash_vertical
 	else:
 		_air_steer(desired, dt)
 	if not grounded:
 		var gravity_scale := 1.0
 		if dash_time > 0.0:
-			gravity_scale = 0.35
+			gravity_scale = 0.0
 		elif wall_running:
 			gravity_scale = lerpf(1.0, WALL_RUN_GRAVITY, clampf(wall_run_time / WALL_RUN_SAG_TIME, 0.0, 1.0))
 		velocity.y -= GRAVITY * gravity_scale * dt
@@ -462,8 +466,9 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 			hang_time = 0.0
 		elif fresh_press:
 			jump_buffer = JUMP_BUFFER
-	if movement_edges & 2 and not grounded and air_dash:
+	if movement_edges & 2 and not grounded and air_dash and Tension.can_spend(meter, DASH_TENSION_COST):
 		air_dash = false
+		meter = Tension.spend(meter, DASH_TENSION_COST)
 		dash_cd = DASH_COOLDOWN
 		_end_wall_run()
 		vault_time = 0.0
@@ -473,7 +478,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 		dash_velocity = dash_dir * DASH_SPEED
 		if game.authoritative:
 			game.play_sfx(global_position, Sfx.Kind.DASH)
-		velocity = dash_velocity + Vector3.UP * maxf(velocity.y, 1.5)
+		dash_vertical = maxf(velocity.y, DASH_MIN_VERTICAL)
+		velocity = dash_velocity + Vector3.UP * dash_vertical
 	if grapple_time > 0:
 		velocity += (grapple - global_position).normalized() * 32.0 * dt
 		velocity = velocity.limit_length(23.0)
