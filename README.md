@@ -11,7 +11,7 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | Input | Action |
 |---|---|
 | WASD / mouse | Move / aim |
-| Left / right mouse | Primary / alternate fire |
+| Left / right mouse | Primary / alternate fire (holding right also zooms in over the shoulder and fades your own body so the crosshair stays clear) |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
 | 1 | Air dash (about 4.5 m, independent of the double jump; 3 second cooldown) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |

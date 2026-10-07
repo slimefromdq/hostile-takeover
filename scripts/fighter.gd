@@ -194,7 +194,28 @@ var equipment: Node3D
 var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
 
+# Right mouse held = aim down sights (a local view effect only): the shoulder camera pulls in and
+# narrows, and your own body fades so it stops covering the crosshair. Alt fire itself is unchanged.
+const ADS_FOV := 55.0
+const ADS_ARM_LENGTH := 2.0
+const ADS_ALPHA := 0.25
+const ADS_BLEND_RATE := 10.0
+const HIP_FOV := 80.0
+const HIP_ARM_LENGTH := 3.6
+var ads_blend: float = 0.0
+
+func _update_ads(dt: float) -> void:
+	var want := 1.0 if held & 2 and hp > 0 and not game.menu.visible else 0.0
+	if is_equal_approx(ads_blend, want):
+		return
+	ads_blend = move_toward(ads_blend, want, dt * ADS_BLEND_RATE)
+	camera.fov = lerpf(HIP_FOV, ADS_FOV, ads_blend)
+	(pivot.get_child(0) as SpringArm3D).spring_length = lerpf(HIP_ARM_LENGTH, ADS_ARM_LENGTH, ads_blend)
+	update_visual()
+
 func _process(dt: float) -> void:
+	if game != null and fighter_id == game.local_id:
+		_update_ads(dt)
 	if game != null and not game.authoritative and fighter_id != game.local_id and has_remote_target:
 		global_position = global_position.lerp(remote_target, minf(1.0, dt * 20))
 	if is_instance_valid(equipment) and hp > 0:
@@ -783,6 +804,8 @@ func update_visual() -> void:
 			alpha = 0.3
 		elif distance > 5.0:
 			shown = false
+	if fighter_id == game.local_id:
+		alpha = minf(alpha, lerpf(1.0, ADS_ALPHA, ads_blend))
 	equipment.visible = shown
 	CharacterRig.set_alpha(equipment, alpha)
 	var plate: bool = shown and fighter_id != game.local_id and (is_ally or distance < 25.0 or reveal > 0)
