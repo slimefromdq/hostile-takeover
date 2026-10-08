@@ -23,6 +23,9 @@ const AIR_CAP_HOT_LAP := 2.0
 const AIR_ACCEL := 60.0
 const AIR_ACCEL_HOT_LAP := 100.0
 const AIR_SPEED_SOFT_CAP := 15.0
+const WEAPON_SPEED_CAP := 24.0
+const WEAPON_LAUNCH_GRACE := 0.12
+const WEAPON_BOOST_TIME := 0.8
 # Slide: a short, boosted burst that bleeds speed at a fixed rate and steers by rotating the velocity.
 const SLIDE_MIN_SPEED := 5.0
 const SLIDE_EXIT_SPEED := 4.5
@@ -81,6 +84,10 @@ var primary: WeaponSpec
 var sidearm: WeaponSpec
 var slot: int = 0  # 0 = primary out, 1 = sidearm out
 var weapon: WeaponSpec  # the gun in hand (primary or sidearm); ammo and reload_timer belong to it
+var pending_weapon_impulse := Vector3.ZERO
+var weapon_impulse_sequence := 0
+var weapon_launch_time := 0.0
+var weapon_boost_time := 0.0
 var stowed_ammo: int = 0  # the other gun's magazine, kept while it is holstered
 var swap_timer: float = 0.0  # cannot fire until the swap finishes
 var utility_cd: float = 0.0
@@ -177,7 +184,8 @@ var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
 
 # Right mouse held = aim down sights: the shoulder camera pulls in, zooms hard and slides out to the side, so your own
-# body is pushed toward the left screen edge, and a near depth-of-field blur softens it. RMB does nothing else.
+# body is pushed toward the left screen edge, and a near depth-of-field blur softens it. Guns with alternate attacks
+# keep the hip camera, both here and in the authority's aim reconstruction.
 # The server reconstructs the same camera from the held button (aim_point), so the crosshair stays true.
 const ADS_FOV := 42.0
 const ADS_ARM_LENGTH := 2.2
@@ -193,7 +201,7 @@ var ads_blend: float = 0.0
 var _ads_blur: CameraAttributesPractical
 
 func _update_ads(dt: float) -> void:
-	var want := 1.0 if held & 2 and hp > 0 and not game.menu.visible else 0.0
+	var want := 1.0 if held & 2 and weapon.uses_ads() and hp > 0 and not game.menu.visible else 0.0
 	if is_equal_approx(ads_blend, want):
 		return
 	ads_blend = move_toward(ads_blend, want, dt * ADS_BLEND_RATE)
@@ -330,7 +338,7 @@ func aim_point() -> Vector3:
 	var origin := global_position + Vector3.UP * 1.55
 	# Reconstruct the shoulder camera on the authority; clients cannot submit hits.
 	var basis := Basis.from_euler(Vector3(pitch, yaw, 0))
-	var ads := 1.0 if held & 2 != 0 else 0.0
+	var ads := 1.0 if held & 2 != 0 and weapon.uses_ads() else 0.0
 	var back := basis * Vector3(lerpf(HIP_SIDE, ADS_SIDE, ads) * shoulder, 0, lerpf(HIP_ARM_LENGTH, ADS_ARM_LENGTH, ads))
 	var wall: Dictionary = game.ray(origin, origin + back, [get_rid()], 1 | 4)
 	var cam: Vector3 = origin + back if wall.is_empty() else wall.position + wall.normal * 0.2
@@ -359,8 +367,11 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	slide_cd = maxf(0.0, slide_cd - dt)
 	if dash_cd <= 0.0:
 		air_dash = true
-	var grounded := is_on_floor()
+	weapon_launch_time = maxf(0.0, weapon_launch_time - dt)
+	weapon_boost_time = maxf(0.0, weapon_boost_time - dt)
+	var grounded := is_on_floor() and weapon_launch_time <= 0.0
 	if grounded:
+		weapon_boost_time = 0.0
 		air_jump = true
 		wall_repeats = 0
 		wall_normal = Vector3.ZERO
@@ -379,7 +390,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 	var speed := (8.0 if idle_weapon >= 1.25 else 6.0) * weapon.move_speed_mult
 	_update_slide_state(grounded, dt)
 	dash_time = maxf(0.0, dash_time - dt)
-	_update_wall_run(grounded, desired, dt)
+	if pending_weapon_impulse == Vector3.ZERO and weapon_launch_time <= 0.0:
+		_update_wall_run(grounded, desired, dt)
 	if sliding:
 		_slide_step(desired, dt)
 	elif grounded:
@@ -435,7 +447,9 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 			grapple_time = 0.0
 			hot_lap = 2.0
 	MapVerbs.post_move(self, dt)
-	_ledge_step(desired, grounded, dt)
+	_consume_weapon_impulse()
+	if weapon_launch_time <= 0.0:
+		_ledge_step(desired, grounded, dt)
 	move_and_slide()
 	step_timer -= dt
 	if game.authoritative and is_on_floor() and Vector2(velocity.x, velocity.z).length() > 2 and step_timer <= 0:
@@ -693,10 +707,37 @@ func _air_steer(desired: Vector3, dt: float) -> void:
 	# Soft ceiling so strafing and dashes cannot build unbounded speed.
 	if grapple_time <= 0.0:
 		var horizontal := Vector2(velocity.x, velocity.z)
-		if horizontal.length() > AIR_SPEED_SOFT_CAP:
-			var limited := horizontal.move_toward(horizontal.normalized() * AIR_SPEED_SOFT_CAP, 18.0 * dt)
+		var cap := WEAPON_SPEED_CAP if weapon_boost_time > 0.0 else AIR_SPEED_SOFT_CAP
+		if horizontal.length() > cap:
+			var limited := horizontal.move_toward(horizontal.normalized() * cap, 18.0 * dt)
 			velocity.x = limited.x
 			velocity.z = limited.y
+
+func apply_weapon_impulse(impulse: Vector3) -> void:
+	if hp <= 0 or not impulse.is_finite():
+		return
+	pending_weapon_impulse += impulse
+	dash_time = 0.0
+	_end_wall_run()
+	grapple_time = 0.0
+	zip_id = -1
+	climbing = false
+	vault_time = 0.0
+	hang_time = 0.0
+	sliding = false
+
+func _consume_weapon_impulse() -> void:
+	if pending_weapon_impulse == Vector3.ZERO:
+		return
+	velocity += pending_weapon_impulse
+	var flat := Vector2(velocity.x, velocity.z).limit_length(WEAPON_SPEED_CAP)
+	velocity.x = flat.x
+	velocity.z = flat.y
+	velocity.y = minf(velocity.y, WEAPON_SPEED_CAP)
+	pending_weapon_impulse = Vector3.ZERO
+	weapon_launch_time = WEAPON_LAUNCH_GRACE
+	weapon_boost_time = WEAPON_BOOST_TIME
+	weapon_impulse_sequence += 1
 
 # Takes a loadout's guns in hand: the primary out, both magazines full.
 func equip(loadout_code: int) -> void:
@@ -779,6 +820,9 @@ func apply_loadout(loadout_code: int) -> void:
 	grapple_time = 0
 	hot_lap = 0
 	damagers.clear()
+	pending_weapon_impulse = Vector3.ZERO
+	weapon_launch_time = 0.0
+	weapon_boost_time = 0.0
 	if is_instance_valid(equipment):
 		if rebuild:
 			equipment.queue_free()
@@ -835,6 +879,12 @@ func update_visual() -> void:
 
 func pack() -> Dictionary:
 	var state := {"id": fighter_id, "team": team, "lo": loadout, "ap": look, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "k": kills, "d": deaths, "pp": power_pickups, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	if weapon_impulse_sequence > 0:
+		state["wi"] = weapon_impulse_sequence
+	if weapon_launch_time > 0.0:
+		state["wl"] = weapon_launch_time
+	if weapon_boost_time > 0.0:
+		state["wb"] = weapon_boost_time
 	# Optional state is only sent while it matters (snapshots are already past the MTU); unpack supplies defaults.
 	if slot != 0:
 		state["slot"] = slot
@@ -875,7 +925,15 @@ func unpack(data: Dictionary, local: bool) -> void:
 		has_remote_target = true
 	else:
 		global_position = data.pos if error > 2.0 or hp <= 0 else global_position.lerp(data.pos, 0.25)
-	velocity = data.vel if not local or error > 2.0 else velocity.lerp(data.vel, 0.25)
+	var impulse_sequence: int = data.get("wi", 0)
+	var new_impulse := impulse_sequence != weapon_impulse_sequence
+	if new_impulse:
+		dash_time = 0.0  # A predicted dash must not overwrite the authority's launch velocity.
+		pending_weapon_impulse = Vector3.ZERO
+	velocity = data.vel if not local or error > 2.0 or new_impulse else velocity.lerp(data.vel, 0.25)
+	weapon_impulse_sequence = impulse_sequence
+	weapon_launch_time = data.get("wl", 0.0)
+	weapon_boost_time = data.get("wb", 0.0)
 	if not local:
 		yaw = data.yaw
 		pitch = data.pitch

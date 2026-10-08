@@ -41,6 +41,37 @@ Verified on Windows with Godot 4.7.2 and an NVIDIA RTX 3080:
 The geometry adds sculpted profiles and flat face patches while retaining the existing mesh baker, bone paths,
 appearance packing, collider and gameplay tuning. See [character design notes](docs/CHARACTERS.md).
 
+## Movement arsenal — 2026-10-08
+
+Verified on Windows with Godot 4.7.2; Forward+ renders used an NVIDIA RTX 3080.
+
+- Editor import: completed without script or resource errors. The runs used a writable workspace profile for
+  `APPDATA` and `LOCALAPPDATA`, and absolute engine log paths.
+- Behavioral suite: **527 checks, 0 failures**. All fourteen guns build and their live default-fire cadence agrees
+  with ideal first-impact TTK within one 60 Hz simulation step. Separate fixtures cover projectile travel delay,
+  swept collisions, splash occlusion/falloff, direct-hit deduplication, allies, deployables, cached launch damage,
+  self-damage/armor and suicide scoring. Ordinary full-health one-shot damage limits are asserted.
+- Weapon movement checks cover floor/wall explosive jumps, double-barrel recoil, speed caps, interrupted movement
+  states, cable/climb reattachment prevention, preserved movement resources and single-delivery client impulses.
+  Projectile checks cover grenade fuse/arming/detonation, disc bounce limits, input priority, ammo/reload/swap locks,
+  spawn budgets, expiry, snapshots and lifecycle cleanup.
+- The baseline restart failure is corrected: restart removes combat entities and projectiles, restores fighters,
+  and recreates map pickups. The inspected baseline had **346 checks, one failure** on the old assertion.
+- Movement Course: **18 checks, 0 failures**. Map verbs: **37 checks, 0 failures**. Walker: **64 routes, 0 failures**.
+  Canopy bot tower: **PASS**, power-up collected at 8 seconds, best height 17.1 m. Offline match smoke: **PASS**,
+  ten fighters, five advancing, objective pressure and finite positions/velocities.
+- LAN server/client with `--latency-ms=80 --drop-every=5`: **PASS**. Covers existing movement/utility/swap behavior,
+  appended weapon indices, grenade and disc reconciliation, reliable detonation and recoil launch without duplicate
+  impulse delivery. Bots remain in the replicated roster but are held dead in this deterministic fixture so random
+  combat cannot interrupt its staged actions. This is a correctness test, not a full-combat bandwidth benchmark.
+- Final two-minute soak: **PASS**, node samples **860 / 872 / 882 / 854**, peak **882**, **zero orphan nodes**.
+- Complete fourteen-gun lineup rendered and visually inspected in [arsenal.png](docs/previews/arsenal.png).
+  Enlarged menu (including its lower scroll position) and HUD rendered and inspected at **1280×720**, **2560×1080**
+  and **1024×768** using `tests/render_arsenal.gd` and `tests/render_resolutions.gd`.
+
+Human balance/feel playtests and listening checks for the new synthesized cues remain outstanding. The existing
+20 Hz authoritative snapshot model is retained; these tests do not establish production netcode or rollback support.
+
 ## What changed on the way (for context)
 Two defects were found by looking at real renders and fixed with regression tests: the opaque map shader wrote ALPHA, which
 forced every map mesh into the transparent pipeline so walls drew over each other, and character meshes used default

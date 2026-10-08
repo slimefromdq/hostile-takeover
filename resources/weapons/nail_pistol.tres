@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Nail Pistol"
+blurb = "Accurate nails for projectile follow-ups. Lead your target."
+damage = 18
+interval = 0.14
+magazine = 18
+reload_time = 1.2
+reach = 40
+headshot_mult = 1
+fire_mode = 1
+projectile_speed = 65

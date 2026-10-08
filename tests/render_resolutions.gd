@@ -18,7 +18,16 @@ func run() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	await create_timer(0.5).timeout
+	if tag.begins_with("arsenal"):
+		game.menu.item_buttons[1][4].button_pressed = true
+		game.menu._pick(1, 4)
+		game.menu.item_buttons[0][8].button_pressed = true
+		game.menu._pick(0, 8)
 	await shot("res://docs/previews/res_%s_menu.png" % tag)
+	if tag.begins_with("arsenal"):
+		game.menu.loadout_scroll.scroll_vertical = 10000
+		await shot("res://docs/previews/res_%s_menu_lower.png" % tag)
+		game.menu.loadout_scroll.scroll_vertical = 0
 	game.start_game("offline")
 	var p: Fighter = game.local_player()
 	p.global_position = Vector3(-57, 0.1, 5)

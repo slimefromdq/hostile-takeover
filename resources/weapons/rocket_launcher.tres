@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Rocket Launcher"
+blurb = "Splash pressure. Fire at floors or walls to rocket jump; jumps cost reduced health."
+damage = 100
+interval = 0.85
+magazine = 4
+reload_time = 1.8
+reach = 60
+headshot_mult = 1
+fire_mode = 1
+projectile_speed = 28
+projectile_radius = 0.12
+splash_radius = 3.5
+splash_damage = 80
+splash_min = 15

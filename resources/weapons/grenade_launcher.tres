@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Grenade Launcher"
+blurb = "Bouncing grenades. RMB detonates armed grenades; blast jumps cost reduced health."
+damage = 110
+interval = 0.9
+magazine = 4
+reload_time = 1.9
+reach = 40
+headshot_mult = 1
+fire_mode = 1
+alt_mode = 1
+projectile_speed = 24
+projectile_radius = 0.12
+projectile_gravity = 15
+projectile_lift = 3
+projectile_fuse = 2.5
+projectile_bounces = 64
+bounce_retention = 0.65
+splash_radius = 3.5
+splash_damage = 85
+splash_min = 15

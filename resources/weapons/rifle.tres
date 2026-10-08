@@ -4,8 +4,8 @@
 script = ExtResource("1")
 title = "Rifle"
 blurb = "Semi-auto rifle. Precise, rewards headshots, slow to follow up."
-damage = 42.0
-interval = 0.55
+damage = 55.0
+interval = 0.32
 magazine = 8
 reload_time = 1.8
 reach = 80.0

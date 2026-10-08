@@ -2,6 +2,9 @@ extends Node3D
 
 const FIGHTER_SCENE = preload("res://scenes/fighter.tscn")
 const PORT = 27847
+const MAX_PROJECTILES := 256
+const MAX_OWNER_PROJECTILES := 32
+const MAX_LAUNCHER_GRENADES := 4
 # Health packs (blockout "pickup" features): an instant heal, then a regen that enemy hero damage cancels.
 const PACK_HEAL := 60.0
 const PACK_REGEN := 150.0
@@ -39,7 +42,8 @@ const EDGE_RELOAD := 4
 const EDGE_UTILITY := 8  # Q
 const EDGE_MELEE := 16  # F
 const EDGE_SWAP := 32  # 2 or the mouse wheel: primary <-> sidearm
-const EDGE_ALL := 63
+const EDGE_ALT := 64  # reliable, weapon-specific RMB press
+const EDGE_ALL := 127
 const HELD_BITS := 27  # held buttons: 1 fire, 2 aim down sights (RMB), 8 slide, 16 jump
 var authoritative := true
 var running := false
@@ -52,6 +56,8 @@ var selected_loadout := Loadout.encode(1, 0, Loadout.Utility.FRAG_GRENADE, Loado
 var selected_look := Appearance.load_saved()  # the start menu's LOOK tab; saved in user://settings.cfg
 var fighters: Dictionary = {}
 var entities: Dictionary = {}
+var projectiles: Dictionary = {}
+var projectile_next := 1
 var entity_next := 1
 var match_state := Acquisition.new()
 var points: Array[Vector3] = []
@@ -188,6 +194,7 @@ func start_game(mode: String) -> void:
 			menu_status.text = "Only the host or offline player can restart a running round."
 			return
 		match_state.reset()
+		clear_projectiles()
 		map_clock = 0.0
 		for e in entities.values():
 			remove_entity(e.entity_id)
@@ -261,6 +268,7 @@ func connection_failed() -> void:
 
 func server_disconnected() -> void:
 	running = false
+	clear_projectiles()
 	menu.show()
 	hud.hide()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -273,6 +281,7 @@ func peer_disconnected(id: int) -> void:
 	if not authoritative or not fighters.has(id):
 		return
 	var side: int = fighters[id].team
+	clear_projectiles(id)
 	remove_owned(id)
 	fighters[id].queue_free()
 	fighters.erase(id)
@@ -297,6 +306,7 @@ func join_request(loadout_code: int, look_code: int) -> void:
 	for p in fighters.values():
 		if p.bot and p.team == side:
 			remove_owned(p.fighter_id)
+			clear_projectiles(p.fighter_id)
 			fighters.erase(p.fighter_id)
 			p.queue_free()
 			break
@@ -367,6 +377,7 @@ func apply_loadout(id: int, loadout_code: int) -> void:
 			remote_notice.rpc_id(id, "Return to spawn to change loadout.")
 		return
 	remove_owned(id)
+	clear_projectiles(id)
 	p.apply_loadout(loadout_code)
 	p.dead_time = 0
 	p.global_position = spawn_position(p)
@@ -401,7 +412,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var look := 0.0025 * DisplayPrefs.sensitivity
 		p.yaw -= event.relative.x * look
 		p.pitch = clampf(p.pitch - event.relative.y * look, -1.25, 1.2)
-	for pair in [["jump", EDGE_JUMP], ["dash", EDGE_DASH], ["reload", EDGE_RELOAD], ["utility", EDGE_UTILITY], ["melee", EDGE_MELEE], ["swap", EDGE_SWAP]]:
+	for pair in [["jump", EDGE_JUMP], ["dash", EDGE_DASH], ["reload", EDGE_RELOAD], ["utility", EDGE_UTILITY], ["melee", EDGE_MELEE], ["swap", EDGE_SWAP], ["alt", EDGE_ALT]]:
 		if event.is_action_pressed(pair[0]) and not event.is_echo():
 			input_edges |= pair[1]
 	if event.is_action_pressed("shoulder"):
@@ -466,6 +477,7 @@ func _physics_process(dt: float) -> void:
 					if player.hp >= Fighter.MAX_HEALTH:
 						player.heal_left = 0
 			player.edges = 0
+		projectiles_tick(dt)
 		if match_state.winner == -2:
 			entities_tick(dt)
 			if not explore:
@@ -481,6 +493,8 @@ func _physics_process(dt: float) -> void:
 						get_tree().create_timer(network_delay).timeout.connect(send_state)
 					else:
 						send_state.call()
+	else:
+		projectiles_tick(dt)
 	update_hud(dt)
 
 # Grapples and launch pads can never carry a fighter out of the arena.
@@ -530,7 +544,10 @@ func packed_world() -> Dictionary:
 		players.append(p.pack())
 	for e in entities.values():
 		deploys.append(e.pack())
-	return {"players": players, "entities": deploys, "match": match_state.pack(), "tick": simulation_tick, "mt": map_clock}
+	var world := {"players": players, "entities": deploys, "match": match_state.pack(), "tick": simulation_tick, "mt": map_clock}
+	if not projectiles.is_empty():
+		world["pr"] = projectiles.values().map(func(shot: WeaponProjectile): return shot.pack())
+	return world
 
 func encode_world() -> PackedByteArray:
 	return var_to_bytes(packed_world()).compress(FileAccess.COMPRESSION_DEFLATE)
@@ -593,6 +610,20 @@ func apply_world(data: Dictionary) -> void:
 		if not seen.has(id):
 			entities[id].queue_free()
 			entities.erase(id)
+	seen.clear()
+	for state in data.get("pr", []):
+		seen.append(state.id)
+		if not projectiles.has(state.id):
+			create_projectile(state)
+		var shot: WeaponProjectile = projectiles[state.id]
+		shot.global_position = state.p
+		shot.velocity = state.v
+		shot.age = state.a
+		shot.bounces = state.b
+		shot.update_visual()
+	for id in projectiles.keys():
+		if not seen.has(id):
+			remove_projectile(id)
 	match_state.unpack(data.match)
 
 func ray(from: Vector3, to: Vector3, exclude: Array = [], mask: int = 15) -> Dictionary:
@@ -637,6 +668,8 @@ func _toggle_cheat(keycode: int) -> void:
 				announce("Test: full heal.")
 
 func combat_tick(p: Fighter, dt: float) -> void:
+	if not authoritative or p.hp <= 0:
+		return
 	if p.fighter_id == local_id and cheat_no_cooldowns:
 		p.utility_cd = 0.0
 		p.melee_cd = 0.0
@@ -656,7 +689,8 @@ func combat_tick(p: Fighter, dt: float) -> void:
 		p.damagers[attacker] += dt
 		if p.damagers[attacker] > ASSIST_WINDOW:
 			p.damagers.erase(attacker)
-	p.shot_timer = maxf(0, p.shot_timer - dt)
+	# Keep the last fraction of a physics tick so rapid guns do not lose cadence to rounding.
+	p.shot_timer = p.shot_timer - dt if p.shot_timer > 0.0 else 0.0
 	p.conceal = maxf(0, p.conceal - dt)
 	p.reveal = maxf(0, p.reveal - dt)
 	if p.edges & EDGE_SWAP:
@@ -675,6 +709,25 @@ func combat_tick(p: Fighter, dt: float) -> void:
 		use_melee(p)
 	# The gun in hand fires once a swap has finished, no melee is recovering and no reload is running.
 	var ready := p.swap_timer <= 0.0 and p.melee_cd <= 0.0 and p.reload_timer <= 0
+	if p.edges & EDGE_ALT and w.alt_mode != WeaponSpec.AltMode.ADS:
+		if ready and p.shot_timer <= 0.00001:
+			if w.alt_mode == WeaponSpec.AltMode.DETONATE:
+				for shot in projectiles.values():
+					if shot.owner_id == p.fighter_id and shot.spec.alt_mode == WeaponSpec.AltMode.DETONATE and shot.age >= 0.25:
+						p.conceal = 0
+						p.idle_weapon = 0
+						explode_projectile(shot)
+			elif p.ammo >= w.alt_ammo:
+				p.ammo -= w.alt_ammo
+				p.shot_timer = w.interval + minf(0.0, p.shot_timer)
+				p.conceal = 0
+				p.idle_weapon = 0
+				fire_ray(p, w.damage, w.alt_pellets)
+				p.apply_weapon_impulse(-p.direction() * w.alt_recoil)
+			else:
+				p.reload_timer = w.reload_time
+		p.update_visual()
+		return
 	# Bursts finish their committed sequence even if fire is released.
 	if p.burst_left > 0:
 		p.burst_timer -= dt
@@ -684,17 +737,16 @@ func combat_tick(p: Fighter, dt: float) -> void:
 			p.ammo -= 1
 			p.conceal = 0
 			p.idle_weapon = 0
-			fire_ray(p, w.damage)
+			fire_weapon(p)
 	elif p.held & 1 and ready and p.shot_timer <= 0.00001:
 		if p.ammo <= 0:
 			p.reload_timer = w.reload_time
-		else:
+		elif fire_weapon(p):
 			p.conceal = 0
 			p.ammo -= 1
-			p.shot_timer = w.interval
+			p.shot_timer = w.interval + minf(0.0, p.shot_timer)
 			p.burst_left = w.burst - 1
 			p.burst_timer = w.burst_gap
-			fire_ray(p, w.damage)
 	p.update_visual()
 
 # Shot sound and tracer per gun, keyed by WeaponSpec.title.
@@ -705,8 +757,130 @@ const WEAPON_FX := {
 	"Pistol": [Sfx.Kind.SHOT_PISTOL, Vfx.Style.PISTOL],
 	"Burst Pistol": [Sfx.Kind.SHOT_BURST_PISTOL, Vfx.Style.PISTOL],
 	"Revolver": [Sfx.Kind.SHOT_REVOLVER, Vfx.Style.REVOLVER],
+	"Rocket Launcher": [Sfx.Kind.SHOT_ROCKET, Vfx.Style.ROCKET],
+	"Grenade Launcher": [Sfx.Kind.SHOT_LAUNCHER, Vfx.Style.GRENADE],
+	"Plasma Gun": [Sfx.Kind.SHOT_PLASMA, Vfx.Style.PLASMA],
+	"Lightning Gun": [Sfx.Kind.SHOT_LIGHTNING, Vfx.Style.LIGHTNING],
+	"Railgun": [Sfx.Kind.SHOT_RAIL, Vfx.Style.RAIL],
+	"Double-Barrel Shotgun": [Sfx.Kind.SHOT_DOUBLE, Vfx.Style.PELLET],
+	"Nail Pistol": [Sfx.Kind.SHOT_NAIL, Vfx.Style.NAIL],
+	"Disc Launcher": [Sfx.Kind.SHOT_DISC, Vfx.Style.DISC],
 }
 const MAX_PELLET_TRACES := 4  # a shotgun blast draws a few tracers, not nine
+
+func create_projectile(data: Dictionary) -> WeaponProjectile:
+	var shot := WeaponProjectile.new()
+	add_child(shot)
+	shot.configure(self, data)
+	projectiles[shot.projectile_id] = shot
+	return shot
+
+func remove_projectile(id: int) -> void:
+	if projectiles.has(id):
+		projectiles[id].queue_free()
+		projectiles.erase(id)
+
+func clear_projectiles(owner: int = -1) -> void:
+	for shot in projectiles.values():
+		if owner < 0 or shot.owner_id == owner:
+			remove_projectile(shot.projectile_id)
+
+func launcher_grenade_count(owner: int) -> int:
+	var count := 0
+	for shot in projectiles.values():
+		if shot.owner_id == owner and shot.spec.alt_mode == WeaponSpec.AltMode.DETONATE:
+			count += 1
+	return count
+
+func projectiles_tick(dt: float) -> void:
+	if match_state.winner != -2:
+		clear_projectiles()
+		return
+	for shot in projectiles.values():
+		shot.tick(dt)
+
+# Ammo is spent by combat_tick only after this dispatcher accepts the shot.
+func fire_weapon(p: Fighter) -> bool:
+	if not authoritative or p.hp <= 0:
+		return false
+	var w := p.weapon
+	if w.fire_mode == WeaponSpec.FireMode.HITSCAN:
+		fire_ray(p, w.damage)
+		return true
+	var owned := 0
+	for shot in projectiles.values():
+		if shot.owner_id == p.fighter_id:
+			owned += 1
+	if projectiles.size() >= MAX_PROJECTILES or owned >= MAX_OWNER_PROJECTILES:
+		return false
+	if w.alt_mode == WeaponSpec.AltMode.DETONATE and launcher_grenade_count(p.fighter_id) >= MAX_LAUNCHER_GRENADES:
+		return false
+	var from := p.muzzle()
+	var toward := spread_direction((p.aim_point() - from).normalized(), w.spread_deg)
+	# A shoulder muzzle must not start on the far side of nearby cover.
+	var obstructed := ray(p.global_position + Vector3.UP * 1.35, from, [p.get_rid()], 1 | 4)
+	if not obstructed.is_empty():
+		from = obstructed.position + obstructed.normal * (w.projectile_radius + 0.01)
+	var id: int = Loadout.decode(p.loadout)[p.slot] + (16 if p.slot == 1 else 0)
+	var shot := create_projectile({"id": projectile_next, "o": p.fighter_id, "t": p.team, "w": id, "p": from, "v": toward * w.projectile_speed + Vector3.UP * w.projectile_lift})
+	projectile_next += 1
+	shot.damage_scale = Items.QUAD_MULTIPLIER if p.power == Items.POWER_QUAD else 1.0
+	var fx: Array = WEAPON_FX[w.title]
+	play_sfx(from, fx[0])
+	show_trace(from, from + toward * 0.3, team_color(p.team), fx[1])
+	return true
+
+func projectile_hit(shot: WeaponProjectile, object: Object, amount: float) -> bool:
+	if not authoritative:
+		return false
+	if object is Fighter:
+		var self_hit: bool = object.fighter_id == shot.owner_id
+		if object.team == shot.team and not self_hit:
+			return false
+		var reached := damage_fighter(object, amount, shot.owner_id, shot.global_position, shot.spec.title, 1.0 if self_hit else shot.damage_scale)
+		if reached and not self_hit:
+			hit_feedback(shot.owner_id, 2 if object.hp <= 0 else 0)
+		return reached
+	if object is Deployable and object.team != shot.team:
+		object.hp -= amount * shot.damage_scale
+		object.last_damage = object.age
+		hit_feedback(shot.owner_id)
+		return true
+	return false
+
+func explode_projectile(shot: WeaponProjectile, direct: Object = null) -> void:
+	if not authoritative or not projectiles.has(shot.projectile_id):
+		return
+	var pos := shot.global_position
+	var w := shot.spec
+	var direct_reached := false
+	if direct != null:
+		direct_reached = projectile_hit(shot, direct, w.damage)
+	for target in fighters.values() + entities.values():
+		if target is Deployable and target.collision_layer == 0:
+			continue  # Timed pickups are map state, not destructible cover.
+		if target.hp <= 0:
+			continue
+		var self_hit: bool = target is Fighter and target.fighter_id == shot.owner_id
+		if target.team == shot.team and not self_hit:
+			continue
+		var center: Vector3 = target.global_position + (Vector3.UP * 0.9 if target is Fighter else target.mesh.position)
+		var diff := center - pos
+		var distance := diff.length()
+		if distance >= w.splash_radius:
+			continue
+		var sight := ray(pos, center, [], 1 | 4)
+		if not sight.is_empty() and sight.collider != target:
+			continue
+		var fraction := 1.0 - distance / w.splash_radius
+		var amount := lerpf(w.splash_min, w.splash_damage, fraction)
+		var reached := direct_reached if target == direct else projectile_hit(shot, target, amount * (0.25 if self_hit else 1.0))
+		if target is Fighter and target.hp > 0 and (reached or self_hit):
+			var outward := diff.normalized() if distance > 0.001 else Vector3.UP
+			target.apply_weapon_impulse(outward * fraction * (16.0 if self_hit else 6.0))
+	show_ring(pos, w.splash_radius, Color("ffb457"))
+	play_sfx(pos, Sfx.Kind.EXPLODE)
+	remove_projectile(shot.projectile_id)
 
 # Random direction inside a cone of `deg` half-angle around `toward`.
 func spread_direction(toward: Vector3, deg: float) -> Vector3:
@@ -719,15 +893,16 @@ func spread_direction(toward: Vector3, deg: float) -> Vector3:
 	var radius := tan(deg_to_rad(deg)) * sqrt(rng.randf())
 	return (toward + (side * cos(angle) + up * sin(angle)) * radius).normalized()
 
-func fire_ray(p: Fighter, amount: float) -> void:
+func fire_ray(p: Fighter, amount: float, pellet_count: int = 0) -> void:
 	var w := p.weapon
 	var fx: Array = WEAPON_FX.get(w.title, [Sfx.Kind.SHOT_PISTOL, Vfx.Style.LINE])
 	play_sfx(p.global_position, fx[0])
 	var from := p.muzzle()
 	var toward := (p.aim_point() - from).normalized()
 	var landed := {}  # enemy Fighter -> [damage, headshot], applied once per shot so a blast is one hit
-	for i in range(w.pellets):
-		var dir := toward if i == 0 and w.pellets > 1 else spread_direction(toward, w.spread_deg)
+	var pellets := w.pellets if pellet_count == 0 else pellet_count
+	for i in range(pellets):
+		var dir := toward if i == 0 and pellets > 1 else spread_direction(toward, w.spread_deg)
 		var hit := ray(from, from + dir * w.reach, [p.get_rid()])
 		var end: Vector3 = from + dir * w.reach if hit.is_empty() else hit.position
 		if i < MAX_PELLET_TRACES:
@@ -769,16 +944,18 @@ func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 
 # Returns true when the damage reached the target. `cause` names what dealt it in the kill feed (a utility or melee);
 # empty means the attacker's gun in hand.
-func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, cause: String = "") -> bool:
+func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, cause: String = "", power_scale: float = -1.0) -> bool:
 	if target.hp <= 0 or not authoritative:
 		return false
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
-	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0:
+	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0 and attacker != target.fighter_id:
 		return false
 	if target.power == Items.POWER_INVULNERABLE and (attacker >= 0 or amount < 1000.0):
 		return false  # invincible; only the out-of-bounds kill (attacker -1, 10000) goes through
 	var source: Fighter = fighters.get(attacker)
-	if source != null and source != target and source.power == Items.POWER_QUAD:
+	if power_scale >= 0.0:
+		amount *= power_scale
+	elif source != null and source != target and source.power == Items.POWER_QUAD:
 		amount *= Items.QUAD_MULTIPLIER
 	if cheat_invulnerable and target.fighter_id == local_id:
 		return false
@@ -799,6 +976,9 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.deaths += 1
 		target.dead_time = 5.0
 		target.velocity = Vector3.ZERO
+		target.pending_weapon_impulse = Vector3.ZERO
+		target.weapon_launch_time = 0.0
+		target.weapon_boost_time = 0.0
 		target.grapple_time = 0
 		target.conceal = 0
 		target.armor = 0.0
@@ -806,7 +986,12 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.power_time = 0.0
 		remove_owned(target.fighter_id)
 		target.update_visual()
-		if source != null:
+		if source == target:
+			var suicide_label := "%s · %s (suicide)" % [target.callsign(), cause if cause != "" else target.weapon.title]
+			kill_feed(suicide_label, target.team, target.callsign(), target.team)
+			if multiplayer.get_peers().size() > 0:
+				kill_feed.rpc(suicide_label, target.team, target.callsign(), target.team)
+		elif source != null:
 			source.kills += 1
 			if source.power != 0 and source.team != target.team:
 				source.power_kills += 1
@@ -1311,10 +1496,31 @@ func bot_input(p: Fighter, dt: float) -> void:
 	p.held = 0
 	if target != null and target.hp > 0:
 		var target_diff := target.global_position + Vector3.UP * 1.1 - p.muzzle()
-		aim = target_diff.normalized()
 		var gap := target_diff.length()
+		var w := p.weapon
+		var flight := clampf(gap / w.projectile_speed, 0.0, 1.0) if w.projectile_speed > 0.0 else 0.0
+		var lead := target.velocity * flight
+		lead.y += 0.5 * w.projectile_gravity * flight * flight - w.projectile_lift * flight
+		if w.splash_radius > 0.0 and target.is_on_floor():
+			lead.y -= 0.95
+		aim = (target_diff + lead).normalized()
 		if gap <= p.weapon.reach:
 			p.held = 1
+		if w.splash_radius > 0.0:
+			var unsafe := gap < w.splash_radius + 1.0
+			for ally in fighters.values():
+				if ally != p and ally.team == p.team and ally.hp > 0 and ally.global_position.distance_to(p.global_position) < 2.0:
+					unsafe = true
+			if unsafe:
+				p.held = 0
+				if p.slot == 0 and p.stowed_ammo > 0 and p.swap_timer <= 0.0:
+					p.edges |= EDGE_SWAP
+		if w.alt_mode == WeaponSpec.AltMode.DETONATE:
+			for shot in projectiles.values():
+				if shot.owner_id == p.fighter_id and shot.age >= 0.25 and shot.global_position.distance_to(target.global_position + Vector3.UP * 0.9) < w.splash_radius and shot.global_position.distance_to(p.global_position + Vector3.UP * 0.9) > w.splash_radius:
+					p.edges |= EDGE_ALT
+		elif w.alt_mode == WeaponSpec.AltMode.DOUBLE_BLAST and gap < 4.0 and p.ammo >= 2:
+			p.edges |= EDGE_ALT
 		bot_kit(p, gap, dt)
 	elif p.slot == 1 and p.swap_timer <= 0.0 and rng.randf() < dt * 2.0:
 		p.edges |= EDGE_SWAP  # nobody in sight: back to the primary
@@ -1383,6 +1589,14 @@ func bot_weights(p: Fighter) -> Dictionary:
 				odds = {"blv": 0.25, "roof": 0.45, "trn": 0.1, "aln": 0.2}
 			2:  # SMG
 				odds = {"blv": 0.4, "roof": 0.15, "trn": 0.25, "aln": 0.2}
+			3, 4:  # Explosives favor high ground and open approach angles.
+				odds = {"blv": 0.35, "roof": 0.4, "trn": 0.1, "aln": 0.15}
+			5, 6:  # Tracking guns favor medium and close routes.
+				odds = {"blv": 0.4, "roof": 0.1, "trn": 0.3, "aln": 0.2}
+			7:
+				odds = {"blv": 0.25, "roof": 0.5, "trn": 0.1, "aln": 0.15}
+			8:
+				odds = {"blv": 0.15, "roof": 0.1, "trn": 0.4, "aln": 0.35}
 		var roll := rng.randf()
 		var chosen := "blv"
 		for tag in odds:
@@ -1530,7 +1744,7 @@ func update_hud(dt: float) -> void:
 	if p == null:
 		return
 	# Aiming down sights with a ricochet gun previews the bounce; local presentation only, it never deals damage.
-	if p.weapon.ricochet and p.held & 2 and p.hp > 0 and simulation_tick % 4 == 0:
+	if p.weapon.ricochet and p.weapon.uses_ads() and p.held & 2 and p.hp > 0 and simulation_tick % 4 == 0:
 		var start := p.muzzle()
 		var direction := (p.aim_point() - start).normalized()
 		var hit := ray(start, start + direction * p.weapon.reach, [p.get_rid()])

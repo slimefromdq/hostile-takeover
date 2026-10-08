@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Railgun"
+blurb = "Long-range precision slug. Powerful peeks, slow recovery; no full-health one-shot."
+damage = 105
+interval = 1.15
+magazine = 4
+reload_time = 2
+reach = 100
+headshot_mult = 1.65

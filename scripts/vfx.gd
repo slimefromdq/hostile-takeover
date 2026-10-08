@@ -1,10 +1,10 @@
 class_name Vfx
 extends RefCounted
 
-# Cosmetic combat effects. Damage and hit detection stay hitscan on the authority;
+# Cosmetic combat effects. Damage and hit detection stay on the authority;
 # these only change how shots, abilities and impacts are drawn.
 
-enum Style { LINE, PISTOL, REVOLVER, BOUNCE, SWOOSH, GRENADE, PELLET, RIFLE, SMG }
+enum Style { LINE, PISTOL, REVOLVER, BOUNCE, SWOOSH, GRENADE, PELLET, RIFLE, SMG, ROCKET, PLASMA, LIGHTNING, RAIL, NAIL, DISC }
 
 const BOLT_SPEED := 140.0
 # Lifetime multiplier; tests raise it to hold effects still for screenshots.
@@ -191,6 +191,19 @@ static func tracer(root: Node3D, from: Vector3, to: Vector3, style: int, color: 
 	if from.distance_to(to) < 0.01 or _live(root) > MAX_EFFECT_NODES:
 		return
 	match style:
+		Style.LIGHTNING:
+			arc(root, from, to, 0.12, 0.025, Color("86dfff"), 0.06)
+		Style.RAIL:
+			segment(root, from, to, 0.05, Color("d5a0ff"), 0.45, 3.0)
+			flash(root, from, 0.18, Color("d5a0ff"))
+		Style.ROCKET:
+			segment(root, from, to, 0.08, Color("ffb457"), 0.15)
+		Style.PLASMA:
+			segment(root, from, to, 0.045, Color("76ffe0"), 0.09)
+		Style.NAIL:
+			segment(root, from, to, 0.02, Color("ffed9b"), 0.1)
+		Style.DISC:
+			segment(root, from, to, 0.065, Color("a8b8ff"), 0.15)
 		Style.PISTOL:
 			segment(root, from, to, 0.012, color, 0.12)
 			bolt(root, from, to, 1.4, 0.03, color)

@@ -6,8 +6,8 @@ size (`Fighter.BODY_RADIUS`), the full movement set and no abilities of their ow
 
 | Slot | Key | Rule |
 |---|---|---|
-| Primary | LMB | The main gun: Shotgun, Rifle or SMG. |
-| Sidearm | 2 / mouse wheel | A second gun with its own magazine (Pistol, Burst Pistol, Revolver). Swapping takes `Fighter.SWAP_TIME` (0.25 s), at least four times faster than any primary reload, so swapping is the answer to an empty magazine mid-fight. A swap drops a reload in progress. |
+| Primary | LMB / RMB | Shotgun, Rifle, SMG, Rocket Launcher, Grenade Launcher, Plasma Gun, Lightning Gun, Railgun or Double-Barrel Shotgun. RMB detonates launcher grenades or fires a double-barrel recoil blast; other guns aim down sights. |
+| Sidearm | 2 / mouse wheel | A second gun with its own magazine (Pistol, Burst Pistol, Revolver, Nail Pistol, Disc Launcher). Swapping takes `Fighter.SWAP_TIME` (0.25 s), at least four times faster than any primary reload, so swapping is the answer to an empty magazine mid-fight. A swap drops a reload in progress. |
 | Utility | Q | One tool on a cooldown: Grapple, Frag Grenade, Smoke Grenade, Launch Pad, Sentry Turret, Barricade, Breach Charge. A use that fails costs nothing. |
 | Melee | F | Knife, Sledgehammer or Sword. The recovery also holds the gun. |
 
@@ -16,14 +16,19 @@ Numbers are in the README (Loadouts). Item names are plain descriptions of what 
 ## Design rules
 
 - **The body never changes.** Health, size and movement are the same for everyone, so the map audit, the walker and
-  the movement course test one fighter. The only per-item movement effect is the gun in hand's `move_speed_mult`
-  (0.95 to 1.05) and the Grapple's Hot Lap window.
+  the movement course test one fighter. Item effects include the gun in hand's `move_speed_mult` (0.95 to 1.05),
+  the Grapple's Hot Lap window, explosive jumps and double-barrel recoil. Weapon impulses interrupt constrained
+  traversal, keep existing air resources, cap horizontal/upward velocity at 24 m/s and briefly allow boosted air speed.
 - **Sidearms are a fallback, not a second primary.** Each primary out-trades every sidearm in that primary's own range
   (asserted in `test_weapon_specs`). A sidearm's job is to cover the reload and the range a primary is bad at.
 - **Utilities replace abilities, one at a time.** They are the old hero abilities that work on any body: the Grapple
   (was the Skyrunner's Sling Line), the Frag Grenade (the Mirage capsule), the Smoke Grenade, the Launch Pad and Sentry
   Turret (the Engineer's machinery), the Barricade (Enforcer cover) and the Breach Charge (Reave's Breach).
 - **No single melee hit kills** a full-health fighter, backstab included.
+- **No ordinary gun one-shots either**, including rail headshots and alternate double blasts. Triple damage is an exception.
+- **Projectiles invite prediction and movement.** Rockets pressure feet, grenades bounce and detonate remotely,
+  plasma/nails reward leading, lightning rewards tracking, rails reward peeks, and discs bank around cover.
+  Reduced explosive self-damage (25% of unboosted splash) gives jumps a modest health cost; recoil jumps spend two rounds.
 - **No ultimates.** Power-ups and light armor are the big swings.
 
 ## How a loadout travels
@@ -32,6 +37,11 @@ Numbers are in the README (Loadouts). Item names are plain descriptions of what 
 every slot into its table, so any int from the network is safe. The int rides in `join_request` / `loadout_request` and
 in the snapshot (`"lo"`). The gun in hand (`"slot"`), the holstered magazine (`"ammo2"`), the swap timer and the two
 cooldowns (`"ucd"`, `"mcd"`) are only sent while they differ from the default.
+
+The optional world `"pr"` list carries projectile id, owner/team, gun id (primary index or 16 + sidearm index), position,
+velocity, age and bounce count. Launch damage multipliers stay on the authority. Clients reconcile ids and extrapolate
+motion without collision/damage decisions. Fighter `"wi"` identifies a new weapon impulse; `"wl"` and `"wb"` carry its
+launch grace and boosted air-speed time. Defaults preserve older snapshots. Existing gun/loadout indices are unchanged.
 
 ## Adding an item
 

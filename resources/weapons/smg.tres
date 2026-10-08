@@ -4,12 +4,12 @@
 script = ExtResource("1")
 title = "SMG"
 blurb = "Rapid-fire SMG. Strong up close, fades at range."
-damage = 5.5
+damage = 8.0
 spread_deg = 1.8
 falloff_start = 10.0
 falloff_end = 30.0
 falloff_min = 0.55
-interval = 0.065
+interval = 0.05
 magazine = 40
 reload_time = 1.6
 reach = 30.0

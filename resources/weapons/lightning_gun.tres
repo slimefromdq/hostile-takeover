@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Lightning Gun"
+blurb = "Continuous close-range beam. Keep your crosshair on a moving enemy."
+damage = 10
+interval = 0.05
+magazine = 50
+reload_time = 1.6
+reach = 18
+headshot_mult = 1

@@ -10,7 +10,8 @@ numbers), `docs/LOADOUTS.md`, `MAP.md`, `docs/JUNGLE_GYM.md`, `docs/BLENDER.md` 
 
 - **One shared body, Splatoon-style loadouts.** There are no heroes, classes or ultimates. Every fighter has 200 HP
   (`Fighter.MAX_HEALTH`), the same hitbox and the full movement set. A loadout is four picks: **primary** (Shotgun,
-  Rifle, SMG), **sidearm** (Pistol, Burst Pistol, Revolver; quick swap, own magazine), **utility on Q** (Grapple, Frag,
+  Rifle, SMG, Rocket Launcher, Grenade Launcher, Plasma Gun, Lightning Gun, Railgun, Double-Barrel Shotgun),
+  **sidearm** (Pistol, Burst Pistol, Revolver, Nail Pistol, Disc Launcher; quick swap, own magazine), **utility on Q** (Grapple, Frag,
   Smoke, Launch Pad, Sentry Turret, Barricade, Breach Charge) and **melee on F** (Knife, Sledgehammer, Sword).
 - **Character look (cosmetic).** In the start menu's LOOK tab you pick build, skin, eyes, hairstyle and hair colour,
   headgear, top, bottoms, shoes and garment colours. The look is drawn as a cute faceted low-poly person, and team colour shows
@@ -39,6 +40,7 @@ The project root is the Godot project (`project.godot`). The main scene is `scen
 | `scripts/game.gd` | **The hub.** Lobby and start, networking RPCs, input submission, snapshot encode/decode, combat (`fire_ray`, `damage_fighter`, `hit_fighter`, `use_utility`, `use_melee`), entities (deployables and pickups), objective ticking, bot AI (`bot_*`, `choose_bot_item`, `bot_kit`), HUD/FX plumbing. Start here for most gameplay changes. |
 | `scripts/fighter.gd` | One `CharacterBody3D` per fighter. Movement verbs are small helpers whose tuning constants sit at the top of the file. Also holds loadout state (`equip`, `apply_loadout`, `swap_weapon`), look (`set_look`), `pack()` / `unpack()` for snapshots, and the rig and nameplate. |
 | `scripts/loadout.gd` | Pure data: the gun tables (`resources/weapons/*.tres`, typed by `weapon_spec.gd`), the `UTILITIES` and `MELEES` dictionaries, and `encode` / `decode` of a loadout into one int (4 bits per slot). |
+| `scripts/weapon_projectile.gd` | Swept spherical projectile collision, bounded bounce steps, launch-time damage context and compact snapshots. The hub owns ticking, budgets, explosions and reconciliation; clients only extrapolate. |
 | `scripts/appearance.gd` | Pure data: character-creator option tables, plus `encode` / `decode` of a look into one int (clamped, so network-safe), and save/load to `user://settings.cfg`. |
 | `scripts/character_rig.gd` | Builds the fighter model from a look and loadout. Faceted profiles, face patches, boxes and prisms are baked into one vertex-coloured mesh per bone. Procedural animation is in `animate()`. **Bone names are a contract:** `Legs/LegL`, `Legs/LegR`, `Body/Head`, `Body/ArmL/Melee`, `Body/Weapon/{Primary,Sidearm}`. |
 | `scripts/items.gd` | Pickup kinds (`KINDS`: heal, armor, respawn, colour, sound) and power-up rules. |
@@ -69,6 +71,8 @@ Every system has an extension point. Use it; don't restructure the hub.
      `CharacterRig._primary_model` / `_sidearm_model`.
   3. Add its range to `LIVE_RANGES` in `tests/run_tests.gd`. TTK numbers are asserted by tests, so retuning a gun
      usually means updating `run_tests.gd` and the README tables.
+  4. Projectile guns use `WeaponSpec.fire_mode` and projectile/splash fields; alternate modes use reliable `EDGE_ALT`.
+     Preserve ADS for `AltMode.ADS`. Explosion self-damage is quarter splash, unboosted; impulses never refill air resources.
 - **A utility:**
   1. Add an entry to `Loadout.UTILITIES` and the `Utility` enum.
   2. Add a branch in `Game.use_utility` (set `success = false` when it can't be used, so it costs no cooldown).
@@ -121,6 +125,7 @@ godot --headless --path . --script res://tests/map_walk.gd
 godot --headless --fixed-fps 60 --script res://tests/match_smoke.gd
 godot --headless --fixed-fps 60 --script res://tests/bot_tower.gd  # a bot climbs to the Canopy power-up
 godot --headless --fixed-fps 60 --script res://tests/soak.gd -- minutes=2
+godot --resolution 1920x1080 --script res://tests/render_arsenal.gd # procedural weapon gallery
 python3 tools/blender/test_blockout_kit.py                          # map scripts validate
 ```
 

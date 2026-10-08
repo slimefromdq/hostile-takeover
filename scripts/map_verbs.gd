@@ -210,6 +210,10 @@ static func pre_move(f: Fighter, dt: float, edges: int, grounded: bool) -> int:
 	f.zip_cd = maxf(0.0, f.zip_cd - dt)
 	f.bounce_cd = maxf(0.0, f.bounce_cd - dt)
 	f.climb_cd = maxf(0.0, f.climb_cd - dt)
+	if f.pending_weapon_impulse != Vector3.ZERO or f.weapon_launch_time > 0.0:
+		f.zip_id = -1
+		f.climbing = false
+		return edges  # Do not immediately reattach and swallow a weapon launch.
 	if f.zip_id >= 0:
 		return edges
 	if f.zip_cd <= 0.0 and not cables.is_empty() and not grounded:

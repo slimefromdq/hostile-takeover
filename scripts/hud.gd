@@ -269,6 +269,12 @@ func _draw_dash_icon(p: Fighter, c: Vector2) -> void:
 
 # Gun in hand (ammo, or RELOADING) with the holstered gun's magazine under it, and the swap key.
 func _draw_ammo(p: Fighter, c: Vector2) -> void:
+	var alt_hint := "RMB: AIM"
+	if p.weapon.alt_mode == WeaponSpec.AltMode.DETONATE:
+		alt_hint = "RMB: DETONATE · %d ACTIVE" % game.launcher_grenade_count(p.fighter_id)
+	elif p.weapon.alt_mode == WeaponSpec.AltMode.DOUBLE_BLAST:
+		alt_hint = "RMB: DOUBLE BLAST · 2 ROUNDS"
+	text(c + Vector2(-160, 38), alt_hint, 12, UiStyle.TEXT_MUTED, HORIZONTAL_ALIGNMENT_CENTER, 320.0)
 	var stowed := p.stowed_weapon()
 	text(c + Vector2(-80, 20), "2 · %s %d / %d" % [stowed.title, p.stowed_ammo, stowed.magazine], 13, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_CENTER, 160.0)
 	if p.reload_timer > 0.0:

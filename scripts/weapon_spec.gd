@@ -21,6 +21,27 @@ extends Resource
 @export var move_speed_mult: float = 1.0
 @export var ricochet: bool = false  # a shot that hits geometry bounces once for the remaining reach
 
+enum FireMode { HITSCAN, PROJECTILE }
+enum AltMode { ADS, DETONATE, DOUBLE_BLAST }
+@export var fire_mode: FireMode = FireMode.HITSCAN
+@export var alt_mode: AltMode = AltMode.ADS
+@export var projectile_speed: float = 0.0
+@export var projectile_radius: float = 0.06
+@export var projectile_gravity: float = 0.0
+@export var projectile_lift: float = 0.0
+@export var projectile_fuse: float = 0.0
+@export var projectile_bounces: int = 0
+@export var bounce_retention: float = 1.0
+@export var splash_radius: float = 0.0
+@export var splash_damage: float = 0.0
+@export var splash_min: float = 0.0
+@export var alt_pellets: int = 0
+@export var alt_ammo: int = 0
+@export var alt_recoil: float = 0.0
+
+func uses_ads() -> bool:
+	return alt_mode == AltMode.ADS
+
 # Damage multiplier for a pellet that travelled `dist` metres.
 func falloff_at(dist: float) -> float:
 	if falloff_end <= falloff_start or dist <= falloff_start:

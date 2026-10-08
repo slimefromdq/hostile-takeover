@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Plasma Gun"
+blurb = "Accurate rapid plasma. Lead moving targets to fill their escape route."
+damage = 14
+interval = 0.06
+magazine = 40
+reload_time = 1.5
+reach = 36
+headshot_mult = 1
+fire_mode = 1
+projectile_speed = 42

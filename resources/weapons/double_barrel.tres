@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Double-Barrel Shotgun"
+blurb = "Two quick close blasts. RMB spends both rounds for a stronger blast and recoil jump."
+damage = 12
+interval = 0.65
+magazine = 2
+reload_time = 1.4
+reach = 20
+headshot_mult = 1
+pellets = 9
+spread_deg = 7
+falloff_start = 5
+falloff_end = 18
+falloff_min = 0.2
+alt_mode = 2
+alt_pellets = 14
+alt_ammo = 2
+alt_recoil = 10

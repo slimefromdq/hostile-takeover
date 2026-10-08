@@ -4,8 +4,8 @@
 script = ExtResource("1")
 title = "Revolver"
 blurb = "Six-shot revolver. Hits hard, and a miss bounces once off walls and floors."
-damage = 34.0
-interval = 0.5
+damage = 48.0
+interval = 0.38
 magazine = 6
 reload_time = 1.5
 reach = 45.0

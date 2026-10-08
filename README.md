@@ -13,7 +13,7 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | Input | Action |
 |---|---|
 | WASD / mouse | Move / aim |
-| Left / right mouse | Fire / aim down sights (holding right zooms in over the shoulder and fades your own body so the crosshair stays clear; with the Revolver it also previews the bounce) |
+| Left / right mouse | Fire / aim down sights. Grenade Launcher RMB detonates armed grenades; Double-Barrel RMB spends two rounds for a recoil blast. Other guns zoom over the shoulder; Revolver ADS previews its bounce. |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
 | 1 | Air dash (about 3.5 m, independent of the double jump; 2.5 second cooldown, holds vertical speed so you hover through it) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
@@ -52,7 +52,7 @@ There are no heroes or classes. Every fighter has the same body: **200 HP**, the
 | Slot | Key | What it is |
 |---|---|---|
 | Primary | LMB | Your main gun. |
-| Sidearm | **2** / mouse wheel to swap | A second gun with its own magazine. Swapping takes **0.25 s**, much faster than any primary reload (1.6 to 2.2 s), so swapping beats reloading mid-fight. Swapping drops a reload in progress; the holstered gun keeps whatever it had left. |
+| Sidearm | **2** / mouse wheel to swap | A second gun with its own magazine. Swapping takes **0.25 s**, much faster than any primary reload (1.4 to 2.2 s), so swapping beats reloading mid-fight. Swapping drops a reload in progress; the holstered gun keeps whatever it had left. |
 | Utility | **Q** | A tool on a cooldown. A use that fails (nothing to hook, no ground to place on) costs nothing. |
 | Melee | **F** | A quick close-range attack. Its recovery also holds your gun. |
 
@@ -60,19 +60,33 @@ There are no heroes or classes. Every fighter has the same body: **200 HP**, the
 
 | Weapon | Role | Damage | Rate | Magazine / reload | Reach | Falloff | Spread | Headshot |
 |---|---|---|---|---|---|---|---|---|
-| Shotgun | Close range pump shotgun | 9 pellets x 12 | 0.85 s | 6 / 2.2 s | 22 m | full to 6 m, 20% at 20 m | 5.5 deg | 1.2x |
-| Rifle | Mid to long range rifle | 42 | 0.55 s | 8 / 1.8 s | 80 m | full to 35 m, 70% at 80 m | none | 1.6x |
-| SMG | Rapid-fire SMG | 5.5 | 0.065 s | 40 / 1.6 s | 30 m | full to 10 m, 55% at 30 m | 1.8 deg | 1.25x |
+| Shotgun | Close range pump shotgun | 10 pellets x 12 | 0.70 s | 6 / 2.2 s | 22 m | full to 6 m, 20% at 20 m | 5.5 deg | 1.2x |
+| Rifle | Mid to long range rifle | 55 | 0.32 s | 8 / 1.8 s | 80 m | full to 35 m, 70% at 80 m | none | 1.6x |
+| SMG | Rapid-fire SMG | 8 | 0.05 s | 40 / 1.6 s | 30 m | full to 10 m, 55% at 30 m | 1.8 deg | 1.25x |
+| Rocket Launcher | Splash pressure, rocket jumps | 100 direct | 0.85 s | 4 / 1.8 s | 60 m | none | none | none |
+| Grenade Launcher | Bank shots, remote detonation | 110 direct | 0.90 s | 4 / 1.9 s | 40 m aiming | none | none | none |
+| Plasma Gun | Lead and track targets | 14 | 0.06 s | 40 / 1.5 s | 36 m | none | none | none |
+| Lightning Gun | Close sustained tracking beam | 10 | 0.05 s | 50 / 1.6 s | 18 m | none | none | none |
+| Railgun | Long-range peeks | 105 | 1.15 s | 4 / 2.0 s | 100 m | none | none | 1.65x |
+| Double-Barrel Shotgun | Close burst, recoil jumps | 9 pellets x 12; RMB 14 x 12 | 0.65 s | 2 / 1.4 s | 20 m | full to 5 m, 20% at 18 m | 7 deg | none |
 
 **Sidearms**
 
 | Weapon | Role | Damage | Rate | Magazine / reload | Reach | Falloff | Headshot |
 |---|---|---|---|---|---|---|---|
-| Pistol | Accurate semi-auto | 18 | 0.22 s | 12 / 1.2 s | 40 m | full to 15 m, 60% at 40 m | 1.5x |
-| Burst Pistol | Three-round burst | 12 x 3 | 0.5 s per burst | 18 / 1.3 s | 32 m | full to 12 m, 60% at 32 m | 1.35x |
-| Revolver | Heavy six-shot; a miss bounces once off geometry (aim down sights to preview the bounce) | 34 | 0.5 s | 6 / 1.5 s | 45 m | none | 1.35x |
+| Pistol | Accurate semi-auto | 28 | 0.20 s | 12 / 1.2 s | 40 m | full to 15 m, 60% at 40 m | 1.5x |
+| Burst Pistol | Three-round burst | 18 x 3 | 0.55 s per burst, 0.06 s between rounds | 18 / 1.3 s | 32 m | full to 12 m, 60% at 32 m | 1.35x |
+| Revolver | Heavy six-shot; a miss bounces once off geometry (ADS previews the bounce) | 48 | 0.38 s | 6 / 1.5 s | 45 m | none | 1.35x |
+| Nail Pistol | Accurate projectile follow-ups | 18 | 0.14 s | 18 / 1.2 s | 40 m | none | none |
+| Disc Launcher | Visible projectiles, two geometry bounces | 50 | 0.55 s | 6 / 1.4 s | 40 m total travel | none | none |
 
-Time to kill a 200-HP body-shot target, every pellet landing: Shotgun 0.85 s at 3 m (2.55 s at 15 m, with a reload on the way at longer range); Rifle 2.20 s out to 35 m; SMG 2.34 s up to 10 m, 5.05 s at 25 m. Sidearms are a little slower than each primary in that primary's own range: Pistol 2.42 s, Burst Pistol 2.57 s and Revolver 2.50 s at 10 m. A shotgun blast against one target counts as one hit. The movement speed multiplier follows the gun in your hand (Shotgun and Rifle 0.95, SMG 1.05, sidearms 1.0).
+Ideal time to kill a 200-HP body-shot target, from first impact with every pellet landing: Shotgun 0.70 s at 3 m; Rifle 0.96 s out to 35 m; SMG 1.20 s up to 10 m; Rocket Launcher 0.85 s direct; Grenade Launcher 0.90 s direct; Plasma Gun 0.84 s; Lightning Gun 0.95 s; Railgun 1.15 s; Double-Barrel 0.65 s inside 5 m. Sidearms at 10 m: Pistol 1.40 s, Burst Pistol 1.77 s, Revolver 1.52 s, Nail Pistol 1.54 s and Disc Launcher 1.65 s. Projectile travel adds time before first impact. No ordinary single shot, headshot or alternate blast kills at full health; triple damage remains an exception. A shotgun blast against one target counts as one hit. Movement multipliers: Shotgun/Rifle 0.95, SMG 1.05, every other gun 1.0.
+
+Rockets fly at 28 m/s and burst on contact, with splash falling linearly from 80 to 15 damage across 3.5 m. Launcher grenades fly at 24 m/s plus 3 m/s upward, fall under 15 m/s² gravity, bounce with 65% velocity retention and burst on fighter/deployable contact or after 2.5 s. Their splash falls from 85 to 15 across 3.5 m. RMB remotely detonates your grenades after 0.25 s arming; four can be active. Direct victims take direct damage once, without extra splash. Cover blocks splash; allies take neither damage nor impulse.
+
+Fire explosives at floors or walls to jump: self-damage is 25% of normal splash, with armor absorbing it; triple damage does not increase this cost. Explosive impulse peaks at 16 m/s for yourself and 6 m/s for enemies, declining across the radius. Double-Barrel RMB consumes two rounds and adds 10 m/s recoil opposite the aim direction, without self-damage. Both techniques retain momentum, interrupt constrained traversal and keep your current air-jump/dash resources. Weapon impulses cap horizontal and upward speeds at 24 m/s, with 0.12 s launch grace and 0.8 s boosted air-speed allowance before normal limits return. A suicide grants no kill, armor drop or power-up streak.
+
+Plasma bolts fly at 42 m/s, nails at 65 m/s, and discs at 24 m/s. Discs retain full speed and damage through two geometry bounces. Other guns retain RMB aiming. In-flight projectiles keep the firing weapon and damage multiplier through weapon swaps and shooter death; loadout replacement, disconnect and round restart remove owned projectiles.
 
 **Utilities (Q)**
 

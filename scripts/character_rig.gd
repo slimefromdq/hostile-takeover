@@ -502,10 +502,43 @@ static func _primary_model(ctx: Ctx, weapon: Node3D, primary_id: int) -> void:
 			ctx.add(gun, Vector3(0, 0.065, -0.55), Vector3(0.08, 0.08, 0.32), Color("3a4552"))
 			ctx.add(gun, Vector3(0, -0.12, -0.36), Vector3(0.06, 0.12, 0.07), Color("3a4552"))
 			box(gun, Vector3(0, 0.065, -0.72), Vector3(0.05, 0.05, 0.03), ctx.glow(Color("7ee8ff"), 2.4))
-		_:  # SMG: compact with a stick magazine
+		2:  # SMG: compact with a stick magazine
 			ctx.add(gun, Vector3(0, -0.03, -0.44), Vector3(0.1, 0.14, 0.38), DARK)
 			ctx.add(gun, Vector3(0, -0.16, -0.4), Vector3(0.06, 0.18, 0.08), Color("3a4552"))
 			box(gun, Vector3(0, -0.02, -0.66), Vector3(0.03, 0.03, 0.08), ctx.glow(Color("ffe08a"), 2.0))
+
+		3:  # Rocket Launcher
+			ctx.add(gun, Vector3(0, 0, -0.58), Vector3(0.24, 0.24, 0.85), DARK)
+			ctx.add(gun, Vector3(0, -0.19, -0.3), Vector3(0.08, 0.24, 0.1), Color("6a4a32"))
+			ctx.add(gun, Vector3(0, 0.15, -0.5), Vector3(0.08, 0.09, 0.15), Color("8a949c"))
+			box(gun, Vector3(0, 0, -1.01), Vector3(0.15, 0.15, 0.04), ctx.glow(Color("ffb457"), 2.5))
+		4:  # Grenade Launcher
+			ctx.add(gun, Vector3(0, 0, -0.48), Vector3(0.19, 0.19, 0.6), DARK)
+			ctx.add(gun, Vector3(0, -0.16, -0.46), Vector3(0.25, 0.23, 0.23), Color("8a949c"))
+			ctx.add(gun, Vector3(0, -0.19, -0.27), Vector3(0.07, 0.2, 0.08), Color("6a4a32"))
+			box(gun, Vector3(0, 0, -0.8), Vector3(0.12, 0.12, 0.04), ctx.glow(Color("ffd78c"), 2.5))
+		5:  # Plasma Gun
+			ctx.add(gun, Vector3(0, 0, -0.45), Vector3(0.22, 0.16, 0.47), DARK)
+			ctx.add(gun, Vector3(-0.13, 0, -0.72), Vector3(0.05, 0.09, 0.24), Color("8a949c"))
+			ctx.add(gun, Vector3(0.13, 0, -0.72), Vector3(0.05, 0.09, 0.24), Color("8a949c"))
+			box(gun, Vector3(0, 0, -0.62), Vector3(0.12, 0.1, 0.3), ctx.glow(Color("76ffe0"), 2.5))
+		6:  # Lightning Gun
+			ctx.add(gun, Vector3(0, 0, -0.45), Vector3(0.19, 0.22, 0.45), DARK)
+			ctx.add(gun, Vector3(-0.09, 0, -0.74), Vector3(0.035, 0.05, 0.3), Color("8a949c"))
+			ctx.add(gun, Vector3(0.09, 0, -0.74), Vector3(0.035, 0.05, 0.3), Color("8a949c"))
+			ctx.add(gun, Vector3(0, -0.18, -0.4), Vector3(0.15, 0.15, 0.2), Color("3a4552"))
+			box(gun, Vector3(0, 0, -0.86), Vector3(0.1, 0.09, 0.06), ctx.glow(Color("86dfff"), 2.5))
+		7:  # Railgun
+			ctx.add(gun, Vector3(0, 0, -0.65), Vector3(0.11, 0.13, 1.1), DARK)
+			ctx.add(gun, Vector3(0, 0.13, -0.6), Vector3(0.09, 0.08, 0.32), Color("8a949c"))
+			ctx.add(gun, Vector3(0, -0.16, -0.36), Vector3(0.07, 0.2, 0.09), Color("3a4552"))
+			box(gun, Vector3(0, 0, -0.9), Vector3(0.04, 0.05, 0.52), ctx.glow(Color("d5a0ff"), 2.5))
+		8:  # Double-Barrel Shotgun
+			ctx.add(gun, Vector3(-0.075, 0, -0.58), Vector3(0.11, 0.11, 0.6), Color("8a949c"))
+			ctx.add(gun, Vector3(0.075, 0, -0.58), Vector3(0.11, 0.11, 0.6), Color("8a949c"))
+			ctx.add(gun, Vector3(0, -0.1, -0.35), Vector3(0.2, 0.11, 0.24), Color("6a4a32"))
+			ctx.add(gun, Vector3(0, -0.17, -0.24), Vector3(0.07, 0.18, 0.09), DARK)
+			box(gun, Vector3(0, 0.07, -0.83), Vector3(0.04, 0.04, 0.07), ctx.glow(Color("ff9a4a"), 2.5))
 
 static func _sidearm_model(ctx: Ctx, weapon: Node3D, sidearm_id: int) -> void:
 	var gun := pivot(weapon, "Sidearm", Vector3(0, 0.05, 0))
@@ -518,9 +551,18 @@ static func _sidearm_model(ctx: Ctx, weapon: Node3D, sidearm_id: int) -> void:
 		1:  # Burst Pistol: longer slide with a lit vent
 			ctx.add(gun, Vector3(0, -0.02, -0.46), Vector3(0.08, 0.1, 0.3), DARK)
 			box(gun, Vector3(0, 0.04, -0.56), Vector3(0.03, 0.03, 0.1), ctx.glow(Color("7ee8ff"), 2.0))
-		_:  # Revolver: cylinder and long barrel
+		2:  # Revolver: cylinder and long barrel
 			ctx.add(gun, Vector3(0, -0.02, -0.42), Vector3(0.07, 0.11, 0.22), metal)
 			ctx.add(gun, Vector3(0, -0.01, -0.56), Vector3(0.06, 0.06, 0.16), metal, LIT, Vector3(PI / 2, 0, 0), PRISM)
+
+		3:  # Nail Pistol: exposed nail rack and narrow muzzle
+			ctx.add(gun, Vector3(0, 0, -0.45), Vector3(0.11, 0.1, 0.32), DARK)
+			ctx.add(gun, Vector3(0, -0.13, -0.39), Vector3(0.1, 0.16, 0.12), metal)
+			box(gun, Vector3(0, 0.06, -0.5), Vector3(0.06, 0.035, 0.2), ctx.glow(Color("ffed9b"), 2.0))
+		4:  # Disc Launcher: wide disc magazine and flat slot
+			ctx.add(gun, Vector3(0, 0, -0.43), Vector3(0.25, 0.12, 0.3), metal)
+			ctx.add(gun, Vector3(0, -0.12, -0.35), Vector3(0.07, 0.19, 0.09), DARK)
+			box(gun, Vector3(0, 0, -0.59), Vector3(0.2, 0.025, 0.035), ctx.glow(Color("a8b8ff"), 2.0))
 
 static func _melee_model(ctx: Ctx, arm: Node3D, melee_id: int) -> void:
 	var hand := pivot(arm, "Melee", Vector3(0, -0.45, -0.02))

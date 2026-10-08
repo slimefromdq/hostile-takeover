@@ -56,6 +56,7 @@ func run() -> void:
 	await process_frame
 	await test_movement()
 	await test_weapons()
+	await test_projectile_arsenal()
 	await test_sidearm_swap()
 	await test_utilities()
 	await test_melee()
@@ -144,7 +145,7 @@ func test_objectives() -> void:
 func test_specs() -> void:
 	check(Fighter.MAX_HEALTH == 200.0, "every fighter has the same 200 HP")
 	var sizes := Loadout.slot_sizes()
-	check(sizes == [3, 3, 7, 3], "loadout tables: 3 primaries, 3 sidearms, 7 utilities, 3 melee weapons")
+	check(sizes == [9, 5, 7, 3], "loadout tables: 9 primaries, 5 sidearms, 7 utilities, 3 melee weapons")
 	for slot in range(4):
 		var names := {}
 		for i in range(sizes[slot]):
@@ -160,8 +161,8 @@ func test_specs() -> void:
 		var ids := Loadout.decode(code)
 		check(Loadout.encode(ids[0], ids[1], ids[2], ids[3]) == code, "loadout encode/decode round trip (%d)" % code)
 	check(Loadout.encode(1, 0, 0, 0) == REFERENCE, "reference loadout code")
-	check(Loadout.decode(Loadout.encode(9, -3, 99, 7)) == [2, 0, 6, 2], "loadout slots clamp into their tables")
-	check(Loadout.decode(-1) == [2, 2, 6, 2] and Loadout.decode(0xFFFF) == [2, 2, 6, 2], "any network int decodes to a valid loadout")
+	check(Loadout.decode(Loadout.encode(99, -3, 99, 7)) == [8, 0, 6, 2], "loadout slots clamp into their tables")
+	check(Loadout.decode(-1) == [8, 4, 6, 2] and Loadout.decode(0xFFFF) == [8, 4, 6, 2], "any network int decodes to a valid loadout")
 	check(Loadout.with_slot(Loadout.encode(0, 0, 0, 0), 2, 4) == Loadout.encode(0, 0, 4, 0), "with_slot changes one slot")
 	check(Loadout.describe(REFERENCE) == "Rifle · Pistol · Grapple · Knife", "loadout description")
 	var limited := WeaponSpec.new()
@@ -286,7 +287,7 @@ func aim_at(p: Fighter, target: Vector3) -> void:
 		p.pitch = asin(diff.y)
 
 # Live cadence for every gun, primary and sidearm, at a range inside its full-damage band (shotguns point blank).
-const LIVE_RANGES := {"Shotgun": 3.0, "Rifle": 20.0, "SMG": 10.0, "Pistol": 10.0, "Burst Pistol": 10.0, "Revolver": 10.0}
+const LIVE_RANGES := {"Shotgun": 3.0, "Rifle": 20.0, "SMG": 10.0, "Rocket Launcher": 8.0, "Grenade Launcher": 3.0, "Plasma Gun": 10.0, "Lightning Gun": 10.0, "Railgun": 20.0, "Double-Barrel Shotgun": 2.0, "Pistol": 10.0, "Burst Pistol": 10.0, "Revolver": 10.0, "Nail Pistol": 10.0, "Disc Launcher": 10.0}
 
 func test_weapons() -> void:
 	var p: Fighter = game.local_player()
@@ -298,6 +299,7 @@ func test_weapons() -> void:
 	for i in range(Loadout.SIDEARMS.size()):
 		guns.append([Loadout.encode(1, i, 0, 0), true])
 	for entry in guns:
+		game.clear_projectiles()
 		p.apply_loadout(entry[0])
 		if entry[1]:
 			p.swap_weapon()
@@ -319,6 +321,7 @@ func test_weapons() -> void:
 		var first_hit := -1.0
 		for frame in range(600):
 			game.combat_tick(p, 1.0 / 60.0)
+			game.projectiles_tick(1.0 / 60.0)
 			if target.hp < 200 and first_hit < 0:
 				first_hit = elapsed
 			if target.hp <= 0:
@@ -329,6 +332,7 @@ func test_weapons() -> void:
 		check(target.hp <= 0, "authoritative fire kills: " + w.title)
 		check(absf(ttk - w.body_ttk(200.0, distance)) <= 0.15, "live cadence matches model: " + w.title)
 		p.held = 0
+	game.clear_projectiles()
 	# Shotgun out of range: falloff and reach both bite.
 	p.apply_loadout(Loadout.encode(0, 0, 0, 0))
 	neutral(target)  # the last gun killed it: restore its collider
@@ -349,6 +353,299 @@ func test_weapons() -> void:
 	check(target.hp == Fighter.MAX_HEALTH, "friendly fire disabled")
 	target.team = 1 - p.team
 	neutral(p)
+
+func arsenal_shot(p: Fighter, gun: int, at: Vector3, motion := Vector3.ZERO) -> WeaponProjectile:
+	var shot: WeaponProjectile = game.create_projectile({"id": game.projectile_next, "o": p.fighter_id, "t": p.team, "w": gun, "p": at, "v": motion})
+	game.projectile_next += 1
+	return shot
+
+func test_projectile_arsenal() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	foe.team = 1 - p.team
+	for w in Loadout.PRIMARIES + Loadout.SIDEARMS:
+		check(w.damage * w.pellets * w.headshot_mult < Fighter.MAX_HEALTH and w.damage * w.alt_pellets < Fighter.MAX_HEALTH, "no ordinary one-shot, including alternate/headshot: " + w.title)
+	for i in range(Loadout.PRIMARIES.size() + Loadout.SIDEARMS.size()):
+		var holder := Node3D.new()
+		root.add_child(holder)
+		var outlines: Array = []
+		var rig := CharacterRig.build(holder, Visuals.team_color(0), outlines, false, i if i < 9 else 0, i - 9 if i >= 9 else 0, 0)
+		check(rig.get_node("Body/Weapon/Primary/Mesh").mesh.get_surface_count() > 0 and rig.get_node("Body/Weapon/Sidearm/Mesh").mesh.get_surface_count() > 0, "procedural weapon rig builds: %d" % i)
+		holder.queue_free()
+	game.clear_projectiles()
+	p.apply_loadout(Loadout.encode(3, 0, 0, 0))
+	neutral(foe)
+	place(p, O + Vector3(-10, 0, -21))
+	place(foe, O + Vector3(-2, 0, -21))
+	await physics_frame
+	aim_at(p, foe.global_position + Vector3.UP * 1.1)
+	check(game.fire_weapon(p), "authority accepts rocket")
+	game.projectiles_tick(1.0 / 60.0)
+	check(foe.hp == 200.0, "projectile damage waits for travel")
+	for i in range(30):
+		game.projectiles_tick(1.0 / 60.0)
+	check(foe.hp == 100.0 and game.projectiles.is_empty(), "rocket direct damage is applied once without splash stacking")
+	# Launch-time multiplier and cause survive swapping, power expiry and shooter death.
+	neutral(foe)
+	p.apply_loadout(Loadout.encode(3, 0, 0, 0))
+	p.power = Items.POWER_QUAD
+	game.fire_weapon(p)
+	p.swap_weapon()
+	p.power = 0
+	p.hp = 0
+	for i in range(30):
+		game.projectiles_tick(1.0 / 60.0)
+	check(foe.hp == 0 and game.hud.feed[0].killer.contains("Rocket Launcher"), "in-flight rocket retains launch power and cause after swap/death")
+	neutral(p)
+	neutral(foe)
+	# Splash formula and allied immunity in an unobstructed lane.
+	place(p, O + Vector3(-10, 0, -21))
+	place(foe, O + Vector3(-8.25, 0, -21))
+	await physics_frame
+	var shot := arsenal_shot(p, 3, p.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot)
+	check(is_equal_approx(foe.hp, 152.5) and is_equal_approx(p.hp, 180.0), "linear half-radius splash and quarter self-damage")
+	check(p.pending_weapon_impulse.length() == 16.0 and is_equal_approx(foe.pending_weapon_impulse.length(), 3.0), "self and enemy impulses have separate unboosted strength")
+	neutral(p)
+	neutral(foe)
+	foe.team = p.team
+	shot = arsenal_shot(p, 3, foe.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot)
+	check(foe.hp == 200 and foe.pending_weapon_impulse == Vector3.ZERO, "explosions never damage or push allies")
+	foe.team = 1 - p.team
+	# Cover fixture occludes a blast across its near face.
+	place(p, O + Vector3(3, 0, -13))
+	place(foe, O + Vector3(5.6, 0, -13))
+	await physics_frame
+	shot = arsenal_shot(p, 3, O + Vector3(4.8, 0.9, -13))
+	game.explode_projectile(shot)
+	check(foe.hp == 200 and foe.pending_weapon_impulse == Vector3.ZERO, "solid geometry occludes splash and impulse")
+	neutral(p)
+	place(p, O + Vector3(3.5, 0, -13))
+	shot = arsenal_shot(p, 3, p.global_position + Vector3.UP * 1.35, Vector3(24, -16, 0))
+	for i in range(8):
+		game.projectiles_tick(1.0 / 60.0)
+	check(p.pending_weapon_impulse.x < -1 and p.pending_weapon_impulse.y > 1, "swept wall rocket produces outward and upward jump momentum")
+	neutral(p)
+	place(p, O + Vector3(-10, 0, -21))
+	place(foe, O + Vector3(-8.25, 0, -21))
+	await physics_frame
+	foe.power = Items.POWER_INVULNERABLE
+	shot = arsenal_shot(p, 3, foe.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot)
+	check(foe.hp == 200 and foe.pending_weapon_impulse == Vector3.ZERO, "invulnerable enemies receive neither splash nor impulse")
+	neutral(p)
+	neutral(foe)
+	var depot_limit := CivicDividend.depot_limit
+	CivicDividend.depot_limit = 0.0
+	shot = arsenal_shot(p, 3, p.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot)
+	check(foe.hp == 200 and foe.pending_weapon_impulse == Vector3.ZERO and p.hp == 180, "depot protection blocks enemy splash/push while self-jumps retain their cost")
+	CivicDividend.depot_limit = depot_limit
+	neutral(p)
+	var cover_id: int = game.entity_next
+	game.entity_next += 1
+	game.create_entity_from({"id": cover_id, "owner": foe.fighter_id, "team": foe.team, "kind": "cover", "hp": 180.0, "life": 8.0, "pos": O + Vector3(-4, 0, -21), "yaw": 0.0, "used": false})
+	var cover: Deployable = game.entities[cover_id]
+	await physics_frame
+	shot = arsenal_shot(p, 3, cover.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot, cover)
+	check(cover.hp == 80, "direct explosive hit damages enemy deployable once")
+	shot = arsenal_shot(p, 3, cover.global_position + Vector3.UP * 0.9)
+	shot.damage_scale = 3.0
+	game.explode_projectile(shot)
+	check(cover.hp <= 0, "splash damages enemy deployables with captured power")
+	game.remove_entity(cover_id)
+	var pickup_id: int = game.entity_next
+	game.entity_next += 1
+	game.create_entity_from({"id": pickup_id, "owner": -1, "team": foe.team, "kind": "healpack", "hp": 1.0, "life": 1000.0, "pos": O + Vector3(-4, 0, -21), "yaw": 0.0, "used": false})
+	shot = arsenal_shot(p, 3, O + Vector3(-4, 0.9, -21))
+	game.explode_projectile(shot)
+	check(game.entities[pickup_id].hp == 1, "weapon splash cannot destroy map pickups")
+	game.remove_entity(pickup_id)
+	await physics_frame
+	p.armor = 20
+	shot = arsenal_shot(p, 3, p.global_position + Vector3.UP * 0.9)
+	shot.damage_scale = Items.QUAD_MULTIPLIER
+	game.explode_projectile(shot)
+	check(p.hp == 200 and p.armor == 0, "armor absorbs self-damage; triple damage does not increase it")
+	p.hp = 1
+	var kills := p.kills
+	var deaths := p.deaths
+	var drops: int = game.entities.size()
+	shot = arsenal_shot(p, 3, p.global_position + Vector3.UP * 0.9)
+	game.explode_projectile(shot)
+	check(p.hp == 0 and p.deaths == deaths + 1 and p.kills == kills and game.entities.size() == drops and game.hud.feed[0].killer.contains("suicide"), "suicide adds a death/feed entry without kill credit or armor")
+	neutral(p)
+	# Real floor rocket jump, after stale floor state and grounded gravity handling.
+	p.apply_loadout(Loadout.encode(3, 0, 0, 0))
+	place(p, O + Vector3(-10, 0.01, -21))
+	place(foe, O + Vector3(60, 0, 20))
+	p.held = 0
+	p.edges = 0
+	p.movement = Vector2.ZERO
+	await physics_frame
+	p.simulate_movement(1.0 / 60.0, 0)
+	p.pitch = -1.2
+	game.fire_weapon(p)
+	for i in range(30):
+		game.projectiles_tick(1.0 / 60.0)
+	p.simulate_movement(1.0 / 60.0, 0)
+	check(p.velocity.y > 3.0 and p.global_position.y > O.y + 0.05 and p.hp < 200 and p.hp >= 180, "floor rocket launches through grounded overrides with modest health cost")
+	# Impulses interrupt constrained movement and do not replenish air resources.
+	p.air_dash = false
+	p.air_jump = false
+	p.dash_time = 0.2
+	p.wall_running = true
+	p.grapple_time = 1.0
+	p.zip_id = 0
+	p.vault_time = 0.5
+	p.hang_time = 0.2
+	p.apply_weapon_impulse(Vector3(100, 100, 0))
+	p._consume_weapon_impulse()
+	check(p.velocity.x <= 24 and p.velocity.y <= 24 and not p.air_dash and not p.air_jump and p.zip_id == -1 and p.dash_time == 0 and not p.wall_running and p.grapple_time == 0 and p.vault_time == 0 and p.hang_time == 0, "impulse caps and interruptions preserve movement resources")
+	var cables_before := MapVerbs.cables.duplicate(true)
+	var climbs_before := MapVerbs.climbs.duplicate(true)
+	place(p, O + Vector3(30, 4, 20))
+	p.pending_weapon_impulse = Vector3.ZERO
+	p.weapon_launch_time = 0
+	p.movement = Vector2.ZERO
+	p.simulate_movement(1.0 / 60.0, 0)
+	var cable_start := p.global_position + Vector3.UP * (MapVerbs.ZIP_HANG - 0.1)
+	MapVerbs.cables.append({"a": cable_start, "b": cable_start + Vector3.RIGHT * 5, "length": 5.0, "mode": "zip", "speed": 20.0})
+	MapVerbs.climbs.append({"box": AABB(O + Vector3(28, 3, 18), Vector3(4, 10, 4))})
+	p.movement = Vector2(0, -1)
+	p.apply_weapon_impulse(Vector3.UP * 8)
+	p.simulate_movement(1.0 / 60.0, 0)
+	check(p.zip_id == -1 and not p.climbing and p.pending_weapon_impulse == Vector3.ZERO and p.velocity.y > 6, "map traversal cannot reattach before a queued impulse is consumed")
+	p.simulate_movement(1.0 / 60.0, 0)
+	check(p.zip_id == -1 and not p.climbing and p.velocity.y > 6, "launch grace prevents immediate cable/ladder reattachment")
+	MapVerbs.cables = cables_before
+	MapVerbs.climbs = climbs_before
+	var mirror: Fighter = game.fighters[104]
+	var state := p.pack()
+	mirror.weapon_impulse_sequence = 0
+	mirror.global_position = state.pos
+	mirror.velocity = Vector3.ZERO
+	mirror.dash_time = 0.2
+	mirror.unpack(state, true)
+	check(mirror.velocity == state.vel and mirror.weapon_launch_time > 0 and mirror.weapon_boost_time > 0 and mirror.dash_time == 0, "new impulse sequence snaps launch velocity, cancels predicted dash and replicates timers")
+	mirror.unpack(state, true)
+	check(mirror.velocity == state.vel, "duplicate impulse snapshot cannot apply an impulse twice")
+	neutral(mirror)
+	place(mirror, O + Vector3(60, 0, 20))
+	# Alternate fire spends two rounds and excludes ADS, with LMB held simultaneously.
+	p.apply_loadout(Loadout.encode(8, 0, 0, 0))
+	p.edges = GameScript.EDGE_ALT
+	p.held = 3
+	p.swap_timer = 0.2
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 2 and p.pending_weapon_impulse == Vector3.ZERO, "alternate fire cannot bypass swap recovery")
+	p.swap_timer = 0
+	p.reload_timer = 0.2
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 2 and p.pending_weapon_impulse == Vector3.ZERO, "alternate fire cannot bypass reload")
+	p.reload_timer = 0
+	p.melee_cd = 0.2
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 2 and p.pending_weapon_impulse == Vector3.ZERO, "alternate fire cannot bypass melee recovery")
+	p.melee_cd = 0
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 0 and p.pending_weapon_impulse.length() > 9.9 and not p.weapon.uses_ads(), "double blast takes priority, spends two rounds and recoils without ADS")
+	p.shot_timer = 0
+	p.ammo = 1
+	p.pending_weapon_impulse = Vector3.ZERO
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 1 and p.reload_timer > 0 and p.pending_weapon_impulse == Vector3.ZERO, "insufficient alternate ammo starts reload without a partial blast")
+	p.apply_loadout(Loadout.encode(4, 0, 0, 0))
+	p.held = 1
+	p.edges = GameScript.EDGE_ALT
+	shot = arsenal_shot(p, 4, O + Vector3(-5, 3, -21))
+	game.combat_tick(p, 1.0 / 60.0)
+	check(game.projectiles.size() == 1 and p.ammo == 4, "unarmed grenade cannot detonate; alternate press excludes primary fire")
+	shot.age = 0.25
+	game.combat_tick(p, 1.0 / 60.0)
+	check(game.projectiles.is_empty() and p.ammo == 4, "remote detonation accepts armed owned grenades without spending ammo")
+	p.edges = 0
+	p.held = 0
+	shot = arsenal_shot(p, 4, O + Vector3(-5, 10, -21))
+	game.projectiles_tick(2.5)
+	check(game.projectiles.is_empty(), "launcher fuse explodes without impact")
+	# Sweeps catch a thin wall at high speed; discs retain speed and have two bounces.
+	shot = arsenal_shot(p, 20, O + Vector3(88, 2, -21), Vector3(24, 0, 0))
+	game.projectiles_tick(0.1)
+	check(game.projectiles.has(shot.projectile_id) and shot.bounces == 1 and shot.velocity.x < -23.9, "disc swept collision banks at full speed")
+	shot.global_position = O + Vector3(88, 2, -21)
+	shot.velocity = Vector3(24, 0, 0)
+	game.projectiles_tick(0.1)
+	check(shot.bounces == 2, "disc allows its second geometry bounce")
+	shot.global_position = O + Vector3(88, 2, -21)
+	shot.velocity = Vector3(240, 0, 0)
+	game.projectiles_tick(0.02)
+	check(game.projectiles.is_empty(), "third disc impact consumes it without tunneling")
+	shot = arsenal_shot(p, 4, O + Vector3(88, 2, -21), Vector3(24, 0, 0))
+	game.projectiles_tick(0.1)
+	check(shot.bounces == 1 and shot.velocity.x < 0, "grenades bounce on geometry instead of exploding")
+	game.clear_projectiles()
+	# Projectile budgets reject a shot before spending ammunition or starting a cooldown.
+	p.apply_loadout(Loadout.encode(4, 0, 0, 0))
+	p.held = 1
+	for i in range(4):
+		arsenal_shot(p, 4, O + Vector3(0, 10, -21))
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 4 and p.shot_timer == 0, "active grenade cap rejects fire without ammo/cooldown")
+	game.clear_projectiles()
+	p.apply_loadout(Loadout.encode(5, 0, 0, 0))
+	for i in range(game.MAX_OWNER_PROJECTILES):
+		arsenal_shot(p, 5, O + Vector3(0, 10, -21))
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 40 and p.shot_timer == 0, "owner projectile budget rejects fire without cost")
+	game.clear_projectiles()
+	for i in range(game.MAX_PROJECTILES):
+		shot = arsenal_shot(p, 5, O + Vector3(0, 10, -21))
+		shot.owner_id = -1
+	game.combat_tick(p, 1.0 / 60.0)
+	check(p.ammo == 40 and p.shot_timer == 0, "global projectile budget rejects fire without cost")
+	game.clear_projectiles()
+	shot = arsenal_shot(p, 5, O + Vector3(0, 10, -21), Vector3(42, 0, 0))
+	shot.travelled = shot.spec.reach - 0.1
+	game.projectiles_tick(0.1)
+	check(game.projectiles.is_empty(), "nonexplosive projectile expires quietly at its travel limit")
+	shot = arsenal_shot(p, 5, O + Vector3(0, 10, -21), Vector3(42, 0, 0))
+	var world: Dictionary = game.packed_world()
+	game.authoritative = false
+	game.clear_projectiles()
+	world.tick = game.last_world_tick + 1
+	game.apply_world(world)
+	check(game.projectiles.size() == 1, "world snapshot reconstructs an in-flight projectile")
+	var replica: WeaponProjectile = game.projectiles.values()[0]
+	var before := replica.global_position
+	var hp := foe.hp
+	game.projectiles_tick(0.1)
+	check(replica.global_position.x > before.x and foe.hp == hp and not game.fire_weapon(p), "client extrapolates projectiles but cannot fire or award damage")
+	world.erase("pr")
+	world.tick += 1
+	game.apply_world(world)
+	check(game.projectiles.is_empty(), "missing projectile list reconciles removed shots")
+	game.authoritative = true
+	game.last_world_tick = -1
+	shot = arsenal_shot(game.fighters[106], 5, O + Vector3(0, 10, -21))
+	game.peer_disconnected(106)
+	check(game.projectiles.is_empty() and game.fighters.size() == 10, "disconnect clears owned projectiles and replaces the roster slot")
+	arsenal_shot(p, 5, O + Vector3(0, 10, -21))
+	p.global_position = game.spawn_position(p)
+	game.apply_loadout(p.fighter_id, Loadout.encode(5, 0, 0, 0))
+	check(game.projectiles.is_empty(), "loadout replacement removes owned projectiles")
+	arsenal_shot(p, 5, O + Vector3(0, 10, -21))
+	game.match_state.winner = -1
+	game.projectiles_tick(0.1)
+	check(game.projectiles.is_empty(), "round completion clears surviving projectiles")
+	game.match_state.winner = -2
+	p.held = 0
+	p.edges = 0
+	neutral(p)
+	neutral(foe)
+	await process_frame
 
 func test_sidearm_swap() -> void:
 	var p: Fighter = game.local_player()
@@ -1007,14 +1304,17 @@ func test_weapon_specs() -> void:
 	check(shotgun.body_ttk(200.0, 19.0) > 3.0 * shotgun.body_ttk(200.0, 3.0), "shotgun collapses at range")
 	check(smg.interval < 0.1 and smg.magazine >= 30, "smg is rapid fire")
 	for w in Loadout.PRIMARIES:
-		var t: float = w.body_ttk(200.0, 10.0)
-		check(t > 0.5 and t < 4.0, "primary time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		var role_range: float = LIVE_RANGES[w.title]
+		var t: float = w.body_ttk(200.0, role_range)
+		check(t >= 0.65 - 0.001 and t <= 1.2 + 0.001, "primary role time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		for sidearm in Loadout.SIDEARMS:
+			check(t < sidearm.body_ttk(200.0, role_range), "%s beats %s in its intended range" % [w.title, sidearm.title])
 		print("PRIMARY TTK %s: %.2fs at 3 m, %.2fs at 25 m" % [w.title, w.body_ttk(200.0, 3.0), w.body_ttk(200.0, 25.0)])
 	# Sidearms are the fallback: quick to draw, a little weaker than each primary in that primary's own range.
 	for w in Loadout.SIDEARMS:
 		var t: float = w.body_ttk(200.0, 10.0)
 		print("SIDEARM TTK %s: %.2fs at 10 m, %.2fs at 30 m" % [w.title, t, w.body_ttk(200.0, 30.0)])
-		check(t > 2.0 and t < 3.5, "sidearm time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		check(t >= 1.4 - 0.001 and t < 2.0, "sidearm time-to-kill in band: %s (%.2fs)" % [w.title, t])
 		check(shotgun.body_ttk(200.0, 3.0) < w.body_ttk(200.0, 3.0), "shotgun beats the %s point blank" % w.title)
 		check(smg.body_ttk(200.0, 10.0) < t, "smg beats the %s at 10 m" % w.title)
 		check(rifle.body_ttk(200.0, 30.0) < w.body_ttk(200.0, 30.0), "rifle beats the %s at 30 m" % w.title)
@@ -1048,7 +1348,7 @@ func test_authority_and_respawn() -> void:
 	game.match_state.winner = 1
 	game.start_game("restart")
 	check(game.match_state.winner == -2 and game.match_state.remaining == 720, "host restart resets round")
-	check(game.entities.is_empty() and p.hp == Fighter.MAX_HEALTH, "restart clears deployables and restores fighters")
+	check(game.entities.size() == CivicDividend.pickups.size() and game.entities.values().all(func(e): return e.owner_id == -1) and game.projectiles.is_empty() and p.hp == Fighter.MAX_HEALTH, "restart clears deployables/projectiles, recreates map pickups and restores fighters")
 
 func test_roster_and_roles() -> void:
 	check(game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "full roster of %d fighters" % (CivicDividend.TEAM_SIZE * 2))
@@ -1069,7 +1369,10 @@ func test_roster_and_roles() -> void:
 		if p.bot:
 			primaries[ids[0]] = true
 	check(valid, "every fighter carries a valid loadout")
-	check(primaries.size() == Loadout.PRIMARIES.size(), "bots carry every primary")
+	var cycle := {}
+	for i in range(Loadout.PRIMARIES.size()):
+		cycle[Loadout.decode(game.bot_loadout(i))[0]] = true
+	check(cycle.size() == Loadout.PRIMARIES.size(), "bot loadout cycle covers every primary")
 	game.refresh_bot_enemies()
 	for p in game.fighters.values():
 		if p.bot:
@@ -1142,6 +1445,20 @@ func test_hud() -> void:
 	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
 	var row_sizes: Array = game.menu.item_buttons.map(func(row): return row.size())
 	check(row_sizes == Loadout.slot_sizes(), "menu has a button per item in every loadout slot")
+	game.menu.show()
+	game.menu._pick(0, 8)
+	await process_frame
+	await process_frame
+	check(game.menu.size.y <= game.menu.get_viewport_rect().size.y + 16, "long weapon blurbs do not leave an oversized menu after wrapping")
+	check(game.menu.item_blurb.get_parent() != game.menu.loadout_panel and game.menu.loadout_summary.text.contains("first impact"), "weapon hints and ideal TTK remain outside the scrolling item picker")
+	game.menu.loadout_scroll.scroll_vertical = 10000
+	await process_frame
+	check(game.menu.loadout_scroll.scroll_vertical > 0, "expanded loadout picker scrolls to utility and melee choices")
+	game.menu._show_tab(1)
+	check(not game.menu.loadout_scroll.visible and not game.menu.item_blurb.visible and game.menu.look_panel.visible, "LOOK tab hides weapon picker and hints")
+	game.menu._show_tab(0)
+	game.menu.loadout_scroll.scroll_vertical = 0
+	game.menu.hide()
 	var picked: int = game.selected_loadout
 	game.menu._pick(2, Loadout.Utility.SENTRY_TURRET)
 	check(Loadout.utility(game.selected_loadout) == Loadout.Utility.SENTRY_TURRET and Loadout.primary(game.selected_loadout) == Loadout.primary(picked), "picking a menu item changes only its slot")

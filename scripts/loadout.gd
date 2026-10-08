@@ -6,8 +6,8 @@ extends RefCounted
 # and a melee on F. Pure data plus the packing rules; combat lives in game.gd (use_utility, use_melee).
 # A loadout travels as one int (4 bits per slot) in join/loadout RPCs and the snapshot ("lo").
 
-const PRIMARIES = [preload("res://resources/weapons/shotgun.tres"), preload("res://resources/weapons/rifle.tres"), preload("res://resources/weapons/smg.tres")]
-const SIDEARMS = [preload("res://resources/weapons/pistol.tres"), preload("res://resources/weapons/burst_pistol.tres"), preload("res://resources/weapons/revolver.tres")]
+const PRIMARIES = [preload("res://resources/weapons/shotgun.tres"), preload("res://resources/weapons/rifle.tres"), preload("res://resources/weapons/smg.tres"), preload("res://resources/weapons/rocket_launcher.tres"), preload("res://resources/weapons/grenade_launcher.tres"), preload("res://resources/weapons/plasma_gun.tres"), preload("res://resources/weapons/lightning_gun.tres"), preload("res://resources/weapons/railgun.tres"), preload("res://resources/weapons/double_barrel.tres")]
+const SIDEARMS = [preload("res://resources/weapons/pistol.tres"), preload("res://resources/weapons/burst_pistol.tres"), preload("res://resources/weapons/revolver.tres"), preload("res://resources/weapons/nail_pistol.tres"), preload("res://resources/weapons/disc_launcher.tres")]
 
 enum Utility { GRAPPLE, FRAG_GRENADE, SMOKE_GRENADE, LAUNCH_PAD, SENTRY_TURRET, BARRICADE, BREACH_CHARGE }
 const UTILITIES := [

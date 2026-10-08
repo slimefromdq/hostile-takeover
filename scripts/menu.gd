@@ -11,6 +11,7 @@ var item_buttons: Array = [[], [], [], []]  # per loadout slot (Loadout.SLOT_NAM
 var item_blurb: Label
 var loadout_summary: Label
 var loadout_panel: VBoxContainer
+var loadout_scroll: ScrollContainer
 var look_panel: VBoxContainer
 var tab_buttons: Array = []
 var look_controls := {}  # Appearance field key -> Label (style cycler) or Array of swatch Buttons
@@ -58,7 +59,12 @@ func setup(owner_game: Node3D) -> void:
 	right.add_child(_make_tabs())
 	var picker := VBoxContainer.new()
 	picker.add_theme_constant_override("separation", 6)
-	right.add_child(picker)
+	loadout_scroll = ScrollContainer.new()
+	loadout_scroll.custom_minimum_size = Vector2(640, 200)
+	loadout_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(loadout_scroll)
+	loadout_scroll.add_child(picker)
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	loadout_panel = picker
 	look_panel = _make_look_panel()
 	look_panel.visible = false
@@ -88,9 +94,13 @@ func setup(owner_game: Node3D) -> void:
 	item_blurb = _label(Loadout.item_blurb(0, ids[0]), 12, Color(1, 1, 1, 0.75))
 	item_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	item_blurb.custom_minimum_size = Vector2(640, 34)
-	picker.add_child(item_blurb)
+	item_blurb.size = Vector2(640, 34)
+	right.add_child(item_blurb)
 	loadout_summary = _label("", 13, Color(1, 1, 1, 0.85))
-	picker.add_child(loadout_summary)
+	loadout_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	loadout_summary.custom_minimum_size = Vector2(640, 34)
+	loadout_summary.size = Vector2(640, 34)
+	right.add_child(loadout_summary)
 	_refresh_loadout()
 	var grid := GridContainer.new()
 	grid.columns = 3
@@ -158,7 +168,7 @@ func setup(owner_game: Node3D) -> void:
 		sens_label.text = "Aim sensitivity: %.2f" % v)
 	sens_row.add_child(sens_slider)
 	column.add_child(sens_row)
-	controls_panel = _label("WASD move / aim with mouse · LMB fire · RMB aim down sights · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q utility · F melee · 2 or mouse wheel swap primary / sidearm (faster than reloading) · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
+	controls_panel = _label("WASD move / aim with mouse · LMB fire · RMB aim / grenade detonate / double blast · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q utility · F melee · 2 or mouse wheel swap primary / sidearm (faster than reloading) · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
 	toggle.pressed.connect(func():
@@ -194,6 +204,8 @@ func _cycle_map() -> void:
 
 # Keep the panel centred whatever the window or fullscreen aspect ratio is.
 func _center() -> void:
+	# Wrapped labels can briefly enlarge the panel before their width settles; allow it to shrink again.
+	size = Vector2(980, 724).max(get_combined_minimum_size())
 	position = ((get_viewport_rect().size - size) / 2.0).round()
 
 func refresh_display_button() -> void:
@@ -230,6 +242,9 @@ func _make_tabs() -> HBoxContainer:
 
 func _show_tab(index: int) -> void:
 	loadout_panel.visible = index == 0
+	loadout_scroll.visible = index == 0
+	item_blurb.visible = index == 0
+	loadout_summary.visible = index == 0
 	look_panel.visible = index == 1
 
 func _make_look_panel() -> VBoxContainer:
@@ -354,7 +369,7 @@ func _refresh_loadout() -> void:
 	var code: int = game.selected_loadout
 	var primary := Loadout.primary(code)
 	var sidearm := Loadout.sidearm(code)
-	loadout_summary.text = "HP %d  ·  %s %.1fs to kill  ·  %s %.1fs  ·  swap %.2fs" % [int(Fighter.MAX_HEALTH), primary.title, primary.body_ttk(Fighter.MAX_HEALTH), sidearm.title, sidearm.body_ttk(Fighter.MAX_HEALTH), Fighter.SWAP_TIME]
+	loadout_summary.text = "HP %d · Ideal body TTK (first impact, LMB): %s %.2fs / %s %.2fs · swap %.2fs" % [int(Fighter.MAX_HEALTH), primary.title, primary.body_ttk(Fighter.MAX_HEALTH), sidearm.title, sidearm.body_ttk(Fighter.MAX_HEALTH), Fighter.SWAP_TIME]
 	if spinner == null:
 		return
 	for child in spinner.get_children():
