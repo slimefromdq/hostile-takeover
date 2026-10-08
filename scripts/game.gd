@@ -578,6 +578,7 @@ func apply_world(data: Dictionary) -> void:
 		e.rotation.y = state.yaw
 		e.hp = state.hp
 		e.used = state.used
+		e.timer = state.get("t", 0.0)
 		e.update_visual()
 	for id in entities.keys():
 		if not seen.has(id):

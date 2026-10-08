@@ -75,6 +75,13 @@ func _draw_health_packs(me: Fighter) -> void:
 		var color := base_color if not e.used else Color(0.55, 0.6, 0.6)
 		if absf(dy) > 3.0:
 			color.a = 0.55
+		if e.kind == "power" and Items.power_spawning_soon(e.used, e.timer):
+			# About to spawn: a pulsing ring that closes in as the timer runs down, with the seconds left.
+			var warn: Color = Items.KINDS.power.color
+			var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 150.0)
+			draw_arc(c, 7.0 + 5.0 * (e.timer / Items.POWER_WARNING), 0, TAU, 24, Color(warn, 0.5 + 0.5 * pulse), 2.0)
+			draw_string(ThemeDB.fallback_font, c + Vector2(-8, -10), "%d" % ceili(e.timer), HORIZONTAL_ALIGNMENT_CENTER, 16.0, 11, Color(warn, 1.0))
+			color = Color(warn, 0.6 + 0.4 * pulse)
 		if e.kind == "bubble":
 			draw_circle(c, 2.5, color)
 		elif e.kind == "power":

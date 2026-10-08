@@ -84,7 +84,10 @@ func configure(g: Node3D, data: Dictionary) -> void:
 
 var chevrons: Array[StandardMaterial3D] = []
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	# Clients do not run entities_tick: count a snapshot's respawn timer down locally so the minimap countdown is smooth.
+	if timer > 0.0 and Items.KINDS.has(kind) and not game.authoritative:
+		timer = maxf(0.0, timer - dt)
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in range(chevrons.size()):
 		chevrons[i].emission_energy_multiplier = 0.6 + 2.4 * maxf(0.0, sin(t * 6.0 - i * 1.2))
@@ -214,4 +217,4 @@ func update_visual() -> void:
 		display.text = "ALLY DOUBLE" if team == game.local_team() else "Mirage Agent"
 
 func pack() -> Dictionary:
-	return {"id": entity_id, "owner": owner_id, "team": team, "kind": kind, "hp": hp, "max_hp": max_hp, "life": lifetime, "pos": global_position, "yaw": rotation.y, "used": used}
+	return {"id": entity_id, "owner": owner_id, "team": team, "kind": kind, "hp": hp, "max_hp": max_hp, "life": lifetime, "pos": global_position, "yaw": rotation.y, "used": used, "t": timer if used and Items.KINDS.has(kind) else 0.0}

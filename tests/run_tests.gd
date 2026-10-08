@@ -738,6 +738,7 @@ func test_power_ups() -> void:
 	game.damage_fighter(p, 10.0, foe.fighter_id)
 	check(is_equal_approx(p.hp, p.spec.health - 10.0), "the holder takes normal damage")
 	check(Items.KINDS.power.respawn == 90.0, "the power-up respawns after 90 s")
+	check(is_equal_approx(item.pack().t, 90.0) and not Items.power_spawning_soon(true, 60.0) and Items.power_spawning_soon(true, 12.0) and not Items.power_spawning_soon(false, 12.0) and not Items.power_spawning_soon(true, 0.0), "the minimap warns only in the last 15 s of a taken power-up's timer")
 	# One power-up at a time, and it respawns with a fresh roll.
 	game.entities_tick(91.0)
 	check(not item.used and (int(item.hp) == Items.POWER_INVULNERABLE or int(item.hp) == Items.POWER_QUAD), "the power-up respawns as one of the two types")

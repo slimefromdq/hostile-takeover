@@ -18,6 +18,7 @@ const POWER_QUAD := 2
 const POWER_DURATION := 8.0
 const POWER_FIRST_SPAWN := 30.0  # the first one appears this long after the match starts
 const QUAD_MULTIPLIER := 3.0
+const POWER_WARNING := 15.0  # the minimap flags the power-up this many seconds before it spawns
 const POWER_NAMES := {1: "INVINCIBLE", 2: "TRIPLE DAMAGE"}
 const POWER_COLORS := {1: Color("5ae6ff"), 2: Color("ff4a3a")}
 const RADIUS := 1.5
@@ -32,6 +33,10 @@ static func can_use(kind: String, hp: float, max_hp: float, armor: float) -> boo
 		return true  # the holder check (one power-up at a time) lives with the fighter
 	var item: Dictionary = KINDS[kind]
 	return (item.heal > 0.0 and hp < max_hp) or (item.armor > 0.0 and armor < Fighter.ARMOR_MAX)
+
+# True while a taken power-up is within POWER_WARNING seconds of coming back.
+static func power_spawning_soon(used: bool, timer: float) -> bool:
+	return used and timer > 0.0 and timer <= POWER_WARNING
 
 static func apply(kind: String, p: Fighter) -> void:
 	var item: Dictionary = KINDS[kind]
