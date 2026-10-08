@@ -8,7 +8,7 @@ AI agents (ChatGPT, Codex, Claude...): start with [`AGENTS.md`](AGENTS.md) for t
 
 Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Pick a loadout and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.
 
-For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping a full twenty-fighter roster. Disconnected players are replaced by bots.
+For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping a full ten-fighter (5v5) roster. Disconnected players are replaced by bots.
 
 | Input | Action |
 |---|---|
@@ -148,7 +148,7 @@ Art is generated primitive geometry (the fighter rig, effects and the map are co
 
 ## Performance notes
 
-`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 20-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Characters are boxes baked into one vertex-coloured mesh per bone (about a dozen draw calls per fighter whatever the outfit), the sun uses a single shadow cascade, only a fighter's head, torso and legs cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
+`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 10-fighter (5v5) match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Characters are boxes baked into one vertex-coloured mesh per bone (about a dozen draw calls per fighter whatever the outfit), the sun uses a single shadow cascade, only a fighter's head, torso and legs cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.
 

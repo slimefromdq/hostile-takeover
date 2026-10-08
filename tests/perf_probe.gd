@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Samples render/object counts during a simulated 20-fighter match.
+# Samples render/object counts during a simulated 10-fighter (5v5) match.
 #   xvfb-run -a godot --path . --rendering-driver opengl3 --script res://tests/perf_probe.gd [-- frames=N]
 # Software rendering makes timings meaningless; compare counts and before/after A/B runs.
 
