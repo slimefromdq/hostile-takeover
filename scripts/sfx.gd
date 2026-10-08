@@ -4,7 +4,7 @@ extends RefCounted
 # Procedural sound effects: each cue is synthesised once from oscillators and noise, cached as an
 # AudioStreamWAV, and played through small fixed pools. Silent in headless runs.
 
-enum Kind { SHOT_SKYRUNNER, SHOT_ENGINEER, SHOT_ENFORCER, SHOT_MIRAGE, SHOT_CHARGED, SHOT_BREACHER, SHOT_LONGSHOT, SHOT_CHATTERBOX, IMPACT, STEP, SWAP, KICKOFF, BRAKE, BREACH, EVICT, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE }
+enum Kind { SHOT_SKYRUNNER, SHOT_ENGINEER, SHOT_ENFORCER, SHOT_MIRAGE, SHOT_CHARGED, SHOT_BREACHER, SHOT_LONGSHOT, SHOT_CHATTERBOX, IMPACT, STEP, SWAP, KICKOFF, BRAKE, BREACH, EVICT, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE, ITEM_BUBBLE, ITEM_ARMOR1, ITEM_ARMOR2 }
 
 const MIX_RATE := 22050
 const POOL_3D := 16
@@ -39,6 +39,9 @@ const RECIPES := {
 	Kind.KILL: [0.28, 800.0, 1600.0, "square", 0.0, 9.0, 0.45],
 	Kind.CAPTURE: [0.5, 440.0, 880.0, "sine", 0.0, 5.0, 0.5],
 	Kind.PLACE: [0.15, 250.0, 350.0, "square", 0.1, 14.0, 0.4],
+	Kind.ITEM_BUBBLE: [0.1, 900.0, 1300.0, "sine", 0.0, 20.0, 0.4],
+	Kind.ITEM_ARMOR1: [0.2, 500.0, 760.0, "square", 0.0, 12.0, 0.4],
+	Kind.ITEM_ARMOR2: [0.4, 300.0, 900.0, "square", 0.05, 7.0, 0.5],
 }
 
 static var muted := false

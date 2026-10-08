@@ -41,6 +41,12 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		box.size = Vector3(0.7, 0.4, 0.7)
 	elif kind == "armor":
 		box.size = Vector3(0.5, 0.2, 0.5)
+	elif kind == "bubble":
+		box.size = Vector3(0.4, 0.4, 0.4)
+	elif kind == "armor1":
+		box.size = Vector3(0.7, 0.2, 0.7)
+	elif kind == "armor2":
+		box.size = Vector3(0.9, 0.3, 0.9)
 	mesh.mesh = box
 	mesh.position.y = box.size.y / 2
 	if kind == "double":
@@ -126,6 +132,18 @@ func build_model() -> void:
 			var plate := CharacterRig.box(model, Vector3(0, 0.3, 0), Vector3(0.5, 0.2, 0.5), Visuals.solid(Color("e8eef0")))
 			Visuals.add_outline(plate.material_override, blue, 0.025)
 			CharacterRig.box(model, Vector3(0, 0.42, 0), Vector3(0.3, 0.05, 0.3), Visuals.glow(blue, 2.0))
+		"bubble", "armor1", "armor2":
+			var tint: Color = Items.KINDS[kind].color
+			if kind == "bubble":
+				var orb := CharacterRig.sphere(model, Vector3(0, 0.45, 0), 0.2, Visuals.glow(tint, 2.0))
+				Visuals.add_outline(orb.material_override, tint.lightened(0.4), 0.02)
+			else:
+				var wide := 0.7 if kind == "armor1" else 0.9
+				var base := CharacterRig.box(model, Vector3(0, 0.12, 0), Vector3(wide, 0.16, wide), Visuals.solid(Color("2b3440")))
+				Visuals.add_outline(base.material_override, tint, 0.025)
+				CharacterRig.box(model, Vector3(0, 0.26, 0), Vector3(wide * 0.6, 0.1, wide * 0.6), Visuals.glow(tint, 2.2))
+				if kind == "armor2":
+					CharacterRig.box(model, Vector3(0, 0.4, 0), Vector3(wide * 0.3, 0.14, wide * 0.3), Visuals.glow(tint.lightened(0.3), 3.0))
 		"cover":
 			var slab := CharacterRig.box(model, Vector3(0, 0.9, 0), Vector3(3.5, 1.8, 0.3), Visuals.solid(dark.lightened(0.15)))
 			Visuals.add_outline(slab.material_override, team_col.lightened(0.4), 0.02)
@@ -164,7 +182,7 @@ func update_visual() -> void:
 	if kind == "armor":
 		display.visible = false
 		return
-	if kind == "healpack":
+	if kind == "healpack" or Items.KINDS.has(kind):
 		# A taken pack hides until it respawns.
 		var model := get_node_or_null("Model")
 		if model != null:

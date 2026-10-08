@@ -65,15 +65,22 @@ func _draw() -> void:
 # carry an arrow pointing which way to go.
 func _draw_health_packs(me: Fighter) -> void:
 	for e in game.entities.values():
-		if e.kind != "healpack":
+		if e.kind != "healpack" and not Items.KINDS.has(e.kind):
 			continue
 		var c := to_map(e.global_position.x, e.global_position.z)
 		var dy: float = 0.0 if me == null else e.global_position.y - me.global_position.y
-		var color := Color("3dff7a") if not e.used else Color(0.55, 0.6, 0.6)
+		var base_color: Color = Color("3dff7a") if e.kind == "healpack" else Items.KINDS[e.kind].color
+		var color := base_color if not e.used else Color(0.55, 0.6, 0.6)
 		if absf(dy) > 3.0:
 			color.a = 0.55
-		draw_line(c + Vector2(-3.5, 0), c + Vector2(3.5, 0), color, 2.0)
-		draw_line(c + Vector2(0, -3.5), c + Vector2(0, 3.5), color, 2.0)
+		if e.kind == "bubble":
+			draw_circle(c, 2.5, color)
+		elif e.kind == "armor1" or e.kind == "armor2":
+			var half := 3.0 if e.kind == "armor1" else 4.5
+			draw_rect(Rect2(c - Vector2(half, half), Vector2(half, half) * 2.0), color)
+		else:
+			draw_line(c + Vector2(-3.5, 0), c + Vector2(3.5, 0), color, 2.0)
+			draw_line(c + Vector2(0, -3.5), c + Vector2(0, 3.5), color, 2.0)
 		if dy > 3.0:
 			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -9), c + Vector2(3.5, -5), c + Vector2(-3.5, -5)]), color)
 		elif dy < -3.0:

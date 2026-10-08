@@ -45,6 +45,7 @@ func run() -> void:
 	await test_reave()
 	await test_machinery()
 	test_healpack()
+	test_items()
 	test_authority_and_respawn()
 	test_roster_and_roles()
 	await test_hud()
@@ -345,7 +346,7 @@ func test_mirage() -> void:
 	await create_timer(0.2).timeout
 
 func test_armor_rules() -> void:
-	check(Fighter.ARMOR_MAX == 50.0 and GameScript.ARMOR_DROP == 15.0 and GameScript.ARMOR_DROP_BEHIND == 10.0, "light armor: 15 per kill, +10 per point behind, capped at 50")
+	check(Fighter.ARMOR_MAX == 100.0 and GameScript.ARMOR_DROP == 15.0 and GameScript.ARMOR_DROP_BEHIND == 10.0, "light armor: 15 per kill, +10 per point behind, capped at 100")
 
 func test_reave() -> void:
 	var p: Fighter = game.local_player()
@@ -614,6 +615,62 @@ func test_healpack() -> void:
 	game.entities_tick(game.PACK_RESPAWN + 1.0)
 	check(not pack.used, "health pack respawns after its cooldown")
 	game.remove_entity(data.id)
+
+func test_items() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	p.change_class(2)
+	p.global_position = O + Vector3(30, 0, 30)
+	foe.global_position = O + Vector3(60, 0, 60)
+	check(Items.entity_kind("bubble") == "bubble" and Items.entity_kind("armor2") == "armor2" and Items.entity_kind("health") == "healpack", "blockout pickup kinds map to entity kinds")
+	var ids := {}
+	for kind in ["bubble", "armor1", "armor2"]:
+		var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": kind, "hp": 1.0, "life": 1e9, "pos": p.global_position, "yaw": 0.0, "used": false}
+		game.entity_next += 1
+		game.create_entity_from(data)
+		ids[kind] = data.id
+		game.entities[data.id].visible = true
+	# Only the bubble is in reach at first: park the armors away until needed.
+	game.entities[ids.armor1].global_position = O + Vector3(30, 0, 40)
+	game.entities[ids.armor2].global_position = O + Vector3(30, 0, 50)
+	var bubble: Deployable = game.entities[ids.bubble]
+	game.entities_tick(0.1)
+	check(not bubble.used and p.hp == p.spec.health, "a health bubble ignores a fighter at full health")
+	p.hp = 100.0
+	game.entities_tick(0.1)
+	check(is_equal_approx(p.hp, 115.0) and bubble.used and p.heal_left == 0.0, "a health bubble heals 15 at once with no regen tail")
+	p.hp = 50.0
+	game.entities_tick(0.1)
+	check(p.hp == 50.0, "a taken bubble heals nobody until it respawns")
+	game.entities_tick(Items.KINDS.bubble.respawn + 1.0)
+	check(not bubble.used, "a health bubble respawns after 10 s")
+	p.hp = p.spec.health - 5.0
+	game.entities_tick(0.1)
+	check(p.hp == p.spec.health, "a bubble never heals past full health")
+	game.entities_tick(Items.KINDS.bubble.respawn + 1.0)
+	# Armor tiers: stack up to the cap, either team may take them.
+	p.armor = 0.0
+	game.entities[ids.armor1].global_position = p.global_position
+	game.entities_tick(0.1)
+	check(is_equal_approx(p.armor, 50.0) and game.entities[ids.armor1].used, "armor tier 1 gives 50")
+	p.armor = 20.0
+	game.entities[ids.armor2].global_position = p.global_position
+	game.entities_tick(0.1)
+	check(is_equal_approx(p.armor, 100.0) and game.entities[ids.armor2].used, "armor tier 2 gives up to the 100 cap")
+	check(Items.KINDS.armor1.respawn == 30.0 and Items.KINDS.armor2.respawn == 45.0, "armor tiers respawn after 30 s and 45 s")
+	game.entities_tick(46.0)
+	p.armor = Fighter.ARMOR_MAX
+	game.entities_tick(0.1)
+	check(not game.entities[ids.armor2].used, "armor ignores a fighter already at the cap")
+	p.global_position = O + Vector3(80, 0, 80)
+	foe.global_position = game.entities[ids.armor2].global_position
+	foe.armor = 0.0
+	foe.hp = 1.0
+	foe.dead_time = 0.0
+	game.entities_tick(0.1)
+	check(foe.armor == 100.0 and foe.team != p.team, "the other team can take a map armor too")
+	for id in ids.values():
+		game.remove_entity(id)
 
 func test_machinery() -> void:
 	var p: Fighter = game.local_player()

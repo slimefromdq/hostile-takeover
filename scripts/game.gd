@@ -1200,7 +1200,7 @@ func drop_armor(pos: Vector3, team: int) -> void:
 func spawn_pickups() -> void:
 	for f in CivicDividend.pickups:
 		var at: Array = f.pos
-		var data := {"id": entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": Vector3(at[0], at[1], at[2]), "yaw": 0.0, "used": false}
+		var data := {"id": entity_next, "owner": -1, "team": 0, "kind": Items.entity_kind(f.get("kind", "health")), "hp": 1.0, "life": 1e9, "pos": Vector3(at[0], at[1], at[2]), "yaw": 0.0, "used": false}
 		entity_next += 1
 		create_entity_from(data)
 
@@ -1244,6 +1244,20 @@ func entities_tick(dt: float) -> void:
 						e.update_visual()
 						show_ring(e.global_position, PACK_RADIUS, Color("3dff7a"))
 						play_sfx(e.global_position, Sfx.Kind.PAD)
+						break
+		elif Items.KINDS.has(e.kind):
+			if e.used and e.timer <= 0:
+				e.used = false
+				e.update_visual()
+			elif not e.used:
+				for p in fighters.values():
+					if p.hp > 0 and Items.can_use(e.kind, p.hp, p.spec.health, p.armor) and p.global_position.distance_to(e.global_position) < Items.RADIUS:
+						Items.apply(e.kind, p)
+						e.used = true
+						e.timer = Items.KINDS[e.kind].respawn
+						e.update_visual()
+						show_ring(e.global_position, Items.RADIUS, Items.KINDS[e.kind].color)
+						play_sfx(e.global_position, Items.KINDS[e.kind].sound)
 						break
 		elif e.kind == "armor":
 			for p in fighters.values():

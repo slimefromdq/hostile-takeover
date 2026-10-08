@@ -182,7 +182,7 @@ func check_canopy() -> void:
 	var packs := 0
 	var singles := 0
 	for f in features:
-		if f.type == "pickup":
+		if f.type == "pickup" and f.get("kind", "health") == "health":
 			packs += 1
 			check(absf(f.pos[0]) <= 86.0, "health pack %s sits outside the protected depots" % f.get("tag", ""))
 			if absf(f.pos[0]) < 8.0:

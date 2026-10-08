@@ -1732,6 +1732,82 @@
     34,
     -59
    ]
+  },
+  {
+   "type": "pickup",
+   "tag": "bubble",
+   "kind": "bubble",
+   "pos": [
+    -73.5,
+    0,
+    -2.5
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "bubble",
+   "kind": "bubble",
+   "pos": [
+    -17.5,
+    0,
+    3.5
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "bubble",
+   "kind": "bubble",
+   "pos": [
+    -46,
+    -6,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "bubble",
+   "kind": "bubble",
+   "pos": [
+    -61,
+    -6,
+    -3.5
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "armor1",
+   "kind": "armor1",
+   "pos": [
+    -49,
+    0,
+    9
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "armor1",
+   "kind": "armor1",
+   "pos": [
+    -13,
+    -6,
+    4
+   ],
+   "mirror": true
+  },
+  {
+   "type": "pickup",
+   "tag": "armor2",
+   "kind": "armor2",
+   "pos": [
+    0,
+    -11.0,
+    0
+   ]
   }
  ],
  "objects": [

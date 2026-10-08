@@ -64,6 +64,7 @@ def build(b):
     stage_verbs(b)
     stage_vertical(b)
     stage_healpacks(b)
+    stage_items(b)
     stage_graph(b)
 
 
@@ -486,6 +487,23 @@ HEALPACKS = [
 ]
 # On the x = 0 axis, so not mirrored: the north spire dock behind the spire top (spire_n_ladder or the blimp).
 SINGLE_HEALPACKS = [(-4.5, 34, -59)]
+
+
+# ---- timed items: bubbles (+15 HP, 10 s), armor1 (+50, 30 s) and armor2 (+100, 45 s) --------------------
+# Placed on existing waypoints so every one is on a walkable, audited route. Unlike health packs these are not
+# hidden: bubbles sit on the movement lines, armor1 on the A-B approach and in the tunnel, armor2 in the cistern under C.
+BUBBLES = [(-73.5, 0, -2.5), (-17.5, 0, 3.5), (-46, -6, 0), (-61, -6, -3.5)]
+ARMOR1 = [(-49, 0, 9), (-13, -6, 4)]
+ARMOR2_AXIS = [(0, SUMP_Y, 0)]
+
+
+def stage_items(b):
+    for x, y, z in BUBBLES:
+        b.pickup(x, y, z, mirror=True, tag="bubble", kind="bubble")
+    for x, y, z in ARMOR1:
+        b.pickup(x, y, z, mirror=True, tag="armor1", kind="armor1")
+    for x, y, z in ARMOR2_AXIS:
+        b.pickup(x, y, z, mirror=False, tag="armor2", kind="armor2")
 
 
 def stage_healpacks(b):

@@ -53,7 +53,7 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 
 There is no shared meter. Each hero's **ultimate** (X) runs on its own cooldown (`ultimate_cooldown` in the hero's `.tres`; Reave's Pyre Edge is 45 s, restarted when you swap hero, kept through death).
 
-**Light armor:** every kill drops an armor plate where the victim died, for the killer's team to grab (walk over it; it lasts 20 s). A plate gives 15 armor, plus 10 for each objective point the killer's team is behind on (up to +20). Armor soaks damage 1:1 before health, caps at 50 and is lost on death. See `docs/HEROES.md` for the hero design philosophy.
+**Light armor:** every kill drops an armor plate where the victim died, for the killer's team to grab (walk over it; it lasts 20 s). A plate gives 15 armor, plus 10 for each objective point the killer's team is behind on (up to +20). Armor soaks damage 1:1 before health, caps at 100 and is lost on death. See `docs/HEROES.md` for the hero design philosophy.
 
 ## Weapons (experimental)
 
@@ -72,6 +72,8 @@ Aim placement abilities at a visible location; invalid placements do not consume
 ## Health packs
 
 Concrete Canopy has 19 health packs, deliberately hard to find: rooftops and docks, tucked corners inside buildings, and underground dead ends (foundation pit, pump hall, market vault). The minimap marks every pack with a green plus (grey while taken, with an arrow when it is on another tier). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy hero cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
+
+**Timed items (Concrete Canopy):** besides the hidden health packs, the Canopy has visible items on fixed timers, taken by whichever team touches them first (and only when they would help): **health bubbles** (green, +15 HP at once, no regen, back after 10 s; 8 on movement lines), **armor tier 1** (blue square, +50 armor, 30 s; 4 on the A/B approaches and in the tunnel) and **armor tier 2** (gold, +100 armor, 45 s; one in the cistern under point C). Armor stacks with kill-drop armor up to 100 and soaks damage 1:1 before health. The minimap shows every item (grey while taken). Numbers live in `scripts/items.gd`; placement is `stage_items` in `tools/blender/maps/canopy.py`.
 
 ## Acquisition
 

@@ -11,7 +11,7 @@ shares a movement language and a resource, and is free to differ in everything e
 - **Ultimate cooldowns and light armor.** There is no shared meter. An ultimate runs on its hero's own cooldown
   (`ClassSpec.ultimate_cooldown`, restarted by a hero swap, kept through death); `Game.activate_ultimate` is the single
   place it is paid for. Kills drop light armor for the killer's team (`Game.drop_armor`: 15, plus 10 per point the
-  killer's team is behind on points, up to +20). Armor soaks damage 1:1 before health, caps at 50 and is lost on death.
+  killer's team is behind on points, up to +20). Armor soaks damage 1:1 before health, caps at 100 and is lost on death.
 - **The ultimate key (X)**, the three ability keys (Q / E / F), primary and alternate fire, reload.
 
 ## What a hero chooses
