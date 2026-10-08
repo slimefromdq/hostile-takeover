@@ -76,6 +76,7 @@ var fighter_id: int = 0
 var team: int = 0
 var bot: bool = false
 var loadout: int = 0  # Loadout.encode(primary, sidearm, utility, melee)
+var look: int = 0  # Appearance code: cosmetic only, drawn by CharacterRig
 var primary: WeaponSpec
 var sidearm: WeaponSpec
 var slot: int = 0  # 0 = primary out, 1 = sidearm out
@@ -220,11 +221,12 @@ func _process(dt: float) -> void:
 		var slide: bool = held & 8 != 0 and is_on_floor() and planar > 5.0
 		CharacterRig.animate(equipment, dt, planar, is_on_floor(), pitch, slide, melee_cd)
 
-func configure(owner_game: Node3D, id: int, side: int, loadout_code: int, is_bot: bool) -> void:
+func configure(owner_game: Node3D, id: int, side: int, loadout_code: int, is_bot: bool, look_code: int = -1) -> void:
 	game = owner_game
 	fighter_id = id
 	team = side
 	bot = is_bot
+	look = Appearance.default_code() if look_code < 0 else Appearance.sanitize(look_code)
 	equip(loadout_code)
 	hp = MAX_HEALTH
 	name = "Fighter_%s" % id
@@ -279,7 +281,7 @@ func build_rig() -> void:
 	outlines.clear()
 	outline_side = -1
 	var ids := Loadout.decode(loadout)
-	equipment = CharacterRig.build(self, game.team_color(team), outlines, false, ids[0], ids[1], ids[3])
+	equipment = CharacterRig.build(self, game.team_color(team), outlines, false, ids[0], ids[1], ids[3], look)
 	CharacterRig.set_active_slot(equipment, slot)
 	if is_instance_valid(trail):
 		trail.queue_free()
@@ -730,6 +732,17 @@ func swap_weapon() -> void:
 	if is_instance_valid(equipment):
 		CharacterRig.set_active_slot(equipment, slot)
 
+# A new look rebuilds the rig in place; unlike a loadout it changes nothing about play, so it applies anywhere.
+func set_look(look_code: int) -> void:
+	var code := Appearance.sanitize(look_code)
+	if code == look:
+		return
+	look = code
+	if is_instance_valid(equipment):
+		equipment.queue_free()
+		build_rig()
+		update_visual()
+
 # Respawn or a new loadout: full health, full magazines, fresh cooldowns.
 func apply_loadout(loadout_code: int) -> void:
 	var before := Loadout.decode(loadout)
@@ -821,7 +834,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	var state := {"id": fighter_id, "team": team, "lo": loadout, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "k": kills, "d": deaths, "pp": power_pickups, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	var state := {"id": fighter_id, "team": team, "lo": loadout, "ap": look, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "k": kills, "d": deaths, "pp": power_pickups, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 	# Optional state is only sent while it matters (snapshots are already past the MTU); unpack supplies defaults.
 	if slot != 0:
 		state["slot"] = slot
@@ -841,8 +854,10 @@ func pack() -> Dictionary:
 	return state
 
 func unpack(data: Dictionary, local: bool) -> void:
-	if loadout != data["lo"]:
+	var want_look: int = Appearance.sanitize(data.get("ap", look))
+	if loadout != data["lo"] or look != want_look:
 		equip(data["lo"])
+		look = want_look
 		if is_instance_valid(equipment):
 			equipment.queue_free()
 			build_rig()

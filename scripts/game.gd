@@ -49,6 +49,7 @@ var local_id := 1
 var cheat_no_cooldowns := false
 var cheat_invulnerable := false
 var selected_loadout := Loadout.encode(1, 0, Loadout.Utility.FRAG_GRENADE, Loadout.Melee.KNIFE)
+var selected_look := Appearance.load_saved()  # the start menu's LOOK tab; saved in user://settings.cfg
 var fighters: Dictionary = {}
 var entities: Dictionary = {}
 var entity_next := 1
@@ -194,6 +195,7 @@ func start_game(mode: String) -> void:
 		for p in fighters.values():
 			respawn(p)
 		apply_loadout(local_id, selected_loadout)
+		apply_look(local_id, selected_look)
 		menu.hide()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		announce("NEW CONTRACT · Center point unlocked.")
@@ -201,7 +203,7 @@ func start_game(mode: String) -> void:
 	if mode == "resume":
 		if not running:
 			return
-		request_loadout(selected_loadout)
+		request_loadout(selected_loadout, selected_look)
 		menu.hide()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		return
@@ -229,10 +231,10 @@ func start_game(mode: String) -> void:
 	local_id = 1
 	explore = mode == "explore"
 	hud.explore = explore
-	spawn_fighter(1, 0, selected_loadout, false)
+	spawn_fighter(1, 0, selected_loadout, false, selected_look)
 	if not explore:
 		for i in range(CivicDividend.TEAM_SIZE * 2 - 1):
-			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, bot_loadout(i), true)
+			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, bot_loadout(i), true, bot_look(100 + i))
 	spawn_pickups()
 	running = true
 	menu.hide()
@@ -250,7 +252,7 @@ func connected() -> void:
 	menu.hide()
 	hud.show()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	join_request.rpc_id(1, selected_loadout)
+	join_request.rpc_id(1, selected_loadout, selected_look)
 
 func connection_failed() -> void:
 	menu_status.text = "Connection failed. Check server IP and UDP port 27847."
@@ -278,10 +280,10 @@ func peer_disconnected(id: int) -> void:
 	var replacement := 100
 	while fighters.has(replacement):
 		replacement += 1
-	spawn_fighter(replacement, side, bot_loadout(replacement), true)
+	spawn_fighter(replacement, side, bot_loadout(replacement), true, bot_look(replacement))
 
 @rpc("any_peer", "call_remote", "reliable")
-func join_request(loadout_code: int) -> void:
+func join_request(loadout_code: int, look_code: int) -> void:
 	if not authoritative:
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -298,7 +300,7 @@ func join_request(loadout_code: int) -> void:
 			fighters.erase(p.fighter_id)
 			p.queue_free()
 			break
-	spawn_fighter(id, side, loadout_code, false)  # Fighter.equip clamps every slot
+	spawn_fighter(id, side, loadout_code, false, look_code)  # Fighter.equip and Appearance.sanitize clamp every field
 	initial_sync.rpc_id(id, encode_world())
 
 # Lowest depot slot on the team that no teammate holds, so a full team never shares a spawn (peer ids are arbitrary).
@@ -319,9 +321,15 @@ func spawn_position(p: Fighter) -> Vector3:
 func bot_loadout(index: int) -> int:
 	return Loadout.encode(index % Loadout.PRIMARIES.size(), rng.randi_range(0, Loadout.SIDEARMS.size() - 1), rng.randi_range(0, Loadout.UTILITIES.size() - 1), rng.randi_range(0, Loadout.MELEES.size() - 1))
 
-func spawn_fighter(id: int, side: int, loadout_code: int, is_bot: bool) -> Fighter:
+# Each bot id always gets the same random look, so a bot keeps its outfit across restarts and on every client.
+func bot_look(id: int) -> int:
+	var look_rng := RandomNumberGenerator.new()
+	look_rng.seed = hash(id * 7919 + 17)
+	return Appearance.random(look_rng)
+
+func spawn_fighter(id: int, side: int, loadout_code: int, is_bot: bool, look_code: int = -1) -> Fighter:
 	var p: Fighter = FIGHTER_SCENE.instantiate()
-	p.configure(self, id, side, loadout_code, is_bot)
+	p.configure(self, id, side, loadout_code, is_bot, look_code)
 	p.bot_think = rng.randf_range(0.0, 0.5)
 	add_child(p)
 	p.spawn_slot = free_spawn_slot(side)
@@ -330,16 +338,23 @@ func spawn_fighter(id: int, side: int, loadout_code: int, is_bot: bool) -> Fight
 	fighters[id] = p
 	return p
 
-func request_loadout(loadout_code: int) -> void:
+func request_loadout(loadout_code: int, look_code: int) -> void:
 	if authoritative:
+		apply_look(local_id, look_code)
 		apply_loadout(local_id, loadout_code)
 	else:
-		loadout_request.rpc_id(1, loadout_code)
+		loadout_request.rpc_id(1, loadout_code, look_code)
 
 @rpc("any_peer", "call_remote", "reliable")
-func loadout_request(loadout_code: int) -> void:
+func loadout_request(loadout_code: int, look_code: int) -> void:
 	if authoritative:
+		apply_look(multiplayer.get_remote_sender_id(), look_code)
 		apply_loadout(multiplayer.get_remote_sender_id(), loadout_code)
+
+# Looks are cosmetic, so they change anywhere (no return-to-spawn rule); snapshots carry them to everyone ("ap").
+func apply_look(id: int, look_code: int) -> void:
+	if fighters.has(id):
+		fighters[id].set_look(look_code)
 
 func apply_loadout(id: int, loadout_code: int) -> void:
 	if not fighters.has(id):
@@ -554,7 +569,7 @@ func apply_world(data: Dictionary) -> void:
 	for state in data.players:
 		seen.append(state.id)
 		if not fighters.has(state.id):
-			spawn_fighter(state.id, state.team, state["lo"], state.bot)
+			spawn_fighter(state.id, state.team, state["lo"], state.bot, state.get("ap", -1))
 		fighters[state.id].unpack(state, state.id == local_id)
 		if state.id == local_id:
 			fighters[state.id].camera.current = true

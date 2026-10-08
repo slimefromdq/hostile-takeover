@@ -64,6 +64,7 @@ func run() -> void:
 	test_items()
 	test_bot_items()
 	test_power_ups()
+	test_appearance()
 	test_authority_and_respawn()
 	test_roster_and_roles()
 	await test_hud()
@@ -809,6 +810,59 @@ func test_bot_items() -> void:
 		game.remove_entity(id)
 	bot.hp = Fighter.MAX_HEALTH
 	bot.armor = 0.0
+
+# The character creator: look codes pack safely, every option builds a complete rig, and looks travel in snapshots.
+func test_appearance() -> void:
+	check(Appearance.decode(Appearance.default_code()) == Appearance.DEFAULT_LOOK, "the default look round-trips through its code")
+	var dice := RandomNumberGenerator.new()
+	dice.seed = 42
+	var round_trip := true
+	for i in range(64):
+		var code := Appearance.random(dice)
+		round_trip = round_trip and Appearance.encode(Appearance.decode(code)) == code
+	check(round_trip, "random looks round-trip through encode/decode")
+	var in_range := true
+	for garbage in [-1, 1 << 62, 0x7fffffffffffffff, 123456789012345]:
+		var look := Appearance.decode(garbage)
+		for f in Appearance.FIELDS:
+			in_range = in_range and look[f.key] >= 0 and look[f.key] < Appearance.options(f.key).size()
+	check(in_range, "any int from the network decodes into valid options")
+	# Every option of every field builds a full rig: bones, guns, melee, one baked mesh per bone.
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var complete := true
+	var max_meshes := 0
+	for f in Appearance.FIELDS:
+		for i in range(Appearance.options(f.key).size()):
+			var rig := CharacterRig.build(holder, Visuals.team_color(i % 2), [], false, i % 3, i % 3, i % 3, Appearance.with_field(Appearance.default_code(), f.key, i))
+			for path in ["Legs/LegL/Mesh", "Legs/LegR/Mesh", "Body/Mesh", "Body/Head/Mesh", "Body/ArmL/Melee", "Body/Weapon/Primary", "Body/Weapon/Sidearm"]:
+				if rig.get_node_or_null(path) == null:
+					complete = false
+					printerr("  missing %s with %s = %d" % [path, f.key, i])
+			max_meshes = maxi(max_meshes, rig.find_children("*", "MeshInstance3D", true, false).size())
+			rig.free()
+	holder.free()
+	check(complete, "every look option builds a complete rig")
+	check(max_meshes <= 16, "a rig is a handful of draw calls (%d mesh instances at most)" % max_meshes)
+	# Snapshots carry the look and a change rebuilds the rig; respawning keeps it.
+	var p: Fighter = game.local_player()
+	var state := p.pack()
+	check(state.has("ap") and state["ap"] == p.look, "snapshot carries the look")
+	var before := p.equipment
+	var other := Appearance.with_field(p.look, "hair", (Appearance.decode(p.look).hair + 1) % Appearance.HAIRSTYLES.size())
+	state["ap"] = other
+	p.unpack(state, true)
+	check(p.look == other and p.equipment != before and is_instance_valid(p.equipment), "a new look in a snapshot rebuilds the rig")
+	p.global_position = O + Vector3(0, 0, -21)  # far from spawn: looks change anywhere, unlike loadouts
+	game.apply_look(p.fighter_id, Appearance.default_code())
+	check(p.look == Appearance.default_code(), "a look applies away from spawn")
+	p.apply_loadout(p.loadout)
+	check(p.look == Appearance.default_code(), "respawning keeps the look")
+	var looks := {}
+	for f in game.fighters.values():
+		if f.bot:
+			looks[f.look] = true
+	check(looks.size() >= 5 and game.bot_look(104) == game.bot_look(104), "bots wear varied looks, the same one every time")
 
 func test_power_ups() -> void:
 	var p: Fighter = game.local_player()

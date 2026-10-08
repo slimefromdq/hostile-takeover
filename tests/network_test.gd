@@ -14,6 +14,7 @@ func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.selected_loadout = Loadout.encode(1, 2, Loadout.Utility.LAUNCH_PAD, Loadout.Melee.KNIFE)
+	game.selected_look = Appearance.encode({"body": 2, "skin": 5, "hair": 1, "hair_color": 6, "headgear": 2, "top": 4, "top_color": 7})
 	var server := "--server" in OS.get_cmdline_user_args()
 	game.start_game("host" if server else "join")
 	print("NETWORK START: ", "server" if server else "client", " running=", game.running, " status=", game.menu_status.text)
@@ -49,6 +50,11 @@ func run() -> void:
 			var p: Fighter = game.local_player()
 			verify(p.loadout == game.selected_loadout, "requested loadout assigned by server")
 			verify(p.weapon.title == "Rifle" and p.sidearm.title == "Revolver", "loadout guns replicated to the client")
+			verify(p.look == game.selected_look, "the chosen look reaches the server and comes back in snapshots")
+			var bot_looks := {}
+			for other in game.fighters.values():
+				bot_looks[other.look] = true
+			verify(bot_looks.size() >= 5, "the client sees the bots' varied looks")
 			verify(p.global_position.distance_to(CivicDividend.test_lane) < 10, "client receives server relocation into clear test lane")
 			# Place a launch pad on flat ground: a reliable utility action, replicated back as an entity.
 			p.pitch = -0.25

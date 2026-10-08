@@ -1,7 +1,8 @@
 class_name GameMenu
 extends PanelContainer
 
-# Start/pause menu: the loadout picker (four item rows beside a rotating portrait), mode buttons and a controls panel.
+# Start/pause menu: a rotating portrait beside two tabs, LOADOUT (four item rows) and LOOK (the character creator:
+# build, skin, eyes, hair, headgear, top, bottoms, shoes and their colours), then mode buttons and a controls panel.
 
 var game: Node3D
 var status: Label
@@ -9,6 +10,13 @@ var address: LineEdit
 var item_buttons: Array = [[], [], [], []]  # per loadout slot (Loadout.SLOT_NAMES), one toggle per item
 var item_blurb: Label
 var loadout_summary: Label
+var loadout_panel: VBoxContainer
+var look_panel: VBoxContainer
+var tab_buttons: Array = []
+var look_controls := {}  # Appearance field key -> Label (style cycler) or Array of swatch Buttons
+var look_summary: Label
+# LOOK tab layout: rows of groups; a group is one caption followed by the controls of its fields (a style and its colour).
+const LOOK_ROWS := [[["body"], ["headgear"]], [["skin"], ["eyes"]], [["hair", "hair_color"]], [["top", "top_color"]], [["bottom", "bottom_color"]], [["shoes", "shoe_color"]]]
 var spinner: Node3D
 var controls_panel: Label
 var display_button: Button
@@ -21,11 +29,11 @@ func setup(owner_game: Node3D) -> void:
 	var style := StyleBoxEmpty.new()
 	style.content_margin_left = 32
 	style.content_margin_right = 32
-	style.content_margin_top = 18
-	style.content_margin_bottom = 14
+	style.content_margin_top = 12
+	style.content_margin_bottom = 7
 	add_theme_stylebox_override("panel", style)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
+	column.add_theme_constant_override("separation", 6)
 	add_child(column)
 	column.add_child(_label("HOSTILE TAKEOVER", 40))
 	var rule := ColorRect.new()
@@ -43,10 +51,18 @@ func setup(owner_game: Node3D) -> void:
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(container)
 	container.add_child(_make_portrait())
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 8)
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(right)
+	right.add_child(_make_tabs())
 	var picker := VBoxContainer.new()
 	picker.add_theme_constant_override("separation", 6)
-	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(picker)
+	right.add_child(picker)
+	loadout_panel = picker
+	look_panel = _make_look_panel()
+	look_panel.visible = false
+	right.add_child(look_panel)
 	var ids := Loadout.decode(game.selected_loadout)
 	var sizes := Loadout.slot_sizes()
 	for slot in range(4):
@@ -195,6 +211,139 @@ func _label(value: String, font_size: int, color: Color = Color("eef0e5")) -> La
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
+func _make_tabs() -> HBoxContainer:
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for i in range(2):
+		var button := Button.new()
+		button.text = ["LOADOUT", "LOOK"][i]
+		button.toggle_mode = true
+		button.button_group = group
+		button.custom_minimum_size = Vector2(120, 28)
+		UiStyle.style_button(button, false)
+		button.pressed.connect(_show_tab.bind(i))
+		tabs.add_child(button)
+		tab_buttons.append(button)
+	tab_buttons[0].button_pressed = true
+	return tabs
+
+func _show_tab(index: int) -> void:
+	loadout_panel.visible = index == 0
+	look_panel.visible = index == 1
+
+func _make_look_panel() -> VBoxContainer:
+	var panel := VBoxContainer.new()
+	panel.add_theme_constant_override("separation", 6)
+	for groups in LOOK_ROWS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 24)
+		panel.add_child(row)
+		for keys in groups:
+			var group := HBoxContainer.new()
+			group.add_theme_constant_override("separation", 8)
+			var caption := _label(_field_def(keys[0]).label, 12, UiStyle.ACCENT)
+			caption.custom_minimum_size = Vector2(76, 0)
+			caption.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			group.add_child(caption)
+			for key in keys:
+				group.add_child(_look_field(key))
+			row.add_child(group)
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 12)
+	panel.add_child(bottom)
+	var randomize := Button.new()
+	randomize.text = "Randomize"
+	randomize.custom_minimum_size = Vector2(120, 28)
+	UiStyle.style_button(randomize, false)
+	randomize.pressed.connect(func():
+		var dice := RandomNumberGenerator.new()
+		dice.randomize()
+		_set_look(Appearance.random(dice)))
+	bottom.add_child(randomize)
+	look_summary = _label("", 13, Color(1, 1, 1, 0.85))
+	look_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bottom.add_child(look_summary)
+	_refresh_look_controls()
+	return panel
+
+func _field_def(key: String) -> Dictionary:
+	for f in Appearance.FIELDS:
+		if f.key == key:
+			return f
+	return {}
+
+# One field's control: a "< name >" cycler (styles) or a row of swatches (colours).
+func _look_field(key: String) -> Control:
+	var def := _field_def(key)
+	var count := Appearance.options(key).size()
+	if def.kind == "style":
+		var cycler := HBoxContainer.new()
+		cycler.add_theme_constant_override("separation", 6)
+		var name_label := _label("", 14)
+		name_label.custom_minimum_size = Vector2(118, 0)
+		name_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		for step in [-1, 1]:
+			var arrow := Button.new()
+			arrow.text = "◀" if step < 0 else "▶"
+			arrow.custom_minimum_size = Vector2(26, 24)
+			UiStyle.style_button(arrow, false)
+			for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+				var tight: StyleBox = arrow.get_theme_stylebox(state).duplicate()
+				tight.content_margin_left = 4
+				tight.content_margin_right = 4
+				tight.content_margin_top = 2
+				tight.content_margin_bottom = 2
+				arrow.add_theme_stylebox_override(state, tight)
+			arrow.pressed.connect(func():
+				var current: int = Appearance.decode(game.selected_look)[key]
+				_set_look(Appearance.with_field(game.selected_look, key, posmod(current + step, count))))
+			cycler.add_child(arrow)
+			if step < 0:
+				cycler.add_child(name_label)
+		look_controls[key] = name_label
+		return cycler
+	else:
+		var swatches := HBoxContainer.new()
+		swatches.add_theme_constant_override("separation", 3)
+		var group := ButtonGroup.new()
+		var buttons := []
+		for i in range(count):
+			var swatch := Button.new()
+			swatch.toggle_mode = true
+			swatch.button_group = group
+			swatch.custom_minimum_size = Vector2(20, 22)
+			swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			swatch.focus_mode = Control.FOCUS_NONE
+			var color: Color = Appearance.options(key)[i]
+			swatch.add_theme_stylebox_override("normal", UiStyle.box(color, Color(0, 0, 0, 0.6), 1, 0))
+			swatch.add_theme_stylebox_override("hover", UiStyle.box(color, Color(1, 1, 1, 0.8), 2, 0))
+			swatch.add_theme_stylebox_override("pressed", UiStyle.box(color, UiStyle.ACCENT, 3, 0))
+			swatch.add_theme_stylebox_override("hover_pressed", UiStyle.box(color, UiStyle.ACCENT, 3, 0))
+			swatch.pressed.connect(func(): _set_look(Appearance.with_field(game.selected_look, key, i)))
+			swatches.add_child(swatch)
+			buttons.append(swatch)
+		look_controls[key] = buttons
+		return swatches
+
+func _set_look(code: int) -> void:
+	game.selected_look = Appearance.sanitize(code)
+	Appearance.save(game.selected_look)
+	_refresh_look_controls()
+	_refresh_loadout()
+
+func _refresh_look_controls() -> void:
+	var look := Appearance.decode(game.selected_look)
+	for key in look_controls:
+		var control = look_controls[key]
+		if control is Label:
+			control.text = Appearance.option_name(key, look[key])
+		else:
+			control[look[key]].button_pressed = true
+	if look_summary != null:
+		look_summary.text = Appearance.describe(game.selected_look)
+
 func _pick(slot: int, index: int) -> void:
 	game.selected_loadout = Loadout.with_slot(game.selected_loadout, slot, index)
 	item_blurb.text = Loadout.item_blurb(slot, index)
@@ -212,7 +361,7 @@ func _refresh_loadout() -> void:
 		child.queue_free()
 	var ids := Loadout.decode(code)
 	var outlines: Array = []
-	CharacterRig.build(spinner, Visuals.team_color(0), outlines, false, ids[0], ids[1], ids[3])
+	CharacterRig.build(spinner, Visuals.team_color(0), outlines, false, ids[0], ids[1], ids[3], game.selected_look)
 	for outline in outlines:
 		outline.set_shader_parameter("outline_color", Visuals.ALLY_OUTLINE)
 

@@ -45,6 +45,8 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 
 There are no heroes or classes. Every fighter has the same body: **200 HP**, the same size and the full movement set, and no abilities of their own. What sets players apart is the **loadout**, four items picked in the start menu (Splatoon-style). Like the old class choice, the loadout can be changed only in your depot or while dead. Bots cycle through the primaries and roll the other three slots.
 
+**Look (character creator):** the start menu's **LOOK** tab dresses your fighter, a squat, chunky low-poly person with a big head and big eyes: build (Slim / Standard / Sturdy), skin tone, eye colour, hairstyle (Bob, Twin Tails, Ponytail, Buzz, Long, Spiky) and hair colour, headgear (Cap, Goggle Helmet, Headset, Beanie, Sunglasses), top (Tee, Hoodie, Crop Jacket, Tactical Vest, Jersey), bottoms (Shorts, Cargo Pants, Skirt, Cutoffs) and shoes (Sneakers, Boots, High-tops), each garment with its own colour, plus **Randomize**. Your colours stay yours; team identity is trim in the team colour (collar or stripe, a band on each upper arm, shoe stripes, a small chest badge) and the ally/enemy outline. Looks are cosmetic only (every build shares the same collider and hitbox), can be changed anywhere with **Apply loadout / Resume**, are saved between sessions (`user://settings.cfg`) and replicate to everyone. Every bot wears its own random look. Data in `scripts/appearance.gd`, drawing in `scripts/character_rig.gd`; `tests/render_characters.gd` renders a lineup to `docs/previews/characters.png`.
+
 | Slot | Key | What it is |
 |---|---|---|
 | Primary | LMB | Your main gun. |
@@ -140,11 +142,11 @@ The development flags delay outgoing movement/actions/snapshots by 80 millisecon
 
 ## Prototype limits
 
-Art is generated primitive geometry (the fighter rig, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized per-weapon and per-item cues generated at runtime (`scripts/sfx.gd`; F3 mutes). Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level item use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
+Art is generated primitive geometry (the fighter rig, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized per-weapon and per-item cues generated at runtime (`scripts/sfx.gd`; F3 mutes). Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level item use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, progression, or persistence beyond local settings and your character look is included.
 
 ## Performance notes
 
-`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 20-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Character meshes are low-poly (about 10x fewer triangles than the first pass), the sun uses a single shadow cascade, small character details do not cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
+`tests/perf_probe.gd` reports draw calls, primitives and node counts for a simulated 20-fighter match; `tests/soak.gd` runs a long bot match and fails on node or orphan growth. Characters are boxes baked into one vertex-coloured mesh per bone (about a dozen draw calls per fighter whatever the outfit), the sun uses a single shadow cascade, only a fighter's head, torso and legs cast shadows, and combat effects are pooled and capped at 220 live nodes. Software-rendered numbers are only comparable run to run.
 
 Automated checks establish rules and basic runtime behavior. Human balance sessions and a documented 1080p reference-PC performance test are still required before claiming the gameplay or 60-fps acceptance targets are met.
 
