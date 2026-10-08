@@ -15,7 +15,7 @@ const KINDS := {
 # The power-up: the entity's `hp` field holds which one is up (1 or 2), re-rolled each time it respawns.
 const POWER_INVULNERABLE := 1
 const POWER_QUAD := 2
-const POWER_DURATION := 8.0
+const POWER_DURATION := 12.0
 const POWER_FIRST_SPAWN := 30.0  # the first one appears this long after the match starts
 const QUAD_MULTIPLIER := 3.0
 const POWER_WARNING := 15.0  # the minimap flags the power-up this many seconds before it spawns

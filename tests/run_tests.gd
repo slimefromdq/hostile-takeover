@@ -731,7 +731,7 @@ func test_power_ups() -> void:
 	game.create_entity_from(data)
 	var item: Deployable = game.entities[data.id]
 	game.entities_tick(0.1)
-	check(p.power == Items.POWER_QUAD and is_equal_approx(p.power_time, 8.0) and item.used, "touching the power-up grants triple damage for 8 s")
+	check(p.power == Items.POWER_QUAD and is_equal_approx(p.power_time, 12.0) and item.used, "touching the power-up grants triple damage for 12 s")
 	var before := foe.hp
 	game.damage_fighter(foe, 10.0, p.fighter_id)
 	check(is_equal_approx(before - foe.hp, 30.0), "triple damage triples what the holder deals")
@@ -753,7 +753,7 @@ func test_power_ups() -> void:
 	# Streak announcements: kills during one power-up escalate; the count restarts with the next pickup.
 	check(Items.streak_name(1) == "" and Items.streak_name(2) == "DOUBLE KILL" and Items.streak_name(3) == "TRIPLE KILL" and Items.streak_name(4) == "QUAD KILL" and Items.streak_name(7) == "RAMPAGE", "streak names escalate from the second kill")
 	p.power = Items.POWER_QUAD
-	p.power_time = 8.0
+	p.power_time = Items.POWER_DURATION
 	p.power_kills = 0
 	for i in range(2):
 		foe.hp = foe.spec.health
@@ -1022,7 +1022,7 @@ func test_roster_and_roles() -> void:
 			roamers += 1
 			valid_roam = valid_roam and p.bot_roam_node >= 0 and not p.bot_path.is_empty()
 	check(attackers[0] <= game.BOT_MAX_ATTACKERS + 1 and attackers[1] <= game.BOT_MAX_ATTACKERS + 1, "attackers per team stay near the capture cap (%s)" % [attackers])
-	check(roamers >= 4, "surplus bots roam or defend instead of stacking on the point (%d)" % roamers)
+	check(roamers >= 2, "surplus bots roam or defend instead of stacking on the point (%d)" % roamers)
 	check(valid_roam, "every roaming bot has a graph node and a route")
 
 func test_hud() -> void:

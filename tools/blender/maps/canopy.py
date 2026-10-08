@@ -495,8 +495,9 @@ SINGLE_HEALPACKS = [(-4.5, 34, -59)]
 BUBBLES = [(-73.5, 0, -2.5), (-17.5, 0, 3.5), (-46, -6, 0), (-61, -6, -3.5)]
 ARMOR1 = [(-49, 0, 9), (-13, -6, 4)]
 ARMOR2_AXIS = [(0, SUMP_Y, 0)]
-# The power-up (invincibility or triple damage, 8 s; 90 s timer) sits in the tunnel under point C.
-POWER_AXIS = [(0, TUNNEL_Y, 0)]
+# The power-up (invincibility or triple damage, 12 s; 90 s timer) sits on the centre of each tower's 24 m top plate
+# (frame plate x -54..-44, z -54..-44), mirrored: one per side, each on its own timer. Reached by ladder_4, the hoist or the crane span.
+POWER_TOWERS = [(-49, 24, -49)]
 
 
 def stage_items(b):
@@ -506,8 +507,8 @@ def stage_items(b):
         b.pickup(x, y, z, mirror=True, tag="armor1", kind="armor1")
     for x, y, z in ARMOR2_AXIS:
         b.pickup(x, y, z, mirror=False, tag="armor2", kind="armor2")
-    for x, y, z in POWER_AXIS:
-        b.pickup(x, y, z, mirror=False, tag="power", kind="power")
+    for x, y, z in POWER_TOWERS:
+        b.pickup(x, y, z, mirror=True, tag="power", kind="power")
 
 
 def stage_healpacks(b):

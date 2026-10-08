@@ -1245,6 +1245,7 @@ func remove_owned(id: int) -> void:
 			remove_entity(e.entity_id)
 
 func entities_tick(dt: float) -> void:
+	var tick_cues := {}  # map-wide cues this tick, deduped so two power-ups in step play each cue once
 	for e in entities.values():
 		e.age += dt
 		var timer_before: float = e.timer
@@ -1252,7 +1253,7 @@ func entities_tick(dt: float) -> void:
 		if e.kind == "power" and e.used:
 			var cue := Items.power_cue(timer_before, e.timer)
 			if cue >= 0:
-				global_cue(cue)
+				tick_cues[cue] = true
 		if e.age >= e.lifetime or e.hp <= 0:
 			remove_entity(e.entity_id)
 			continue
@@ -1280,7 +1281,7 @@ func entities_tick(dt: float) -> void:
 			if e.used and e.timer <= 0:
 				e.used = false
 				if e.kind == "power":
-					global_cue(Sfx.Kind.ITEM_POWER)
+					tick_cues[Sfx.Kind.ITEM_POWER] = true
 					e.hp = float(rng.randi_range(Items.POWER_INVULNERABLE, Items.POWER_QUAD))
 					notice_all("%s power-up is up." % Items.POWER_NAMES[int(e.hp)].capitalize())
 				e.update_visual()
@@ -1333,6 +1334,8 @@ func entities_tick(dt: float) -> void:
 					play_sfx(from, Sfx.Kind.TURRET)
 					break
 		e.update_visual()
+	for cue in tick_cues:
+		global_cue(cue)
 
 func throw_capsule(p: Fighter) -> void:
 	var capsule := preload("res://scripts/dead_drop.gd").new()

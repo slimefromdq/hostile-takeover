@@ -4,7 +4,7 @@ extends RefCounted
 # Facade over MapLayout/MapBuilder so existing callers (game.gd, minimap, tests) keep one entry point.
 
 # Fighters per team. Depot spawn slots are laid out in rows of SPAWN_ROW slots (see spawn_slot_position).
-const TEAM_SIZE := 10
+const TEAM_SIZE := 5
 const SPAWN_ROW := 5
 const SPAWN_ROW_GAP := 2.5
 
