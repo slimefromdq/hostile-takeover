@@ -152,6 +152,8 @@ var wall_repeats: int = 0
 var double_id: int = -1
 var alt_timer: float = 0.0
 var armor: float = 0.0  # light armor (dropped by kills): absorbs damage before health, lost on death
+var power: int = 0  # active power-up (Items.POWER_*), 0 = none; lost on death
+var power_time: float = 0.0
 var ult_cd: float = 0.0  # ultimate cooldown; kept through death, restarted by a hero swap
 var prev_held: int = 0
 var guarding: bool = false  # replicated so remote players can see the stance; the owner derives it from held
@@ -772,6 +774,8 @@ func change_class(value: int, weapon_choice: int = -1) -> void:
 	equip_weapon(weapon_id if weapon_choice < 0 else weapon_choice)
 	hp = spec.health
 	armor = 0.0
+	power = 0
+	power_time = 0.0
 	if swapped:
 		ult_cd = spec.ultimate_cooldown
 	heal_left = 0.0
@@ -874,6 +878,9 @@ func pack() -> Dictionary:
 		state["ar"] = int(ceil(armor))
 	if ult_cd > 0.0:
 		state["ucd"] = ult_cd
+	if power != 0:
+		state["pw"] = power
+		state["pwt"] = power_time
 	if class_id == REAVE_ID:
 		state["guard"] = guarding
 		state["gs"] = int(guard_stamina)
@@ -933,6 +940,8 @@ func unpack(data: Dictionary, local: bool) -> void:
 	climbing = data.get("climb", false)
 	armor = float(data.get("ar", 0))
 	ult_cd = data.get("ucd", 0.0)
+	power = data.get("pw", 0)
+	power_time = data.get("pwt", 0.0)
 	guarding = data.get("guard", false)
 	guard_stamina = float(data.get("gs", GUARD_STAMINA_MAX))
 	blade_charge = float(data.get("bc", 0))

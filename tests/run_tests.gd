@@ -47,6 +47,7 @@ func run() -> void:
 	test_healpack()
 	test_items()
 	test_bot_items()
+	test_power_ups()
 	test_authority_and_respawn()
 	test_roster_and_roles()
 	await test_hud()
@@ -711,6 +712,65 @@ func test_bot_items() -> void:
 		game.remove_entity(id)
 	bot.hp = bot.spec.health
 	bot.armor = 0.0
+
+func test_power_ups() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	if foe.team == p.team:
+		foe = game.fighters[106]
+	p.change_class(2)
+	foe.change_class(2)
+	p.global_position = O + Vector3(0, 0, -21)
+	foe.global_position = O + Vector3(0, 0, -25)
+	p.hp = p.spec.health
+	foe.hp = foe.spec.health
+	p.power = 0
+	foe.power = 0
+	var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "power", "hp": float(Items.POWER_QUAD), "life": 1e9, "pos": p.global_position, "yaw": 0.0, "used": false}
+	game.entity_next += 1
+	game.create_entity_from(data)
+	var item: Deployable = game.entities[data.id]
+	game.entities_tick(0.1)
+	check(p.power == Items.POWER_QUAD and is_equal_approx(p.power_time, 8.0) and item.used, "touching the power-up grants triple damage for 8 s")
+	var before := foe.hp
+	game.damage_fighter(foe, 10.0, p.fighter_id)
+	check(is_equal_approx(before - foe.hp, 30.0), "triple damage triples what the holder deals")
+	game.damage_fighter(p, 10.0, foe.fighter_id)
+	check(is_equal_approx(p.hp, p.spec.health - 10.0), "the holder takes normal damage")
+	check(Items.KINDS.power.respawn == 90.0, "the power-up respawns after 90 s")
+	# One power-up at a time, and it respawns with a fresh roll.
+	game.entities_tick(91.0)
+	check(not item.used and (int(item.hp) == Items.POWER_INVULNERABLE or int(item.hp) == Items.POWER_QUAD), "the power-up respawns as one of the two types")
+	game.entities_tick(0.1)
+	check(not item.used and p.power == Items.POWER_QUAD, "a holder cannot take a second power-up")
+	# Expiry.
+	p.power_time = 0.05
+	game.combat_tick(p, 0.1)
+	check(p.power == 0, "a power-up ends after its timer")
+	# Invincibility: nothing hurts the holder except the out-of-bounds kill.
+	item.hp = float(Items.POWER_INVULNERABLE)
+	item.global_position = foe.global_position
+	game.entities_tick(0.1)
+	check(foe.power == Items.POWER_INVULNERABLE and item.used, "the other team can take it too")
+	before = foe.hp
+	game.damage_fighter(foe, 50.0, p.fighter_id)
+	foe.burn = 0.0
+	check(foe.hp == before, "invincibility blocks enemy damage")
+	game.damage_fighter(foe, 10000.0, -1)
+	check(foe.hp <= 0, "invincibility does not stop the out-of-bounds kill")
+	check(foe.power == 0, "a power-up is lost on death")
+	foe.hp = foe.spec.health
+	foe.dead_time = 0.0
+	# Snapshot round trip.
+	p.power = Items.POWER_INVULNERABLE
+	p.power_time = 5.5
+	var mirror: Fighter = game.fighters[107]
+	mirror.unpack(p.pack(), false)
+	check(mirror.power == Items.POWER_INVULNERABLE and is_equal_approx(mirror.power_time, 5.5), "snapshot carries the active power-up")
+	mirror.change_class(1)
+	p.power = 0
+	check(not p.pack().has("pw"), "idle fighters carry no power-up fields")
+	game.remove_entity(data.id)
 
 func test_machinery() -> void:
 	var p: Fighter = game.local_player()

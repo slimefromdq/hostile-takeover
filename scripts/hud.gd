@@ -374,6 +374,8 @@ func _draw_ability_bar(p: Fighter) -> void:
 		UiStyle.draw_tag(self, Rect2(c + Vector2(-14, 26), Vector2(28, 20)), UiStyle.ACCENT)
 		text(c + Vector2(-14, 42), p.ultimate_key() if is_ult else keys[i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
 		text(c + Vector2(-48, 62), label_name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
+	if p.power != 0:
+		centered(cx, cy - 92.0, "%s  %.1f" % [Items.POWER_NAMES[p.power], p.power_time], 24, Items.POWER_COLORS[p.power])
 	if quip_timer > 0.0:
 		centered(cx, cy - 56.0, quip_text, 18, Color(1, 1, 1, minf(1.0, quip_timer)))
 

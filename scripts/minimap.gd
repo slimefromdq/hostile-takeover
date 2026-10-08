@@ -70,11 +70,15 @@ func _draw_health_packs(me: Fighter) -> void:
 		var c := to_map(e.global_position.x, e.global_position.z)
 		var dy: float = 0.0 if me == null else e.global_position.y - me.global_position.y
 		var base_color: Color = Color("3dff7a") if e.kind == "healpack" else Items.KINDS[e.kind].color
+		if e.kind == "power" and Items.POWER_COLORS.has(int(e.hp)):
+			base_color = Items.POWER_COLORS[int(e.hp)]
 		var color := base_color if not e.used else Color(0.55, 0.6, 0.6)
 		if absf(dy) > 3.0:
 			color.a = 0.55
 		if e.kind == "bubble":
 			draw_circle(c, 2.5, color)
+		elif e.kind == "power":
+			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6), c + Vector2(6, 0), c + Vector2(0, 6), c + Vector2(-6, 0)]), color)
 		elif e.kind == "armor1" or e.kind == "armor2":
 			var half := 3.0 if e.kind == "armor1" else 4.5
 			draw_rect(Rect2(c - Vector2(half, half), Vector2(half, half) * 2.0), color)

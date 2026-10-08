@@ -495,6 +495,8 @@ SINGLE_HEALPACKS = [(-4.5, 34, -59)]
 BUBBLES = [(-73.5, 0, -2.5), (-17.5, 0, 3.5), (-46, -6, 0), (-61, -6, -3.5)]
 ARMOR1 = [(-49, 0, 9), (-13, -6, 4)]
 ARMOR2_AXIS = [(0, SUMP_Y, 0)]
+# The power-up (invincibility or triple damage, 8 s; 90 s timer) sits in the tunnel under point C.
+POWER_AXIS = [(0, TUNNEL_Y, 0)]
 
 
 def stage_items(b):
@@ -504,6 +506,8 @@ def stage_items(b):
         b.pickup(x, y, z, mirror=True, tag="armor1", kind="armor1")
     for x, y, z in ARMOR2_AXIS:
         b.pickup(x, y, z, mirror=False, tag="armor2", kind="armor2")
+    for x, y, z in POWER_AXIS:
+        b.pickup(x, y, z, mirror=False, tag="power", kind="power")
 
 
 def stage_healpacks(b):

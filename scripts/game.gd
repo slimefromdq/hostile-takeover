@@ -25,7 +25,7 @@ const BOT_PAUSE_MAX := 2.5
 const BOT_SIGHT := 30.0
 const BOT_ITEM_RANGE := 30.0  # bots only detour for a timed item this close (horizontal)
 const BOT_ITEM_TIME := 10.0  # give up on a detour after this long
-const BOT_ITEM_VALUE := {"bubble": 1.0, "armor1": 2.0, "armor2": 3.0}
+const BOT_ITEM_VALUE := {"bubble": 1.0, "armor1": 2.0, "armor2": 3.0, "power": 6.0}
 const ASSIST_WINDOW := 6.0  # seconds a recent attacker still counts for an assist
 var authoritative := true
 var running := false
@@ -638,6 +638,12 @@ func combat_tick(p: Fighter, dt: float) -> void:
 	for i in range(3):
 		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
 	p.ult_cd = maxf(0.0, p.ult_cd - dt)
+	if p.power != 0:
+		p.power_time = maxf(0.0, p.power_time - dt)
+		if p.power_time <= 0.0:
+			p.power = 0
+		elif fmod(p.power_time, 1.0) < dt:
+			show_ring(p.global_position + Vector3.UP * 0.9, 1.4, Items.POWER_COLORS[p.power])
 	for attacker in p.damagers.keys():
 		p.damagers[attacker] += dt
 		if p.damagers[attacker] > ASSIST_WINDOW:
@@ -847,7 +853,11 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
 	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0:
 		return false
+	if target.power == Items.POWER_INVULNERABLE and (attacker >= 0 or amount < 1000.0):
+		return false  # invincible; only the out-of-bounds kill (attacker -1, 10000) goes through
 	var source: Fighter = fighters.get(attacker)
+	if source != null and source != target and source.power == Items.POWER_QUAD:
+		amount *= Items.QUAD_MULTIPLIER
 	if blockable and attacker >= 0:
 		var struck_from := origin
 		if struck_from == Vector3.INF and source != null:
@@ -878,6 +888,8 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.burn = 0
 		target.stun = 0
 		target.armor = 0.0
+		target.power = 0
+		target.power_time = 0.0
 		remove_owned(target.fighter_id)
 		target.double_id = -1
 		target.update_visual()
@@ -1204,9 +1216,13 @@ func drop_armor(pos: Vector3, team: int) -> void:
 func spawn_pickups() -> void:
 	for f in CivicDividend.pickups:
 		var at: Array = f.pos
-		var data := {"id": entity_next, "owner": -1, "team": 0, "kind": Items.entity_kind(f.get("kind", "health")), "hp": 1.0, "life": 1e9, "pos": Vector3(at[0], at[1], at[2]), "yaw": 0.0, "used": false}
+		var is_power: bool = f.get("kind", "health") == "power"
+		var data := {"id": entity_next, "owner": -1, "team": 0, "kind": Items.entity_kind(f.get("kind", "health")), "hp": 1.0, "life": 1e9, "pos": Vector3(at[0], at[1], at[2]), "yaw": 0.0, "used": is_power}
 		entity_next += 1
 		create_entity_from(data)
+		if is_power:
+			entities[data.id].hp = float(Items.POWER_QUAD)
+			entities[data.id].timer = Items.POWER_FIRST_SPAWN
 
 func remove_entity(id: int) -> void:
 	if entities.has(id):
@@ -1252,11 +1268,18 @@ func entities_tick(dt: float) -> void:
 		elif Items.KINDS.has(e.kind):
 			if e.used and e.timer <= 0:
 				e.used = false
+				if e.kind == "power":
+					e.hp = float(rng.randi_range(Items.POWER_INVULNERABLE, Items.POWER_QUAD))
+					notice_all("%s power-up is up." % Items.POWER_NAMES[int(e.hp)].capitalize())
 				e.update_visual()
 			elif not e.used:
 				for p in fighters.values():
-					if p.hp > 0 and Items.can_use(e.kind, p.hp, p.spec.health, p.armor) and p.global_position.distance_to(e.global_position) < Items.RADIUS:
+					if p.hp > 0 and Items.can_use(e.kind, p.hp, p.spec.health, p.armor) and (e.kind != "power" or p.power == 0) and p.global_position.distance_to(e.global_position) < Items.RADIUS:
 						Items.apply(e.kind, p)
+						if e.kind == "power":
+							p.power = int(e.hp)
+							p.power_time = Items.POWER_DURATION
+							notice_all("%s took %s." % [HELIX_MONARCH[p.team], Items.POWER_NAMES[p.power]])
 						e.used = true
 						e.timer = Items.KINDS[e.kind].respawn
 						e.update_visual()
@@ -1425,6 +1448,8 @@ func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
 		if not Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
 			continue
 		# Bubbles are only worth a detour once hurt; armor once it is meaningfully missing.
+		if e.kind == "power" and p.power != 0:
+			continue
 		if e.kind == "bubble" and p.hp > p.spec.health * 0.75:
 			continue
 		if e.kind == "armor1" and p.armor >= 50.0 or e.kind == "armor2" and p.armor >= 60.0:
@@ -1629,6 +1654,14 @@ func character_quip(value: String) -> void:
 @rpc("authority", "call_remote", "reliable")
 func remote_notice(value: String) -> void:
 	announce(value)
+
+const HELIX_MONARCH := ["HELIX", "MONARCH"]
+
+# A notice every player sees: shown here and sent to connected clients.
+func notice_all(message: String) -> void:
+	announce(message)
+	if multiplayer.get_peers().size() > 0:
+		remote_notice.rpc(message)
 
 func announce(value: String) -> void:
 	hud.announce(value)

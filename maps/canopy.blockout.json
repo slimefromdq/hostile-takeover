@@ -1808,6 +1808,16 @@
     -11.0,
     0
    ]
+  },
+  {
+   "type": "pickup",
+   "tag": "power",
+   "kind": "power",
+   "pos": [
+    0,
+    -6.0,
+    0
+   ]
   }
  ],
  "objects": [

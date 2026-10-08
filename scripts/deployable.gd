@@ -47,6 +47,8 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		box.size = Vector3(0.7, 0.2, 0.7)
 	elif kind == "armor2":
 		box.size = Vector3(0.9, 0.3, 0.9)
+	elif kind == "power":
+		box.size = Vector3(0.9, 0.9, 0.9)
 	mesh.mesh = box
 	mesh.position.y = box.size.y / 2
 	if kind == "double":
@@ -144,6 +146,14 @@ func build_model() -> void:
 				CharacterRig.box(model, Vector3(0, 0.26, 0), Vector3(wide * 0.6, 0.1, wide * 0.6), Visuals.glow(tint, 2.2))
 				if kind == "armor2":
 					CharacterRig.box(model, Vector3(0, 0.4, 0), Vector3(wide * 0.3, 0.14, wide * 0.3), Visuals.glow(tint.lightened(0.3), 3.0))
+		"power":
+			# Both orbs exist; update_visual shows the one that is up (hp 1 = invincibility, 2 = triple damage).
+			for which in [Items.POWER_INVULNERABLE, Items.POWER_QUAD]:
+				var tint: Color = Items.POWER_COLORS[which]
+				var holder := CharacterRig.pivot(model, "Power%d" % which, Vector3.ZERO)
+				CharacterRig.box(holder, Vector3(0, 0.1, 0), Vector3(0.7, 0.14, 0.7), Visuals.solid(Color("2b3440")))
+				var orb := CharacterRig.sphere(holder, Vector3(0, 0.65, 0), 0.32, Visuals.glow(tint, 3.0))
+				Visuals.add_outline(orb.material_override, tint.lightened(0.4), 0.03)
 		"cover":
 			var slab := CharacterRig.box(model, Vector3(0, 0.9, 0), Vector3(3.5, 1.8, 0.3), Visuals.solid(dark.lightened(0.15)))
 			Visuals.add_outline(slab.material_override, team_col.lightened(0.4), 0.02)
@@ -187,6 +197,11 @@ func update_visual() -> void:
 		var model := get_node_or_null("Model")
 		if model != null:
 			model.visible = not used
+			if kind == "power":
+				for which in [Items.POWER_INVULNERABLE, Items.POWER_QUAD]:
+					var holder := model.get_node_or_null("Power%d" % which)
+					if holder != null:
+						holder.visible = int(hp) == which
 		display.visible = false
 		return
 	display.visible = true
