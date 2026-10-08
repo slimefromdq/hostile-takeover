@@ -98,13 +98,13 @@ Everything dynamic is a pure function of the match clock the server broadcasts, 
 | Check | Result |
 |---|---|
 | `tests/map_audit.gd` on this map | 38 checks, 0 failures (geometry, clearance, waypoint edges, spawns, capture discs, sightline budgets including the sump, Foundation Line and cellar lanes) |
-| `tests/map_walk.gd` | Skyrunner and Enforcer walk 64 routes, 0 failures |
+| `tests/map_walk.gd` | Fighters with the Shotgun and SMG move speeds walk 64 routes, 0 failures |
 | `tests/verbs_map.gd` | 461 checks, 0 failures: every one of 50 climb lanes tops out onto solid ground, 22 bounce pads reach their apex, 6 zips are ridden both ways and land the hero within 10 m of the far end, 4 grind rails carry the hero the full length, and every tram/hoist/blimp carries a standing hero; both heroes |
 | `tests/verbs_test.gd`, `run_tests.gd`, `network_test.gd`, `blockout_import.gd` | pass |
 | `match_smoke.gd` on this map | bots leave the depots, contest points and capture them |
 | Blender round trip (`tools/blender/test_roundtrip.py`, real Blender 5.0) | 183 objects, 60 waypoints and 37 features survive import and export unchanged |
 
-Greybox tests with the **fastest hero (Skyrunner) and the heaviest (Enforcer)** found and fixed geometry problems rather than hero tuning:
+Greybox tests with the old **fastest hero (Skyrunner) and heaviest (Enforcer)**, before heroes were replaced by loadouts, found and fixed geometry problems rather than hero tuning:
 the Enforcer's wider capsule clipped the blimp hull at the spire ladder (blimp docks moved 2 m off the faces), and awnings sat under a roof bridge that cut their launch short.
 
 ## Not done yet

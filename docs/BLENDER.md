@@ -111,7 +111,7 @@ The kit exposes them as `b.bounce`, `b.climb`, `b.cable`, `b.mover`, `b.event`, 
   targets, so a new map is judged by its own layout instead of the built-in map's.
 - `settings.ceiling` raises the kill height (default 40 m) for tall landmarks.
 
-`tests/verbs_map.gd` drives every feature of the active map with Skyrunner and Enforcer: climb lanes must top out onto solid ground,
+`tests/verbs_map.gd` drives every feature of the active map holding the slowest (Shotgun) and fastest (SMG) primary: climb lanes must top out onto solid ground,
 bounce pads reach their apex, cables catch and land within 10 m of the far end, movers carry a rider.
 
 ## Previewing without Godot

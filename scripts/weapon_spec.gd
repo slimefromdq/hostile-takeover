@@ -1,8 +1,7 @@
 class_name WeaponSpec
 extends Resource
 
-# A gun, independent of fighter class. Weapon 0 ("Signature") is synthesised from a class's own
-# gun fields by from_class(); weapons 1+ come from resources/weapons/*.tres.
+# A gun: a primary or a sidearm in a loadout (scripts/loadout.gd), data in resources/weapons/*.tres.
 
 @export var title: String = ""
 @export var blurb: String = ""
@@ -20,24 +19,7 @@ extends Resource
 @export var burst: int = 1
 @export var burst_gap: float = 0.07
 @export var move_speed_mult: float = 1.0
-
-static func from_class(spec: ClassSpec, class_id: int) -> WeaponSpec:
-	var w := WeaponSpec.new()
-	w.title = "Signature"
-	w.damage = spec.damage
-	w.interval = spec.interval
-	w.magazine = spec.magazine
-	w.reload_time = spec.reload_time
-	w.reach = spec.reach
-	w.pellets = spec.pellets
-	w.spread_deg = spec.spread_deg
-	w.falloff_start = spec.falloff_start
-	w.falloff_end = spec.falloff_end
-	w.falloff_min = spec.falloff_min
-	w.burst = spec.burst
-	w.burst_gap = spec.burst_gap
-	w.headshot_mult = 1.0 if class_id == 1 else spec.headshot_mult  # the electric hose cannot headshot
-	return w
+@export var ricochet: bool = false  # a shot that hits geometry bounces once for the remaining reach
 
 # Damage multiplier for a pellet that travelled `dist` metres.
 func falloff_at(dist: float) -> float:
@@ -49,7 +31,7 @@ func falloff_at(dist: float) -> float:
 func damage_at(dist: float) -> float:
 	return damage * falloff_at(dist)
 
-# Seconds to kill a target with body shots at `dist`, with every pellet landing (same model as ClassSpec.body_ttk).
+# Seconds to kill a target with body shots at `dist`, with every pellet landing (firing cadence plus any reload).
 func body_ttk(target_health: float = 200.0, dist: float = 0.0) -> float:
 	var per_shot := damage_at(dist) * pellets
 	var rounds := int(ceil(target_health / per_shot))

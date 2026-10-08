@@ -1,11 +1,12 @@
 class_name CharacterRig
 extends RefCounted
 
-# Procedural per-class character rig. A Blender export at assets/models/characters/<slug>.glb
-# replaces the procedural parts (see assets/README.md); animation then degrades gracefully
-# because every part lookup tolerates a missing node.
+# Procedural character rig: one shared operative body for every fighter, holding the loadout's primary and sidearm
+# (only the gun in hand shows) and its melee weapon in the free hand. A Blender export at
+# assets/models/characters/operative.glb replaces the procedural parts (see assets/README.md); animation then degrades
+# gracefully because every part lookup tolerates a missing node.
 
-const SLUGS := ["skyrunner", "field_engineer", "enforcer", "mirage_agent", "reave"]
+const SLUG := "operative"
 const DARK := Color("28323f")
 const CREAM := Color("e7e9df")
 
@@ -44,9 +45,6 @@ class Ctx:
 		var mat := Visuals.glow(color, energy)
 		materials.append(mat)
 		return mat
-
-static func slug(class_id: int) -> String:
-	return SLUGS[clampi(class_id, 0, SLUGS.size() - 1)]
 
 static func mesh_part(parent: Node3D, mesh: Mesh, pos: Vector3, mat: Material, rot: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
@@ -95,7 +93,7 @@ static func pivot(parent: Node3D, node_name: String, pos: Vector3) -> Node3D:
 	return node
 
 # Builds the rig under `parent` and returns the "ClassEquipment" root.
-static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Array = [], ghost: bool = false, weapon_id: int = 0) -> Node3D:
+static func build(parent: Node3D, team_color: Color, outlines: Array = [], ghost: bool = false, primary_id: int = 0, sidearm_id: int = 0, melee_id: int = 0) -> Node3D:
 	var root := Node3D.new()
 	root.name = "ClassEquipment"
 	parent.add_child(root)
@@ -104,7 +102,7 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 	ctx.outlines = outlines
 	ctx.ghost = ghost
 	ctx.team_color = team_color
-	var authored := AssetLibrary.model("characters", slug(class_id))
+	var authored := AssetLibrary.model("characters", SLUG)
 	if authored != null:
 		root.add_child(authored)
 		_tint_team(authored, team_color)
@@ -113,14 +111,7 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 	# Hips are the lean origin: Body holds everything above the legs.
 	var legs := pivot(root, "Legs", Vector3(0, 0.9, 0))
 	var body := pivot(root, "Body", Vector3(0, 0.9, 0))
-	match class_id:
-		0: _skyrunner(ctx, legs, body)
-		1: _engineer(ctx, legs, body)
-		2: _enforcer(ctx, legs, body)
-		4: _reave(ctx, legs, body)
-		_: _mirage(ctx, legs, body)
-	if weapon_id > 0:
-		_swap_weapon(ctx, body, weapon_id)
+	_operative(ctx, legs, body, primary_id, sidearm_id, melee_id)
 	# Only the body capsules and spheres cast shadows; small details would just double draw calls.
 	for part in root.find_children("*", "MeshInstance3D", true, false):
 		if not (part.mesh is CapsuleMesh or part.mesh is SphereMesh):
@@ -130,28 +121,61 @@ static func build(parent: Node3D, class_id: int, team_color: Color, outlines: Ar
 		set_alpha(root, 0.55)
 	return root
 
-# Shared weapons replace the class's gun on the same "Weapon" pivot; the first child is the arm itself.
-static func _swap_weapon(ctx: Ctx, body: Node3D, weapon_id: int) -> void:
-	var weapon: Node3D = body.get_node_or_null("Weapon")
+# Shows the gun in hand: slot 0 the primary, slot 1 the sidearm.
+static func set_active_slot(root: Node3D, slot: int) -> void:
+	if root == null or not is_instance_valid(root):
+		return
+	var weapon := root.get_node_or_null("Body/Weapon")
 	if weapon == null:
 		return
-	for i in range(weapon.get_child_count() - 1, 0, -1):
-		var gun := weapon.get_child(i)
-		weapon.remove_child(gun)
-		gun.queue_free()
-	match weapon_id:
-		1:  # Breacher: short, fat pump shotgun
-			box(weapon, Vector3(0, -0.03, -0.5), Vector3(0.1, 0.1, 0.56), ctx.lit(DARK))
-			cylinder(weapon, Vector3(0, -0.09, -0.52), 0.045, 0.045, 0.34, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
-			box(weapon, Vector3(0, 0.03, -0.78), Vector3(0.04, 0.04, 0.08), ctx.glow(Color("ff9a4a"), 2.0))
-		2:  # Longshot: long barrel and scope
-			box(weapon, Vector3(0, -0.03, -0.62), Vector3(0.06, 0.09, 0.95), ctx.lit(DARK))
-			box(weapon, Vector3(0, 0.06, -0.55), Vector3(0.07, 0.07, 0.32), ctx.lit(Color("3a4552")))
-			box(weapon, Vector3(0, 0.06, -0.72), Vector3(0.05, 0.05, 0.03), ctx.glow(Color("7ee8ff"), 2.4))
-		_:  # Chatterbox: compact SMG with a stick magazine
-			box(weapon, Vector3(0, -0.03, -0.42), Vector3(0.09, 0.13, 0.38), ctx.lit(DARK))
-			box(weapon, Vector3(0, -0.15, -0.38), Vector3(0.06, 0.18, 0.08), ctx.lit(Color("3a4552")))
-			box(weapon, Vector3(0, -0.02, -0.64), Vector3(0.03, 0.03, 0.08), ctx.glow(Color("ffe08a"), 2.0))
+	var primary := weapon.get_node_or_null("Primary")
+	var sidearm := weapon.get_node_or_null("Sidearm")
+	if primary != null:
+		primary.visible = slot == 0
+	if sidearm != null:
+		sidearm.visible = slot == 1
+
+static func _primary_model(ctx: Ctx, weapon: Node3D, primary_id: int) -> void:
+	var gun := pivot(weapon, "Primary", Vector3.ZERO)
+	match primary_id:
+		0:  # Shotgun: short, fat pump shotgun
+			box(gun, Vector3(0, -0.03, -0.5), Vector3(0.1, 0.1, 0.56), ctx.lit(DARK))
+			cylinder(gun, Vector3(0, -0.09, -0.52), 0.045, 0.045, 0.34, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
+			box(gun, Vector3(0, 0.03, -0.78), Vector3(0.04, 0.04, 0.08), ctx.glow(Color("ff9a4a"), 2.0))
+		1:  # Rifle: long barrel and scope
+			box(gun, Vector3(0, -0.03, -0.62), Vector3(0.06, 0.09, 0.95), ctx.lit(DARK))
+			box(gun, Vector3(0, 0.06, -0.55), Vector3(0.07, 0.07, 0.32), ctx.lit(Color("3a4552")))
+			box(gun, Vector3(0, 0.06, -0.72), Vector3(0.05, 0.05, 0.03), ctx.glow(Color("7ee8ff"), 2.4))
+		_:  # SMG: compact with a stick magazine
+			box(gun, Vector3(0, -0.03, -0.42), Vector3(0.09, 0.13, 0.38), ctx.lit(DARK))
+			box(gun, Vector3(0, -0.15, -0.38), Vector3(0.06, 0.18, 0.08), ctx.lit(Color("3a4552")))
+			box(gun, Vector3(0, -0.02, -0.64), Vector3(0.03, 0.03, 0.08), ctx.glow(Color("ffe08a"), 2.0))
+
+static func _sidearm_model(ctx: Ctx, weapon: Node3D, sidearm_id: int) -> void:
+	var gun := pivot(weapon, "Sidearm", Vector3.ZERO)
+	gun.visible = false
+	match sidearm_id:
+		0:  # Pistol: plain slide and grip
+			box(gun, Vector3(0, -0.02, -0.38), Vector3(0.06, 0.08, 0.2), ctx.lit(DARK))
+			box(gun, Vector3(0, -0.1, -0.32), Vector3(0.05, 0.12, 0.06), ctx.lit(Color("3a4552")))
+		1:  # Burst Pistol: longer slide with a lit vent
+			box(gun, Vector3(0, -0.02, -0.42), Vector3(0.07, 0.1, 0.3), ctx.lit(DARK))
+			box(gun, Vector3(0, 0.04, -0.52), Vector3(0.03, 0.03, 0.1), ctx.glow(Color("7ee8ff"), 2.0))
+		_:  # Revolver: cylinder and long barrel
+			box(gun, Vector3(0, -0.02, -0.38), Vector3(0.06, 0.1, 0.22), ctx.lit(Color("8a949c")))
+			cylinder(gun, Vector3(0, -0.01, -0.5), 0.03, 0.03, 0.14, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
+
+static func _melee_model(ctx: Ctx, arm: Node3D, melee_id: int) -> void:
+	var hand := pivot(arm, "Melee", Vector3(0, -0.56, -0.02))
+	match melee_id:
+		0:  # Knife
+			box(hand, Vector3(0, 0, -0.12), Vector3(0.03, 0.03, 0.22), ctx.lit(Color("c8d0d4")))
+		1:  # Sledgehammer: long haft and a heavy head
+			cylinder(hand, Vector3(0, 0.1, 0), 0.025, 0.025, 0.7, ctx.lit(Color("6a4a32")))
+			box(hand, Vector3(0, 0.45, 0), Vector3(0.14, 0.14, 0.3), ctx.lit(DARK))
+		_:  # Sword
+			box(hand, Vector3(0, 0.0, 0), Vector3(0.1, 0.06, 0.06), ctx.lit(DARK))
+			box(hand, Vector3(0, 0.45, 0), Vector3(0.05, 0.8, 0.02), ctx.lit(Color("c8d0d4"), 0.01))
 
 static func _tint_team(node: Node, color: Color) -> void:
 	if node.name == "TeamTint":
@@ -180,113 +204,24 @@ static func _free_arm(ctx: Ctx, body: Node3D, shoulder: Vector3, radius: float, 
 	var arm := pivot(body, "ArmL", shoulder)
 	capsule(arm, Vector3(0, -0.28, 0), radius, 0.6, ctx.lit(color, 0.02))
 
-static func _skyrunner(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
-	var suit := Color("2f4f7a")
-	_legs(ctx, legs, 0.12, 0.085, DARK)
-	capsule(body, Vector3(0, 0.38, 0), 0.19, 0.66, ctx.lit(suit, 0.03))
-	_head(ctx, body, 0.16, 0.86, Color("7ee8ff"))
-	box(body, Vector3(0, 0.45, -0.19), Vector3(0.24, 0.16, 0.03), ctx.glow(ctx.team_color, 1.0))
-	box(body, Vector3(0, 0.45, 0.19), Vector3(0.1, 0.4, 0.03), ctx.glow(ctx.team_color, 1.0))
-	# Boost vanes read as the class's winged silhouette from behind and the side.
-	var vanes := pivot(body, "Vanes", Vector3(0, 0.55, 0.2))
+static func _operative(ctx: Ctx, legs: Node3D, body: Node3D, primary_id: int, sidearm_id: int, melee_id: int) -> void:
+	var suit := Color("34404f")
+	_legs(ctx, legs, 0.14, 0.1, DARK)
+	capsule(body, Vector3(0, 0.4, 0), 0.24, 0.72, ctx.lit(suit, 0.03))
+	box(body, Vector3(0, 0.46, -0.22), Vector3(0.36, 0.34, 0.06), ctx.lit(DARK))
+	box(body, Vector3(0, 0.5, -0.255), Vector3(0.22, 0.06, 0.02), ctx.glow(ctx.team_color, 1.2))
+	box(body, Vector3(0, 0.48, 0.24), Vector3(0.34, 0.42, 0.14), ctx.lit(DARK))
 	for side in [-1, 1]:
-		box(vanes, Vector3(side * 0.2, 0, 0.1), Vector3(0.05, 0.5, 0.26), ctx.glow(Color("ffe2a3"), 1.6), Vector3(0.35, 0, side * 0.4))
-	_free_arm(ctx, body, Vector3(-0.27, 0.62, 0), 0.065, suit)
-	var launcher := pivot(body.get_node("ArmL"), "Launcher", Vector3(0, -0.45, -0.04))
-	cylinder(launcher, Vector3.ZERO, 0.05, 0.05, 0.2, ctx.lit(DARK), Vector3(PI / 2, 0, 0))
-	var weapon := _weapon_arm(ctx, body, Vector3(0.27, 0.62, 0), 0.065, suit)
-	box(weapon, Vector3(0, -0.03, -0.42), Vector3(0.07, 0.12, 0.34), ctx.lit(DARK))
-	box(weapon, Vector3(0, 0.04, -0.58), Vector3(0.03, 0.03, 0.1), ctx.glow(Color("7ee8ff"), 2.0))
+		sphere(body, Vector3(side * 0.3, 0.74, 0), 0.13, ctx.lit(ctx.team_color.darkened(0.35), 0.03), 0.8)
+	_head(ctx, body, 0.16, 0.9, Color("7ee8ff"))
+	_free_arm(ctx, body, Vector3(-0.3, 0.65, 0), 0.075, suit)
+	_melee_model(ctx, body.get_node("ArmL"), melee_id)
+	var weapon := _weapon_arm(ctx, body, Vector3(0.3, 0.65, 0), 0.075, suit)
+	_primary_model(ctx, weapon, primary_id)
+	_sidearm_model(ctx, weapon, sidearm_id)
 
-static func _engineer(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
-	var overalls := Color("5a6b4a")
-	var vest := Color("d9b95b")
-	_legs(ctx, legs, 0.15, 0.11, DARK)
-	capsule(body, Vector3(0, 0.4, 0), 0.26, 0.74, ctx.lit(overalls, 0.03))
-	box(body, Vector3(0, 0.45, -0.22), Vector3(0.44, 0.38, 0.06), ctx.lit(vest))
-	box(body, Vector3(0, 0.45, -0.255), Vector3(0.12, 0.12, 0.02), ctx.glow(ctx.team_color, 1.0))
-	var head := _head(ctx, body, 0.17, 0.9, Color("ffe9a0"))
-	sphere(head, Vector3(0, 0.1, 0), 0.2, ctx.lit(Color("ffd23f"), 0.02), 0.7)
-	# Tool-rig backpack with fuel tanks and a hose coil.
-	box(body, Vector3(0, 0.5, 0.3), Vector3(0.5, 0.55, 0.26), ctx.lit(vest, 0.02))
-	for side in [-1, 1]:
-		cylinder(body, Vector3(side * 0.14, 0.82, 0.3), 0.07, 0.07, 0.3, ctx.lit(Color("c8d0d4")))
-	var coil := TorusMesh.new()
-	coil.inner_radius = 0.07
-	coil.outer_radius = 0.2
-	coil.rings = 14
-	coil.ring_segments = 6
-	mesh_part(body, coil, Vector3(-0.3, 0.2, 0.0), ctx.lit(DARK), Vector3(0, 0, PI / 2))
-	_free_arm(ctx, body, Vector3(-0.34, 0.65, 0), 0.09, overalls)
-	var weapon := _weapon_arm(ctx, body, Vector3(0.34, 0.65, 0), 0.09, overalls)
-	box(weapon, Vector3(0, -0.03, -0.4), Vector3(0.14, 0.16, 0.36), ctx.lit(DARK))
-	cylinder(weapon, Vector3(0, -0.03, -0.62), 0.05, 0.08, 0.12, ctx.glow(Color("7ef7ff"), 1.8), Vector3(PI / 2, 0, 0))
-
-static func _enforcer(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
-	var armor := Color("3c4756")
-	_legs(ctx, legs, 0.22, 0.14, DARK)
-	capsule(body, Vector3(0, 0.45, 0), 0.38, 0.95, ctx.lit(armor, 0.035))
-	box(body, Vector3(0, 0.5, -0.36), Vector3(0.5, 0.45, 0.08), ctx.lit(CREAM))
-	box(body, Vector3(0, 0.5, -0.41), Vector3(0.3, 0.1, 0.02), ctx.glow(ctx.team_color, 1.0))
-	_head(ctx, body, 0.17, 1.0, Color("ff6a4a"))
-	for side in [-1, 1]:
-		sphere(body, Vector3(side * 0.5, 0.8, 0), 0.24, ctx.lit(ctx.team_color.darkened(0.35), 0.03), 0.8)
-	box(body, Vector3(0, 0.5, 0.36), Vector3(0.5, 0.6, 0.12), ctx.lit(DARK))
-	_free_arm(ctx, body, Vector3(-0.52, 0.72, 0), 0.12, armor)
-	var weapon := _weapon_arm(ctx, body, Vector3(0.5, 0.72, 0), 0.12, armor)
-	box(weapon, Vector3(0, -0.05, -0.35), Vector3(0.24, 0.24, 0.4), ctx.lit(DARK))
-	var spinner := pivot(weapon, "Spinner", Vector3(0, -0.05, -0.7))
-	var heat_mat := ctx.glow(Color("ff5a2a"), 0.0)
-	for i in range(6):
-		var a := TAU * i / 6.0
-		cylinder(spinner, Vector3(cos(a) * 0.08, sin(a) * 0.08, 0), 0.025, 0.025, 0.5, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
-		sphere(spinner, Vector3(cos(a) * 0.08, sin(a) * 0.08, -0.26), 0.03, heat_mat)
-	spinner.set_meta("heat", heat_mat)
-
-static func _mirage(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
-	var suit := Color("30283f")
-	_legs(ctx, legs, 0.12, 0.09, DARK)
-	capsule(body, Vector3(0, 0.38, 0), 0.2, 0.68, ctx.lit(suit, 0.03))
-	# Long coat skirt plus a cloak that trails when moving.
-	cylinder(body, Vector3(0, -0.05, 0), 0.22, 0.34, 0.75, ctx.lit(DARK, 0.02))
-	box(body, Vector3(0, 0.45, -0.2), Vector3(0.1, 0.4, 0.03), ctx.glow(Color("c7a8f1"), 1.2))
-	var head := _head(ctx, body, 0.15, 0.86, Color("c7a8f1"))
-	cylinder(head, Vector3(0, 0.13, 0), 0.31, 0.31, 0.025, ctx.lit(DARK, 0.015))
-	cylinder(head, Vector3(0, 0.2, 0), 0.15, 0.17, 0.16, ctx.lit(DARK, 0.015))
-	var cloak := pivot(body, "Cloak", Vector3(0, 0.72, 0.18))
-	box(cloak, Vector3(0, -0.4, 0.03), Vector3(0.42, 0.95, 0.03), ctx.lit(suit.lightened(0.1), 0.0))
-	_free_arm(ctx, body, Vector3(-0.27, 0.62, 0), 0.065, suit)
-	var weapon := _weapon_arm(ctx, body, Vector3(0.27, 0.62, 0), 0.065, suit)
-	box(weapon, Vector3(0, -0.02, -0.38), Vector3(0.06, 0.1, 0.22), ctx.lit(Color("8a949c")))
-	cylinder(weapon, Vector3(0, -0.01, -0.5), 0.03, 0.03, 0.14, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
-
-static func _reave(ctx: Ctx, legs: Node3D, body: Node3D) -> void:
-	var plate := Color("4a2f38")
-	var ember := Color("ff7a3a")
-	_legs(ctx, legs, 0.2, 0.13, DARK)
-	capsule(body, Vector3(0, 0.45, 0), 0.34, 0.9, ctx.lit(plate, 0.035))
-	box(body, Vector3(0, 0.52, -0.33), Vector3(0.46, 0.42, 0.08), ctx.lit(DARK))
-	box(body, Vector3(0, 0.52, -0.375), Vector3(0.26, 0.08, 0.02), ctx.glow(ctx.team_color, 1.2))
-	_head(ctx, body, 0.16, 0.98, ember)
-	# Broad pauldrons and a heavy brow-plate make a wide, forward-leaning silhouette.
-	for side in [-1, 1]:
-		sphere(body, Vector3(side * 0.46, 0.78, 0), 0.22, ctx.lit(plate.lightened(0.1), 0.03), 0.75)
-	_free_arm(ctx, body, Vector3(-0.46, 0.7, 0), 0.11, plate)
-	var weapon := _weapon_arm(ctx, body, Vector3(0.46, 0.7, 0), 0.11, plate)
-	# Shotgun: stubby, wide-mouthed barrel with an ember-lit muzzle.
-	box(weapon, Vector3(0, -0.04, -0.4), Vector3(0.16, 0.16, 0.5), ctx.lit(DARK))
-	cylinder(weapon, Vector3(0, -0.04, -0.7), 0.075, 0.095, 0.18, ctx.lit(Color("8a949c")), Vector3(PI / 2, 0, 0))
-	box(weapon, Vector3(0, 0.0, -0.8), Vector3(0.05, 0.05, 0.04), ctx.glow(ember, 2.0))
-	# The blade rides on the back at rest, swings in front to guard, and glows with stored Charge.
-	var blade := pivot(body, "Blade", Vector3(-0.25, 0.55, 0.32))
-	var heat := ctx.glow(ember, 0.4)
-	box(blade, Vector3(0, 0.0, 0), Vector3(0.34, 1.5, 0.07), ctx.lit(Color("8a949c"), 0.02))
-	box(blade, Vector3(0, 0.0, -0.045), Vector3(0.06, 1.42, 0.02), heat)
-	box(blade, Vector3(0, -0.8, 0), Vector3(0.14, 0.16, 0.1), ctx.lit(DARK))
-	blade.set_meta("heat", heat)
-
-# Per-frame procedural pose from synced state only (velocity, pitch, spin).
-static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float, grounded: bool, pitch: float, spin: float, sliding: bool, guard: bool = false) -> void:
+# Per-frame procedural pose from synced state only (velocity, pitch, melee recovery).
+static func animate(root: Node3D, dt: float, planar_speed: float, grounded: bool, pitch: float, sliding: bool, melee_time: float = 0.0) -> void:
 	if root == null or not is_instance_valid(root) or root.has_meta("authored"):
 		return
 	var phase: float = root.get_meta("phase", 0.0)
@@ -305,8 +240,7 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	var left_x := swing - air_tuck
 	var right_x := -swing + air_tuck * 0.4
 	var arm_x := -swing * 0.8
-	var base_lean := -0.12 if class_id == 0 else (-0.06 if class_id == 3 else 0.0)
-	var lean := base_lean - 0.22 * run
+	var lean := -0.06 - 0.22 * run
 	var hip_y := 0.9
 	if sliding:
 		# Seated slide: hips drop, front leg extends, rear leg tucks, torso leans back, free arm braces.
@@ -327,7 +261,8 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	body.rotation.x = lerpf(body.rotation.x, lean, blend)
 	var arm: Node3D = body.get_node_or_null("ArmL")
 	if arm != null:
-		arm.rotation.x = arm_x
+		# A melee swing throws the free arm up and across while recovery runs.
+		arm.rotation.x = 2.2 if melee_time > 0.0 else arm_x
 	var weapon: Node3D = body.get_node_or_null("Weapon")
 	if weapon != null:
 		# Counter the body lean so the weapon follows the aim exactly.
@@ -335,30 +270,6 @@ static func animate(root: Node3D, dt: float, class_id: int, planar_speed: float,
 	var head: Node3D = body.get_node_or_null("Head")
 	if head != null:
 		head.rotation.x = (pitch - body.rotation.x) * 0.4
-	var cloak: Node3D = body.get_node_or_null("Cloak")
-	if cloak != null:
-		cloak.rotation.x = 0.15 + run * 0.7 + (0.0 if grounded else 0.4)
-	var vanes: Node3D = body.get_node_or_null("Vanes")
-	if vanes != null:
-		vanes.rotation.x = 0.1 + run * 0.35 + (0.0 if grounded else 0.3)
-	var blade: Node3D = body.get_node_or_null("Blade")
-	if blade != null:
-		# `spin` carries the stored Charge fraction for Reave; the blade swings forward while she guards.
-		var rest := Vector3(-0.25, 0.55, 0.32)
-		var held_pos := Vector3(0.0, 0.5, -0.62)
-		blade.position = blade.position.lerp(held_pos if guard else rest, blend)
-		blade.rotation.z = lerpf(blade.rotation.z, 0.0 if guard else 0.25, blend)
-		blade.rotation.x = lerpf(blade.rotation.x, 0.0 if guard else 0.1, blend)
-		var blade_heat: StandardMaterial3D = blade.get_meta("heat")
-		blade_heat.emission_energy_multiplier = 0.4 + spin * 4.0
-	if weapon != null:
-		var spinner: Node3D = weapon.get_node_or_null("Spinner")
-		if spinner != null:
-			var turn: float = spinner.get_meta("turn", 0.0) + dt * spin * 30.0
-			spinner.set_meta("turn", turn)
-			spinner.rotation.z = turn
-			var heat: StandardMaterial3D = spinner.get_meta("heat")
-			heat.emission_energy_multiplier = spin * 3.0
 
 # Fades the whole rig (concealment shimmer, hologram doubles).
 static func set_alpha(root: Node3D, alpha: float) -> void:

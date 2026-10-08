@@ -14,6 +14,6 @@ Regenerate with `python3 tools/blender/generate.py tools/blender/maps/movement.p
 | **Wall-run corridor** | x 4..34, z 19..26 | Two 8 m walls, 7 m apart. Run along one in the air, kick across, run the other. The 124 m north and south boundary walls are long wall-run strips too |
 
 Automated check: `godot --headless --path . --script res://tests/movement_course.gd` rebuilds the course 300 m away and walks real
-fighters through each station (slide hill length, 5 m and 7 m gaps with and without a slide-jump, hurdle vaults for Engineer and
-Enforcer, the ledge ladder, and a wall-to-wall run). `tests/blockout_import.gd` also checks the map file and that the ledge
+fighters through each station (slide hill length, 5 m and 7 m gaps with and without a slide-jump, hurdle vaults holding the Shotgun and
+the SMG, the ledge ladder, and a wall-to-wall run). `tests/blockout_import.gd` also checks the map file and that the ledge
 heights bracket the vault and mantle limits.

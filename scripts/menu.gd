@@ -1,18 +1,18 @@
 class_name GameMenu
 extends PanelContainer
 
-# Start/pause menu: class cards with rotating rig portraits, mode buttons and a controls panel.
+# Start/pause menu: the loadout picker (four item rows beside a rotating portrait), mode buttons and a controls panel.
 
 var game: Node3D
 var status: Label
 var address: LineEdit
-var cards: Array[Button] = []
-var spinners: Array[Node3D] = []
+var item_buttons: Array = [[], [], [], []]  # per loadout slot (Loadout.SLOT_NAMES), one toggle per item
+var item_blurb: Label
+var loadout_summary: Label
+var spinner: Node3D
 var controls_panel: Label
 var display_button: Button
 var map_button: Button
-var weapon_buttons: Array[Button] = []
-var weapon_blurb: Label
 
 func setup(owner_game: Node3D) -> void:
 	game = owner_game
@@ -33,43 +33,55 @@ func setup(owner_game: Node3D) -> void:
 	rule.custom_minimum_size = Vector2(120, 3)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(rule)
-	column.add_child(_label("CIVIC DIVIDEND  /  ACQUISITION  ·  Five heroes. Five points. Questionable employment.", 15, UiStyle.TEXT_MUTED))
+	column.add_child(_label("CIVIC DIVIDEND  /  ACQUISITION  ·  One body, your loadout. Five points.", 15, UiStyle.TEXT_MUTED))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 16)
 	column.add_child(row)
-	var group := ButtonGroup.new()
-	for i in range(Fighter.SPECS.size()):
-		var card := _make_card(i, group)
-		row.add_child(card)
-		cards.append(card)
-	cards[game.selected_class].button_pressed = true
-	var weapon_row := HBoxContainer.new()
-	weapon_row.add_theme_constant_override("separation", 10)
-	column.add_child(weapon_row)
-	weapon_row.add_child(_label("WEAPON", 15, UiStyle.ACCENT))
-	var weapon_group := ButtonGroup.new()
-	for i in range(Fighter.WEAPONS.size()):
-		var button := Button.new()
-		button.toggle_mode = true
-		button.button_group = weapon_group
-		button.text = "Signature (class gun)" if i == 0 else Fighter.WEAPONS[i].title
-		button.tooltip_text = "Each class's own gun, with its special behaviour." if i == 0 else "%s\n%s" % [Fighter.WEAPONS[i].blurb, Fighter.WEAPONS[i].summary()]
-		button.custom_minimum_size = Vector2(150, 30)
-		UiStyle.style_button(button, false)
-		button.pressed.connect(func():
-			game.selected_weapon = i
-			weapon_blurb.text = _weapon_blurb(i))
-		weapon_row.add_child(button)
-		weapon_buttons.append(button)
-	weapon_buttons[game.selected_weapon].button_pressed = true
-	weapon_blurb = _label(_weapon_blurb(game.selected_weapon), 13, Color(1, 1, 1, 0.75))
-	column.add_child(weapon_blurb)
+	var container := SubViewportContainer.new()
+	container.stretch = true
+	container.custom_minimum_size = Vector2(200, 250)
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(container)
+	container.add_child(_make_portrait())
+	var picker := VBoxContainer.new()
+	picker.add_theme_constant_override("separation", 6)
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(picker)
+	var ids := Loadout.decode(game.selected_loadout)
+	var sizes := Loadout.slot_sizes()
+	for slot in range(4):
+		picker.add_child(_label(Loadout.SLOT_NAMES[slot] + ["", "  ·  2 / wheel to swap", "  ·  Q", "  ·  F"][slot], 13, UiStyle.ACCENT))
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("v_separation", 6)
+		picker.add_child(flow)
+		var group := ButtonGroup.new()
+		for i in range(sizes[slot]):
+			var button := Button.new()
+			button.toggle_mode = true
+			button.button_group = group
+			button.text = Loadout.item_name(slot, i)
+			button.tooltip_text = Loadout.item_blurb(slot, i)
+			button.custom_minimum_size = Vector2(112, 28)
+			UiStyle.style_button(button, false)
+			button.pressed.connect(_pick.bind(slot, i))
+			button.mouse_entered.connect(func(): item_blurb.text = Loadout.item_blurb(slot, i))
+			flow.add_child(button)
+			item_buttons[slot].append(button)
+		item_buttons[slot][ids[slot]].button_pressed = true
+	item_blurb = _label(Loadout.item_blurb(0, ids[0]), 12, Color(1, 1, 1, 0.75))
+	item_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	item_blurb.custom_minimum_size = Vector2(640, 34)
+	picker.add_child(item_blurb)
+	loadout_summary = _label("", 13, Color(1, 1, 1, 0.85))
+	picker.add_child(loadout_summary)
+	_refresh_loadout()
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 8)
 	column.add_child(grid)
-	for pair in [["Play offline · 10v10 bots", "offline"], ["Explore map · free roam", "explore"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply class / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
+	for pair in [["Play offline · 5v5 bots", "offline"], ["Explore map · free roam", "explore"], ["Host LAN · UDP 27847", "host"], ["Join server", "join"], ["Apply loadout / Resume", "resume"], ["Restart round · host / offline", "restart"]]:
 		var button := Button.new()
 		button.text = pair[0]
 		button.custom_minimum_size = Vector2(290, 38)
@@ -130,7 +142,7 @@ func setup(owner_game: Node3D) -> void:
 		sens_label.text = "Aim sensitivity: %.2f" % v)
 	sens_row.add_child(sens_slider)
 	column.add_child(sens_row)
-	controls_panel = _label("WASD move / aim with mouse · LMB primary · RMB alternate / aim down sights · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q / E / F abilities · X ultimate (Reave: Q guard/slash, E Breach, F ultimate) · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
+	controls_panel = _label("WASD move / aim with mouse · LMB fire · RMB aim down sights · SPACE jump, again in the air to double jump or at a wall to kick, walk into a ledge to mantle (S or SHIFT drops from a hang)\n1 air dash (independent of the double jump; sprint is automatic) · strafe to steer in the air · SHIFT slide, SPACE out of it to slide-jump · run along a wall to wall run · Q utility · F melee · 2 or mouse wheel swap primary / sidearm (faster than reloading) · R reload · V shoulder · TAB scoreboard\nF1 hide hints · F2 colour-blind palette · F11 fullscreen · ESC menu · Capture the centre, then advance; the final point wins.", 14, Color(1, 1, 1, 0.8))
 	controls_panel.visible = false
 	column.add_child(controls_panel)
 	toggle.pressed.connect(func():
@@ -183,56 +195,30 @@ func _label(value: String, font_size: int, color: Color = Color("eef0e5")) -> La
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
-func _weapon_blurb(index: int) -> String:
-	if index == 0:
-		return "Each class keeps its own gun and its quirks."
-	var w: WeaponSpec = Fighter.WEAPONS[index]
-	return "%s  (%s)" % [w.blurb, w.summary()]
+func _pick(slot: int, index: int) -> void:
+	game.selected_loadout = Loadout.with_slot(game.selected_loadout, slot, index)
+	item_blurb.text = Loadout.item_blurb(slot, index)
+	_refresh_loadout()
 
-func _make_card(index: int, group: ButtonGroup) -> Button:
-	var spec: ClassSpec = Fighter.SPECS[index]
-	var card := Button.new()
-	card.toggle_mode = true
-	card.button_group = group
-	card.custom_minimum_size = Vector2(212, 352)
-	card.pressed.connect(func(): game.selected_class = index)
-	var chosen := UiStyle.box(Color(UiStyle.PANEL_RAISED, 0.95), UiStyle.ACCENT, 3, 0.0)
-	card.add_theme_stylebox_override("normal", UiStyle.box(Color(UiStyle.SLOT, 0.9), Color(UiStyle.ACCENT, 0.3), 1, 0.0))
-	card.add_theme_stylebox_override("hover", UiStyle.box(Color(UiStyle.PANEL_RAISED, 0.7), Color(UiStyle.ACCENT, 0.7), 1, 0.0))
-	card.add_theme_stylebox_override("pressed", chosen)
-	card.add_theme_stylebox_override("hover_pressed", chosen)
-	card.add_theme_stylebox_override("focus", UiStyle.box(Color(0, 0, 0, 0), UiStyle.HIGHLIGHT, 2, 0.0))
-	var box := VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(box)
-	var container := SubViewportContainer.new()
-	container.stretch = true
-	container.custom_minimum_size = Vector2(196, 150)
-	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(container)
-	container.add_child(_make_portrait(index))
-	box.add_child(_label(spec.display_name().to_upper(), 18, UiStyle.ACCENT))
-	if spec.hero_name != "":
-		box.add_child(_label("%s · %s" % [spec.epithet, spec.title] if spec.epithet != "" else spec.title, 12, Color(1, 1, 1, 0.7)))
-	box.add_child(_label("HP %d  ·  %.1fs to kill" % [int(spec.health), spec.body_ttk()], 13, Color(1, 1, 1, 0.8)))
-	var reave: bool = index == Fighter.REAVE_ID
-	var keys := ["E"] if reave else ["Q", "E", "F"]
-	if reave:
-		box.add_child(_label("Q  Guard / Slash (hold, release)", 13))
-	for i in range(mini(spec.abilities.size(), keys.size())):
-		box.add_child(_label("%s  %s" % [keys[i], spec.abilities[i]], 13))
-	if spec.ultimate != "":
-		box.add_child(_label(("F" if reave else "X") + "  %s (ULT)" % spec.ultimate, 13, UiStyle.ACCENT))
-	var passive := _label(spec.passive, 11, Color(1, 1, 1, 0.65))
-	passive.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	passive.custom_minimum_size.x = 190
-	box.add_child(passive)
-	return card
+# Summary line plus a fresh portrait holding the chosen guns and melee weapon.
+func _refresh_loadout() -> void:
+	var code: int = game.selected_loadout
+	var primary := Loadout.primary(code)
+	var sidearm := Loadout.sidearm(code)
+	loadout_summary.text = "HP %d  ·  %s %.1fs to kill  ·  %s %.1fs  ·  swap %.2fs" % [int(Fighter.MAX_HEALTH), primary.title, primary.body_ttk(Fighter.MAX_HEALTH), sidearm.title, sidearm.body_ttk(Fighter.MAX_HEALTH), Fighter.SWAP_TIME]
+	if spinner == null:
+		return
+	for child in spinner.get_children():
+		child.queue_free()
+	var ids := Loadout.decode(code)
+	var outlines: Array = []
+	CharacterRig.build(spinner, Visuals.team_color(0), outlines, false, ids[0], ids[1], ids[3])
+	for outline in outlines:
+		outline.set_shader_parameter("outline_color", Visuals.ALLY_OUTLINE)
 
-func _make_portrait(index: int) -> SubViewport:
+func _make_portrait() -> SubViewport:
 	var viewport := SubViewport.new()
-	viewport.size = Vector2i(196, 190)
+	viewport.size = Vector2i(200, 250)
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
 	var world := Node3D.new()
@@ -249,17 +235,12 @@ func _make_portrait(index: int) -> SubViewport:
 	light.rotation_degrees = Vector3(-35, -30, 0)
 	light.light_energy = 1.2
 	world.add_child(light)
-	var spinner := Node3D.new()
+	spinner = Node3D.new()
 	world.add_child(spinner)
-	var outlines: Array = []
-	CharacterRig.build(spinner, index, Visuals.team_color(0), outlines)
-	for outline in outlines:
-		outline.set_shader_parameter("outline_color", Visuals.ALLY_OUTLINE)
-	spinners.append(spinner)
 	var camera := Camera3D.new()
 	camera.fov = 38
 	world.add_child(camera)
-	camera.position = Vector3(0, 1.05, 3.7)
+	camera.position = Vector3(0, 1.05, 3.9)
 	camera.look_at_from_position(camera.position, Vector3(0, 0.95, 0))
 	return viewport
 
@@ -269,5 +250,5 @@ func _draw() -> void:
 func _process(dt: float) -> void:
 	if not visible:
 		return
-	for spinner in spinners:
+	if spinner != null:
 		spinner.rotation.y += dt * 0.9

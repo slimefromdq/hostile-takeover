@@ -4,7 +4,7 @@ extends RefCounted
 # Procedural sound effects: each cue is synthesised once from oscillators and noise, cached as an
 # AudioStreamWAV, and played through small fixed pools. Silent in headless runs.
 
-enum Kind { SHOT_SKYRUNNER, SHOT_ENGINEER, SHOT_ENFORCER, SHOT_MIRAGE, SHOT_CHARGED, SHOT_BREACHER, SHOT_LONGSHOT, SHOT_CHATTERBOX, IMPACT, STEP, SWAP, KICKOFF, BRAKE, BREACH, EVICT, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE, ITEM_BUBBLE, ITEM_ARMOR1, ITEM_ARMOR2, ITEM_POWER, POWER_WARN, POWER_TICK, POWER_TAKEN_INVULNERABLE, POWER_TAKEN_QUAD }
+enum Kind { SHOT_PISTOL, SHOT_BURST_PISTOL, SHOT_REVOLVER, SHOT_SHOTGUN, SHOT_RIFLE, SHOT_SMG, IMPACT, STEP, SWAP, BREACH, MELEE, PAD, SMOKE, EXPLODE, TURRET, GRAPPLE, DASH, JUMP, HIT, HEADSHOT, KILL, CAPTURE, PLACE, ITEM_BUBBLE, ITEM_ARMOR1, ITEM_ARMOR2, ITEM_POWER, POWER_WARN, POWER_TICK, POWER_TAKEN_INVULNERABLE, POWER_TAKEN_QUAD }
 
 const MIX_RATE := 22050
 const POOL_3D := 16
@@ -12,21 +12,17 @@ const POOL_UI := 4
 
 # length (s), start Hz, end Hz, wave, noise mix 0..1, decay, volume
 const RECIPES := {
-	Kind.SHOT_SKYRUNNER: [0.12, 1800.0, 400.0, "saw", 0.45, 18.0, 0.55],
-	Kind.SHOT_ENGINEER: [0.14, 130.0, 110.0, "buzz", 0.3, 12.0, 0.5],
-	Kind.SHOT_ENFORCER: [0.10, 95.0, 60.0, "sine", 0.65, 14.0, 0.9],
-	Kind.SHOT_MIRAGE: [0.20, 700.0, 250.0, "sine", 0.2, 12.0, 0.55],
-	Kind.SHOT_CHARGED: [0.30, 2400.0, 200.0, "saw", 0.4, 8.0, 0.7],
-	Kind.SHOT_BREACHER: [0.22, 140.0, 45.0, "saw", 0.8, 11.0, 0.95],
-	Kind.SHOT_LONGSHOT: [0.26, 1100.0, 120.0, "saw", 0.35, 10.0, 0.8],
-	Kind.SHOT_CHATTERBOX: [0.06, 900.0, 500.0, "square", 0.4, 30.0, 0.4],
+	Kind.SHOT_PISTOL: [0.10, 1400.0, 380.0, "saw", 0.4, 20.0, 0.5],
+	Kind.SHOT_BURST_PISTOL: [0.12, 1800.0, 400.0, "saw", 0.45, 18.0, 0.55],
+	Kind.SHOT_REVOLVER: [0.20, 700.0, 250.0, "sine", 0.2, 12.0, 0.55],
+	Kind.SHOT_SHOTGUN: [0.22, 140.0, 45.0, "saw", 0.8, 11.0, 0.95],
+	Kind.SHOT_RIFLE: [0.26, 1100.0, 120.0, "saw", 0.35, 10.0, 0.8],
+	Kind.SHOT_SMG: [0.06, 900.0, 500.0, "square", 0.4, 30.0, 0.4],
 	Kind.IMPACT: [0.08, 0.0, 0.0, "sine", 1.0, 40.0, 0.35],
 	Kind.STEP: [0.07, 60.0, 50.0, "sine", 0.5, 30.0, 0.3],
-	Kind.SWAP: [0.25, 300.0, 900.0, "sine", 0.0, 9.0, 0.5],
-	Kind.KICKOFF: [0.30, 200.0, 700.0, "saw", 0.3, 7.0, 0.5],
-	Kind.BRAKE: [0.25, 500.0, 200.0, "sine", 0.8, 8.0, 0.4],
+	Kind.SWAP: [0.08, 600.0, 900.0, "square", 0.3, 30.0, 0.3],
 	Kind.BREACH: [0.35, 80.0, 40.0, "sine", 0.5, 8.0, 0.8],
-	Kind.EVICT: [0.30, 100.0, 40.0, "sine", 0.4, 9.0, 0.8],
+	Kind.MELEE: [0.30, 100.0, 40.0, "sine", 0.4, 9.0, 0.8],
 	Kind.PAD: [0.25, 400.0, 1000.0, "square", 0.0, 10.0, 0.4],
 	Kind.SMOKE: [0.40, 0.0, 0.0, "sine", 1.0, 6.0, 0.4],
 	Kind.EXPLODE: [0.50, 70.0, 35.0, "sine", 0.75, 6.0, 0.9],

@@ -57,5 +57,5 @@ static func power_cue(before: float, after: float) -> int:
 
 static func apply(kind: String, p: Fighter) -> void:
 	var item: Dictionary = KINDS[kind]
-	p.hp = minf(p.spec.health, p.hp + item.heal)
+	p.hp = minf(Fighter.MAX_HEALTH, p.hp + item.heal)
 	p.armor = minf(Fighter.ARMOR_MAX, p.armor + item.armor)

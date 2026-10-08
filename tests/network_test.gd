@@ -13,8 +13,7 @@ func verify(condition: bool, value: String) -> void:
 func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
-	game.selected_class = 3
-	game.selected_weapon = 2
+	game.selected_loadout = Loadout.encode(1, 2, Loadout.Utility.LAUNCH_PAD, Loadout.Melee.KNIFE)
 	var server := "--server" in OS.get_cmdline_user_args()
 	game.start_game("host" if server else "join")
 	print("NETWORK START: ", "server" if server else "client", " running=", game.running, " status=", game.menu_status.text)
@@ -48,20 +47,23 @@ func run() -> void:
 			await create_timer(0.5).timeout
 			verify(not game.authoritative and game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "client is nonauthoritative and receives roster")
 			var p: Fighter = game.local_player()
-			verify(p.class_id == 3, "requested class assigned by server")
-			verify(p.weapon_id == 2 and p.weapon.title == "Longshot", "requested weapon assigned by server")
+			verify(p.loadout == game.selected_loadout, "requested loadout assigned by server")
+			verify(p.weapon.title == "Rifle" and p.sidearm.title == "Revolver", "loadout guns replicated to the client")
 			verify(p.global_position.distance_to(CivicDividend.test_lane) < 10, "client receives server relocation into clear test lane")
-			# Place and exchange with a nearby double on flat ground.
+			# Place a launch pad on flat ground: a reliable utility action, replicated back as an entity.
 			p.pitch = -0.25
-			game.input_edges |= 8
+			game.input_edges |= game.EDGE_UTILITY
 			await create_timer(0.6).timeout
-			verify(p.double_id >= 0 and game.entities.has(p.double_id), "reliable ability action creates replicated double")
-			if game.entities.has(p.double_id):
-				var original := p.global_position
-				game.input_edges |= 8
-				await create_timer(0.6).timeout
-				verify(game.entities[p.double_id].used, "server swaps double once")
-				verify(p.global_position.distance_to(original) > 0.5, "client reconciles authoritative teleport")
+			var pads: Array = game.entities.values().filter(func(e): return e.kind == "pad" and e.owner_id == p.fighter_id)
+			verify(pads.size() == 1, "reliable utility action creates a replicated launch pad")
+			verify(p.utility_cd > 0.0, "server starts the utility cooldown and replicates it")
+			# Swap to the sidearm and back; the server owns the slot and both magazines.
+			game.input_edges |= game.EDGE_SWAP
+			await create_timer(0.6).timeout
+			verify(p.slot == 1 and p.weapon.title == "Revolver" and p.stowed_ammo == p.primary.magazine, "server swaps to the sidearm and replicates it")
+			game.input_edges |= game.EDGE_SWAP
+			await create_timer(0.6).timeout
+			verify(p.slot == 0 and p.weapon.title == "Rifle", "server swaps back to the primary")
 			Input.action_press("back")
 			var before := p.global_position
 			await create_timer(0.4).timeout

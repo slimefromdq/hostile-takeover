@@ -2,7 +2,7 @@
 [ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
 [resource]
 script = ExtResource("1")
-title = "Breacher"
+title = "Shotgun"
 blurb = "Pump shotgun. Devastating inside 6 m, useless past 20."
 damage = 12.0
 pellets = 9

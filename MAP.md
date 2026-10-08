@@ -26,7 +26,7 @@ cut-throughs as soft chokes. Every route family is verified to reach B and C fro
 - **Sightlines:** tram portals on the boulevard and chicane baffles in the trench are pairs of offset walls, so no straight line crosses them. Alleys and roofs alternate cover side to side. Median free run is about 10 m everywhere; the longest lane-aligned run anywhere is 58 m.
 - **High ground with a cost:** the C gallery (3 m) and roofs (6 m) overlook B and C but are exposed to grapples, smoke and the trench undercut. Capture requires street level, so high ground defends but never captures.
 - **Spawn safety:** depot gates open onto a runway behind baffles; nothing in a depot can see the boulevard.
-- **Class fit:** CQB for the Engineer's 12 m hose (alleys, trench, lobbies), 25-45 m rooms for the 35-45 m weapons, nothing beyond ~60 m.
+- **Weapon fit:** CQB for the Shotgun's 6 m full-damage range (alleys, trench, lobbies), 25-45 m rooms for the SMG, sidearms and Rifle, nothing beyond ~60 m.
 
 ## Geometry rules (enforced by `tests/map_audit.gd`)
 
@@ -49,7 +49,7 @@ ledge heights after playtests.
 ## Tooling
 
 - `tests/map_audit.gd` - geometry, clearance, connectivity, route diversity, sightline budgets.
-- `tests/map_walk.gd` - a real `Fighter` (Skyrunner and Enforcer) walks every route family from both depots to every point using the game's movement code, without jumping.
+- `tests/map_walk.gd` - a real `Fighter` (holding the slowest and the fastest primary) walks every route family from both depots to every point using the game's movement code, without jumping.
 - `tests/bot_routes.gd` - samples where bots are during a simulated match.
 - `tests/perf_probe.gd` and `tests/soak.gd` - draw/primitive/node counts and a long-match leak check.
 - `tests/render_map.gd` - top-down, isometric and eye-level shots into `docs/previews/`.

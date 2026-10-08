@@ -23,7 +23,7 @@ func run() -> void:
 	var p: Fighter = game.local_player()
 	p.global_position = Vector3(-57, 0.1, 5)
 	p.yaw = -PI / 2
-	game.hud.add_kill("Skyrunner", 0, "Enforcer", 1)
+	game.hud.add_kill("Bot 103 · Rifle", 0, "Bot 107", 1)
 	game.announce("NEW CONTRACT · Center point unlocked.")
 	await shot("res://docs/previews/res_%s_hud.png" % tag)
 	print("%s window=%s content=%s" % [tag, root.size, root.get_visible_rect().size])

@@ -34,7 +34,7 @@ func run() -> void:
 		var start: Vector3 = game.bot_graph.positions[game.bot_graph.node("n1a")]
 		bot.global_position = start + Vector3(0, 0.2, 0)
 		bot.velocity = Vector3.ZERO
-		bot.hp = bot.spec.health
+		bot.hp = Fighter.MAX_HEALTH
 		var elapsed := 0.0
 		while elapsed < 60.0 and bot.power_pickups == 0:
 			await create_timer(0.25).timeout

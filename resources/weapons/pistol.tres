@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeaponSpec" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/weapon_spec.gd" id="1"]
+[resource]
+script = ExtResource("1")
+title = "Pistol"
+blurb = "Semi-auto pistol. Accurate and quick to draw."
+damage = 18.0
+interval = 0.22
+magazine = 12
+reload_time = 1.2
+reach = 40.0
+falloff_start = 15.0
+falloff_end = 40.0
+falloff_min = 0.6
+headshot_mult = 1.5

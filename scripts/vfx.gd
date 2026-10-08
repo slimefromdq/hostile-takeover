@@ -4,7 +4,7 @@ extends RefCounted
 # Cosmetic combat effects. Damage and hit detection stay hitscan on the authority;
 # these only change how shots, abilities and impacts are drawn.
 
-enum Style { LINE, SKYRUNNER, ARC, REPAIR, ENFORCER, MIRAGE, BOUNCE, CHARGED, SWOOSH, CAPSULE, PELLET, RIFLE, SMG }
+enum Style { LINE, PISTOL, REVOLVER, BOUNCE, SWOOSH, GRENADE, PELLET, RIFLE, SMG }
 
 const BOLT_SPEED := 140.0
 # Lifetime multiplier; tests raise it to hold effects still for screenshots.
@@ -191,29 +191,16 @@ static func tracer(root: Node3D, from: Vector3, to: Vector3, style: int, color: 
 	if from.distance_to(to) < 0.01 or _live(root) > MAX_EFFECT_NODES:
 		return
 	match style:
-		Style.SKYRUNNER:
+		Style.PISTOL:
 			segment(root, from, to, 0.012, color, 0.12)
 			bolt(root, from, to, 1.4, 0.03, color)
 			flash(root, from, 0.08, color)
-		Style.ARC:
-			arc(root, from, to, 0.14, 0.018, color.lightened(0.4), 0.1)
-		Style.REPAIR:
-			arc(root, from, to, 0.05, 0.03, Color("7dff9a"), 0.16)
-		Style.ENFORCER:
-			segment(root, from, to, 0.03, color, 0.1)
-			bolt(root, from, to, 2.4, 0.05, color)
-			flash(root, from, 0.14, Color("ffd9a0"))
-		Style.MIRAGE:
+		Style.REVOLVER:
 			segment(root, from, to, 0.01, Color("c7a8f1"), 0.2)
 			bolt(root, from, to, 1.6, 0.025, Color("c7a8f1"))
 			flash(root, from, 0.07, Color("c7a8f1"))
 		Style.BOUNCE:
 			segment(root, from, to, 0.014, Color("f0dcff"), 0.32)
-		Style.CHARGED:
-			segment(root, from, to, 0.06, color, 0.22, 3.0)
-			segment(root, from, to, 0.02, Color.WHITE, 0.14, 3.0)
-			ring(root, to, 0.8, color)
-			flash(root, from, 0.18, color)
 		Style.PELLET:
 			segment(root, from, to, 0.012, Color("ffd9a0"), 0.09, 1.5)
 			if from.distance_to(to) > 0.5 and _live(root) < MAX_EFFECT_NODES / 2:
@@ -226,7 +213,7 @@ static func tracer(root: Node3D, from: Vector3, to: Vector3, style: int, color: 
 			segment(root, from, to, 0.008, Color("fff2b8"), 0.06, 1.5)
 		Style.SWOOSH:
 			swoosh(root, from, to, 2.4, color)
-		Style.CAPSULE:
+		Style.GRENADE:
 			segment(root, from, to, 0.07, Color("ffde8d"), 0.3, 3.0)
 		_:
 			segment(root, from, to, 0.018, color, 0.08, 1.0)

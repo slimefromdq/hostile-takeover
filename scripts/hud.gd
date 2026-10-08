@@ -2,7 +2,7 @@ class_name Hud
 extends Control
 
 # In-game HUD drawn with _draw() so layout is anchor-based and needs no texture assets.
-# Ability icons use assets/textures/icon_<class slug>_<slot>.png when present.
+# Item icons use assets/textures/icon_utility_<id>.png and icon_melee_<id>.png when present.
 
 const NEUTRAL := Color("c4c2af")
 const KILL_FEED_LIFE := 6.0
@@ -19,7 +19,6 @@ var feed: Array = []
 var indicators: Array = []
 var hit_timer := 0.0
 var hit_kind := 0
-var charge_time := 0.0
 var session_time := 0.0
 var help_hidden := false
 var help_pinned := false
@@ -84,11 +83,6 @@ func refresh(g: Node3D, dt: float) -> void:
 	for entry in indicators:
 		entry.age += dt
 	indicators = indicators.filter(func(e): return e.age < 1.5)
-	var p: Fighter = g.local_player()
-	if p != null and p.class_id == 0 and p.held & 2 and p.hp > 0:
-		charge_time += dt
-	else:
-		charge_time = 0.0
 	if visible:
 		minimap.queue_redraw()
 		queue_redraw()
@@ -136,7 +130,7 @@ func _draw() -> void:
 		_draw_crosshair(p)
 		_draw_player_panel(p)
 		_draw_health_bar(p)
-		_draw_ability_bar(p)
+		_draw_item_bar(p)
 	_draw_notice()
 	_draw_feed()
 	_draw_help()
@@ -236,15 +230,10 @@ func _draw_crosshair(p: Fighter) -> void:
 		draw_line(c + dir * gap + Vector2(1, 1), c + dir * (gap + arm) + Vector2(1, 1), Color(0, 0, 0, 0.7), 3.0)
 		draw_line(c + dir * gap, c + dir * (gap + arm), Color.WHITE, 2.0)
 	draw_circle(c, 1.8, Color.WHITE)
-	var team_color := Visuals.team_color(p.team)
-	if p.class_id == 0 and charge_time > 0.05:
-		draw_arc(c, 20.0, -PI / 2.0, -PI / 2.0 + TAU * clampf(charge_time / 0.9, 0.0, 1.0), 24, Color("ffe2a3"), 3.0)
-	elif p.class_id == 2 and p.spin > 0.02:
-		draw_arc(c, 20.0, -PI / 2.0, -PI / 2.0 + TAU * p.spin, 24, team_color, 3.0)
-	elif p.class_id == 3 and p.held & 2:
-		diamond(c + Vector2(0, -26), 4.5, Color("e1c7ff"))
+	if p.swap_timer > 0.0:
+		draw_arc(c, 20.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - clampf(p.swap_timer / Fighter.SWAP_TIME, 0.0, 1.0)), 24, Color("ffe2a3"), 3.0)
 	if p.reload_timer > 0.0:
-		var total: float = p.weapon.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+		var total: float = p.weapon.reload_time
 		draw_arc(c, 28.0, -PI / 2.0, -PI / 2.0 + TAU * (1.0 - clampf(p.reload_timer / total, 0.0, 1.0)), 32, Color(1, 1, 1, 0.9), 3.0)
 	_draw_dash_icon(p, c + Vector2(48.0, 0.0))
 	_draw_ammo(p, c + Vector2(0.0, 52.0))
@@ -276,7 +265,10 @@ func _draw_dash_icon(p: Fighter, c: Vector2) -> void:
 		draw_polyline(PackedVector2Array([pts[0] + Vector2(1, 1), pts[1] + Vector2(1, 1), pts[2] + Vector2(1, 1)]), Color(0, 0, 0, 0.7), 4.0, true)
 		draw_polyline(pts, color, 2.5, true)
 
+# Gun in hand (ammo, or RELOADING) with the holstered gun's magazine under it, and the swap key.
 func _draw_ammo(p: Fighter, c: Vector2) -> void:
+	var stowed := p.stowed_weapon()
+	text(c + Vector2(-80, 20), "2 · %s %d / %d" % [stowed.title, p.stowed_ammo, stowed.magazine], 13, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_CENTER, 160.0)
 	if p.reload_timer > 0.0:
 		text(c + Vector2(-80, 0), "RELOADING", 18, UiStyle.HIGHLIGHT, HORIZONTAL_ALIGNMENT_CENTER, 160.0)
 		return
@@ -288,11 +280,11 @@ func _draw_player_panel(p: Fighter) -> void:
 	var base_y := size.y - 24.0
 	UiStyle.draw_panel(self, Rect2(12, base_y - 56.0, 300.0, 56.0), UiStyle.PANEL, Color(team_color, 0.85))
 	draw_rect(Rect2(12, base_y - 44.0, 4, 32.0), team_color)
-	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.spec.display_name().to_upper(), mode], 20)
+	text(Vector2(24, base_y - 22), "%s   ·   %s" % [p.weapon.title.to_upper(), mode], 20)
 	if p.hp <= 0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.45))
 		centered(size.x / 2.0, size.y / 2.0 - 30.0, "ELIMINATED", 40, Color("ff6a5a"))
-		centered(size.x / 2.0, size.y / 2.0 + 10.0, "Respawn in %.1fs  ·  Esc to change class" % maxf(0.0, p.dead_time), 20)
+		centered(size.x / 2.0, size.y / 2.0 + 10.0, "Respawn in %.1fs  ·  Esc to change loadout" % maxf(0.0, p.dead_time), 20)
 
 # Vertical HP bar anchored beside the player's on-screen model (segments of 20 HP, bottom up).
 func _draw_health_bar(p: Fighter) -> void:
@@ -315,10 +307,10 @@ func _draw_health_bar(p: Fighter) -> void:
 	if rect.grow(4.0).intersects(zone):
 		rect.position.x = zone.position.x - rect.size.x - 12.0
 	var team_color := Visuals.team_color(p.team)
-	var fraction: float = clampf(p.hp / p.spec.health, 0.0, 1.0)
+	var fraction: float = clampf(p.hp / Fighter.MAX_HEALTH, 0.0, 1.0)
 	var fill := team_color.lightened(0.15) if fraction > 0.35 else Color(1.0, 0.3 + 0.2 * sin(Time.get_ticks_msec() / 120.0), 0.25)
 	UiStyle.draw_panel(self, rect.grow(4.0), UiStyle.PANEL, Color(team_color, 0.85), 5.0, 1.5)
-	var segments := int(ceil(p.spec.health / 20.0))
+	var segments := int(ceil(Fighter.MAX_HEALTH / 20.0))
 	var seg_h := (rect.size.y - (segments - 1) * 2.0) / segments
 	for i in range(segments):
 		var y := rect.end.y - (i + 1) * seg_h - i * 2.0
@@ -328,52 +320,42 @@ func _draw_health_bar(p: Fighter) -> void:
 			draw_rect(Rect2(rect.position.x, y + seg_h * (1.0 - f), rect.size.x, seg_h * f), fill)
 	text(Vector2(rect.position.x - 20.0, rect.position.y - 12.0), "%d" % int(ceil(p.hp)), 18, UiStyle.TEXT, HORIZONTAL_ALIGNMENT_CENTER, 54.0)
 	if p.armor > 0.0:
-		var armor_h := rect.size.y * clampf(p.armor / p.spec.health, 0.0, 1.0)
+		var armor_h := rect.size.y * clampf(p.armor / Fighter.MAX_HEALTH, 0.0, 1.0)
 		draw_rect(Rect2(rect.end.x + 3.0, rect.end.y - armor_h, 5.0, armor_h), Color("5ab8ff"))
 		text(Vector2(rect.end.x - 20.0, rect.end.y + 18.0), "+%d" % int(ceil(p.armor)), 14, Color("5ab8ff"), HORIZONTAL_ALIGNMENT_CENTER, 54.0)
 
-func _draw_ability_bar(p: Fighter) -> void:
+# Two slots: the utility on Q (cooldown pie) and the melee on F (recovery pie).
+func _draw_item_bar(p: Fighter) -> void:
 	var cx := size.x / 2.0
 	var cy := size.y - 78.0
-	var slug := CharacterRig.slug(p.class_id)
 	var team_color := Visuals.team_color(p.team)
-	var keys: Array = p.ability_keys()
-	# Heroes differ in ability count: draw one slot per ability, plus the ultimate when the hero has one.
-	var slot_count: int = mini(p.spec.abilities.size(), keys.size()) + (1 if p.spec.ultimate != "" else 0)
-	for i in range(slot_count):
-		var is_ult: bool = i >= p.spec.abilities.size()
-		var c := Vector2(cx + (i - (slot_count - 1) / 2.0) * 96.0, cy)
-		var cooldown: float = p.ult_cd if is_ult else p.cooldowns[i]
-		var label_name: String = p.spec.ultimate if is_ult else p.spec.abilities[i]
-		var state := ""
-		if is_ult:
-			state = "READY" if p.ult_cd <= 0.0 else ""
-		elif p.class_id == 3 and i == 0 and game.entities.has(p.double_id) and not game.entities[p.double_id].used:
-			state = "SWAP"
-			cooldown = 0.0
-		elif p.class_id == 0 and i == 0 and p.grapple_time > 0.0:
-			state = "RELEASE"
-			cooldown = 0.0
+	var utility: Dictionary = Loadout.UTILITIES[p.utility()]
+	var melee: Dictionary = Loadout.MELEES[p.melee()]
+	var slots := [
+		{"key": "Q", "name": utility.name, "cooldown": p.utility_cd, "total": utility.cooldown, "icon": "icon_utility_%d" % p.utility(), "state": "RELEASE" if p.grapple_time > 0.0 else ""},
+		{"key": "F", "name": melee.name, "cooldown": p.melee_cd, "total": melee.recovery, "icon": "icon_melee_%d" % p.melee(), "state": ""},
+	]
+	for i in range(slots.size()):
+		var slot: Dictionary = slots[i]
+		var c := Vector2(cx + (i - (slots.size() - 1) / 2.0) * 96.0, cy)
+		var cooldown: float = 0.0 if slot.state != "" else slot.cooldown
 		draw_circle(c, 34.0, UiStyle.SLOT)
-		var icon := AssetLibrary.texture("icon_%s_%s" % [slug, "ult" if is_ult else str(i)])
-		var spent: bool = false
+		var icon := AssetLibrary.texture(slot.icon)
 		if icon != null:
-			draw_texture_rect(icon, Rect2(c - Vector2(24, 24), Vector2(48, 48)), false, Color(1, 1, 1, 0.35 if cooldown > 0.0 or spent else 1.0))
+			draw_texture_rect(icon, Rect2(c - Vector2(24, 24), Vector2(48, 48)), false, Color(1, 1, 1, 0.35 if cooldown > 0.0 else 1.0))
 		elif cooldown <= 0.0:
-			text(c + Vector2(-20, 13), label_name.substr(0, 1), 38, Color(1, 1, 1, 0.35 if spent else 0.9), HORIZONTAL_ALIGNMENT_CENTER, 40.0)
-		var total: float = p.spec.ultimate_cooldown if is_ult else p.spec.cooldowns[i]
+			text(c + Vector2(-20, 13), slot.name.substr(0, 1), 38, Color(1, 1, 1, 0.9), HORIZONTAL_ALIGNMENT_CENTER, 40.0)
 		if cooldown > 0.0:
-			pie(c, 33.0, cooldown / total, Color(0, 0, 0, 0.62))
+			pie(c, 33.0, cooldown / slot.total, Color(0, 0, 0, 0.62))
 			text(c + Vector2(-24, 8), "%.0f" % cooldown if cooldown >= 1.0 else "%.1f" % cooldown, 22, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 48.0)
 			draw_arc(c, 34.0, 0, TAU, 40, Color(1, 1, 1, 0.25), 2.0)
 		else:
-			var glow := Color("ffe2a3") if state != "" else team_color
-			draw_arc(c, 34.0, 0, TAU, 40, glow, 3.0)
-		if state != "":
-			text(c + Vector2(-34, -38), state, 14, Color("ffe2a3"), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
+			draw_arc(c, 34.0, 0, TAU, 40, Color("ffe2a3") if slot.state != "" else team_color, 3.0)
+		if slot.state != "":
+			text(c + Vector2(-34, -38), slot.state, 14, Color("ffe2a3"), HORIZONTAL_ALIGNMENT_CENTER, 68.0)
 		UiStyle.draw_tag(self, Rect2(c + Vector2(-14, 26), Vector2(28, 20)), UiStyle.ACCENT)
-		text(c + Vector2(-14, 42), p.ultimate_key() if is_ult else keys[i], 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
-		text(c + Vector2(-48, 62), label_name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
+		text(c + Vector2(-14, 42), slot.key, 15, UiStyle.SLOT, HORIZONTAL_ALIGNMENT_CENTER, 28.0)
+		text(c + Vector2(-48, 62), slot.name, 12, Color(1, 1, 1, 0.8), HORIZONTAL_ALIGNMENT_CENTER, 96.0)
 	if p.power != 0:
 		centered(cx, cy - 92.0, "%s  %.1f" % [Items.POWER_NAMES[p.power], p.power_time], 24, Items.POWER_COLORS[p.power])
 	if quip_timer > 0.0:
@@ -384,7 +366,7 @@ func _draw_notice() -> void:
 		centered(size.x / 2.0, 140.0, notice_text, 22, Color(1, 1, 1, minf(1.0, notice_timer * 2.0)))
 
 func _draw_vignette(p: Fighter) -> void:
-	var fraction: float = p.hp / p.spec.health
+	var fraction: float = p.hp / Fighter.MAX_HEALTH
 	if p.hp <= 0 or fraction >= 0.35:
 		return
 	var a := 0.25 + 0.1 * sin(Time.get_ticks_msec() / 160.0)
@@ -419,7 +401,7 @@ func _draw_feed() -> void:
 func _draw_help() -> void:
 	if not help_shown():
 		return
-	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q / E / F abilities · X ultimate (Reave: Q guard, E Breach, F ultimate) · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
+	var lines := ["WASD move · SPACE jump, double jump, wall kick", "SHIFT slide · SPACE out of a slide to slide-jump", "Run along a wall to wall run · ledges mantle", "1 air dash · strafe to steer in the air", "Q utility · F melee · 2 swap gun · R reload · V shoulder · TAB scores", "ESC menu · F1 hints · F2 colour-blind palette · F3 mute"]
 	for i in range(lines.size()):
 		text(Vector2(size.x - 420.0, size.y - 138.0 + i * 20.0), lines[i], 14, Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, 404.0)
 
@@ -440,8 +422,8 @@ func _draw_winner() -> void:
 static func scoreboard_rows(g: Node3D) -> Array:
 	var teams: Array = [[], []]
 	for p in g.fighters.values():
-		var shown_name := "You" if p.fighter_id == g.local_id else (("Bot %d" % p.fighter_id) if p.bot else ("Player %d" % p.fighter_id))
-		teams[p.team].append({"name": shown_name, "class": p.spec.display_name(), "k": p.kills, "d": p.deaths, "pp": p.power_pickups, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
+		var shown_name: String = "You" if p.fighter_id == g.local_id else p.callsign()
+		teams[p.team].append({"name": shown_name, "loadout": p.primary.title, "k": p.kills, "d": p.deaths, "pp": p.power_pickups, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
 	for team in teams:
 		team.sort_custom(func(a, b): return a.k > b.k)
 	return teams
@@ -454,7 +436,7 @@ func _draw_scoreboard(p: Fighter) -> void:
 		var x := panel.position.x + 20.0 + t * 390.0
 		var held: int = game.match_state.owners.count(t)
 		text(Vector2(x, panel.position.y + 30), "%s  ·  %d points" % [["HELIX", "MONARCH"][t], held], 20, Visuals.team_color(t))
-		text(Vector2(x + 160, panel.position.y + 56), "CLASS", 12, Color(1, 1, 1, 0.6))
+		text(Vector2(x + 160, panel.position.y + 56), "PRIMARY", 12, Color(1, 1, 1, 0.6))
 		text(Vector2(x + 250, panel.position.y + 56), "K", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
 		text(Vector2(x + 288, panel.position.y + 56), "D", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
 		text(Vector2(x + 326, panel.position.y + 56), "PWR", 12, Color(Items.POWER_COLORS[Items.POWER_QUAD], 0.8), HORIZONTAL_ALIGNMENT_RIGHT, 36.0)
@@ -469,10 +451,10 @@ func _draw_scoreboard(p: Fighter) -> void:
 			else:
 				diamond(Vector2(x + 6, row_y - 5), 6.0, Color(Visuals.team_color(t), alpha))
 			text(Vector2(x + 20, row_y), row.name, 16, Color(1, 1, 1, alpha))
-			text(Vector2(x + 160, row_y), row["class"], 14, Color(1, 1, 1, alpha))
+			text(Vector2(x + 160, row_y), row.loadout, 14, Color(1, 1, 1, alpha))
 			text(Vector2(x + 250, row_y), "%d" % row.k, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
 			text(Vector2(x + 288, row_y), "%d" % row.d, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
 			text(Vector2(x + 326, row_y), "%d" % row.pp, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 36.0)
 			row_y += 24.0
 	if p != null:
-		text(Vector2(panel.position.x + 20, panel.end.y - 16), p.spec.passive, 14, Color(1, 1, 1, 0.8))
+		text(Vector2(panel.position.x + 20, panel.end.y - 16), "YOUR LOADOUT  ·  " + Loadout.describe(p.loadout), 14, Color(1, 1, 1, 0.8))

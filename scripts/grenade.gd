@@ -1,5 +1,7 @@
 extends Node3D
 
+# The Frag Grenade utility: an arcing throw that bursts on contact (or after 3 s), 35 on a direct hit, 15 splash.
+
 var game: Node3D
 var source_id: int
 var source_team: int
@@ -42,7 +44,7 @@ func _physics_process(dt: float) -> void:
 	velocity += Vector3.DOWN * 15 * dt
 	var next := global_position + velocity * dt
 	var hit: Dictionary = game.ray(global_position, next, [source_rid])
-	game.show_trace(global_position, next, Color("ffde8d"), Vfx.Style.CAPSULE)
+	game.show_trace(global_position, next, Color("ffde8d"), Vfx.Style.GRENADE)
 	global_position = next if hit.is_empty() else hit.position
 	if velocity.length() > 0.1 and absf(velocity.normalized().y) < 0.99:
 		look_at(global_position + velocity, Vector3.UP)

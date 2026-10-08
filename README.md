@@ -1,29 +1,30 @@
 # Hostile Takeover
 
-A playable Godot 4.7 graybox prototype: five heroes (four classes plus the Gunblade), shared parkour, server-authoritative combat, five-point Acquisition, offline 5v5 bots, and LAN host/join.
+A playable Godot 4.7 graybox prototype: one shared fighter body with Splatoon-style loadouts (primary, sidearm, utility, melee), shared parkour, server-authoritative combat, five-point Acquisition, offline 5v5 bots, and LAN host/join.
 
 ## Play
 
-Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Select a class and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.
+Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Pick a loadout and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.
 
 For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping a full twenty-fighter roster. Disconnected players are replaced by bots.
 
 | Input | Action |
 |---|---|
 | WASD / mouse | Move / aim |
-| Left / right mouse | Primary / alternate fire (holding right also zooms in over the shoulder and fades your own body so the crosshair stays clear) |
+| Left / right mouse | Fire / aim down sights (holding right zooms in over the shoulder and fades your own body so the crosshair stays clear; with the Revolver it also previews the bounce) |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
 | 1 | Air dash (about 3.5 m, independent of the double jump; 2.5 second cooldown, holds vertical speed so you hover through it) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
-| Q / E / F | Hero abilities (a hero has one to three) |
-| X | Ultimate (per-hero cooldown) |
+| Q | Utility (see Loadouts) |
+| F | Melee |
+| 2 / mouse wheel | Swap primary / sidearm (0.25 s) |
 | R | Reload |
 | V | Switch camera shoulder |
 | Tab | Hold for the scoreboard |
 | F1 / F2 / F3 | Toggle control hints / colour-blind palette / mute |
-| Escape | Class selector / resume menu |
+| Escape | Loadout picker / resume menu |
 
-Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; Skyrunner's Hot Lap widens that air control. Jumps reach about 1.9 m.
+Movement is momentum-based, in the Source tradition: ground acceleration and friction take a moment, and in the air forward/back input does almost nothing. Steer air movement by strafing (A or D) while turning the view; the Grapple's Hot Lap widens that air control. Jumps reach about 1.9 m.
 
 ### Movement verbs
 
@@ -38,40 +39,66 @@ Movement is momentum-based, in the Source tradition: ground acceleration and fri
 
 Try each verb in isolation on the Movement Course (`docs/MOVEMENT_COURSE.md`): choose it under **Map** in the start menu, then **Explore map**.
 
-Sprint activates automatically after 1.25 seconds without weapon use. Shooting and alternate fire return you to combat speed. Damage and nonweapon abilities do not reset sprint. Changes of class are accepted only in your depot or while dead. Respawn takes five seconds. The match continues while the menu is open.
+Sprint activates automatically after 1.25 seconds without weapon use. Shooting and aiming down sights return you to combat speed. Damage and utilities do not reset sprint. Loadout changes are accepted only in your depot or while dead. Respawn takes five seconds. The match continues while the menu is open.
 
-## Classes
+## Loadouts
 
-- **Skyrunner:** precise three-round burst pistol; hold alternate fire for a charged shot. Q grapples to aimed geometry; Q again releases. E propels upward. Hold F to arrest horizontal momentum and slow descent. Hot Lap improves wall-kick momentum, steering, and reload handling after wall kicks and grapple exits. Low health: 160.
-- **Field Engineer:** forgiving electric hose with line-of-sight aim assistance; alternate fire repairs friendly machinery. Q places one directional turret; E places a launch pad usable by either team; F recalls the nearest owned installation and refunds half its deployment cooldown. Owned machinery condition is visible through walls and nearby idle machinery slowly repairs. Health: 200.
-- **Enforcer:** minigun with a 0.6-second spin-up; alternate fire swings a heavy melee attack. Q rushes forward; E places destructible cover; F slams a forward cone and pushes enemies. Melee hits improve spin-up; sustained gun hits improve melee recovery. Firing slows movement; frontal knockback is reduced while spun up. Health: 280.
-- **Mirage Agent:** accurate six-shot revolver that bounces once off geometry; alternate fire previews the bounce. Q places one physical double; Q again exchanges positions once, within 25 metres. The double lasts eight seconds, can be destroyed, cannot block fighters or capture points, and echoes harmless firing effects. E throws an arcing capsule (35 direct damage / 15 splash). F creates departure smoke and grants 2.5 seconds of concealment; attacks end it, damage briefly reveals the agent, and close opponents can see them. Swapping preserves velocity and facing, reloads one round, and enables sprint. Health: 180.
+There are no heroes or classes. Every fighter has the same body: **200 HP**, the same size and the full movement set, and no abilities of their own. What sets players apart is the **loadout**, four items picked in the start menu (Splatoon-style). Like the old class choice, the loadout can be changed only in your depot or while dead. Bots cycle through the primaries and roll the other three slots.
 
-- **Reave, the Gunblade:** a tank-leaning hero built around one idea: the gun builds damage, the blade spends it. Primary is a shotgun (8 pellets x 8 damage, 6 degree spread, gentle falloff from 8 m to 50% at 24 m, 4 shells, 0.7 s between shots). Hold **Q** to **Guard** (RMB is aim down sights for her, which zooms in hard, slides the camera out so she drifts toward the left screen edge and blurs her body, and does not stop the shotgun): she plants the blade and absorbs hits from the front 120 degrees (shots from behind, or steeply from above or below, go through), turns at about 100 degrees per second, and cannot fire. Absorbed damage becomes **Charge** on the blade, capped at 100 (hits of 40 or more count 1.5x, hits under 10 count half), and visibly lights the blade. Guarding costs stamina (100; 6 per second plus 0.6 per point absorbed); an empty bar breaks the guard, stuns her for 1.2 s and loses the Charge. Release **Q** to **Slash**, a half-circle arc: a tap deals 25 within 3 m, keeps the Charge, and refills the shotgun if it connects; releasing a guard (Q) held 0.3 s or more with Charge stored cashes it all in (25 + 0.9 x Charge within 4.5 m), refills the shotgun, and spends the Charge. E **Breach** (8 s): a 5 m blast that deals 20, launches enemies, breaks a guard, cancels an Enforcer spin-up and deals triple damage to deployables. Ultimate **Pyre Edge** on **F** (45 s cooldown): a blade of fire flies 30 m forward, piercing fighters for 70 damage and setting them burning (5 per second for 3 s); it stops on geometry, and an enemy Reave's guard swallows it. Reave carries only her own shotgun (the shared weapons are not offered to her). Health: 300.
+| Slot | Key | What it is |
+|---|---|---|
+| Primary | LMB | Your main gun. |
+| Sidearm | **2** / mouse wheel to swap | A second gun with its own magazine. Swapping takes **0.25 s**, much faster than any primary reload (1.6 to 2.2 s), so swapping beats reloading mid-fight. Swapping drops a reload in progress; the holstered gun keeps whatever it had left. |
+| Utility | **Q** | A tool on a cooldown. A use that fails (nothing to hook, no ground to place on) costs nothing. |
+| Melee | **F** | A quick close-range attack. Its recovery also holds your gun. |
 
-## Ultimates and armor
-
-There is no shared meter. Each hero's **ultimate** (X) runs on its own cooldown (`ultimate_cooldown` in the hero's `.tres`; Reave's Pyre Edge is 45 s, restarted when you swap hero, kept through death).
-
-**Light armor:** every kill drops an armor plate where the victim died, for the killer's team to grab (walk over it; it lasts 20 s). A plate gives 15 armor, plus 10 for each objective point the killer's team is behind on (up to +20). Armor soaks damage 1:1 before health, caps at 100 and is lost on death. See `docs/HEROES.md` for the hero design philosophy.
-
-## Weapons (experimental)
-
-Weapons are independent of class. The start menu has a **Weapon** row: pick **Signature** (each class's own gun, exactly as described above) or one of three shared guns that any class can carry. A weapon only replaces primary fire (LMB); class abilities and alternate fire stay with the class, and the Signature-only quirks (Enforcer spin-up, Skyrunner burst, Engineer aim assist, Mirage ricochet) do not apply to shared guns. The Skyrunner's charged shot ignores the equipped weapon. Like class, the weapon can be changed only in your depot or while dead. Bots rotate through all four loadouts.
+**Primaries**
 
 | Weapon | Role | Damage | Rate | Magazine / reload | Reach | Falloff | Spread | Headshot |
 |---|---|---|---|---|---|---|---|---|
-| Breacher | Close range pump shotgun | 9 pellets x 12 | 0.85 s | 6 / 2.2 s | 22 m | full to 6 m, 20% at 20 m | 5.5 deg | 1.2x |
-| Longshot | Mid to long range rifle | 42 | 0.55 s | 8 / 1.8 s | 80 m | full to 35 m, 70% at 80 m | none | 1.6x |
-| Chatterbox | Rapid-fire SMG | 5.5 | 0.065 s | 40 / 1.6 s | 30 m | full to 10 m, 55% at 30 m | 1.8 deg | 1.25x |
+| Shotgun | Close range pump shotgun | 9 pellets x 12 | 0.85 s | 6 / 2.2 s | 22 m | full to 6 m, 20% at 20 m | 5.5 deg | 1.2x |
+| Rifle | Mid to long range rifle | 42 | 0.55 s | 8 / 1.8 s | 80 m | full to 35 m, 70% at 80 m | none | 1.6x |
+| SMG | Rapid-fire SMG | 5.5 | 0.065 s | 40 / 1.6 s | 30 m | full to 10 m, 55% at 30 m | 1.8 deg | 1.25x |
 
-Time to kill a 200-HP body-shot target, every pellet landing: Breacher 0.85 s at 3 m (but 2.55 s at 15 m, with a reload on the way at longer range); Longshot 2.20 s out to 35 m; Chatterbox 2.34 s up to 10 m, 5.05 s at 25 m. A shotgun blast against one target counts as one hit. Weapon data is `scripts/weapon_spec.gd` plus `resources/weapons/*.tres`; the loadout rides in the `join_request` / `class_request` RPCs and the snapshot (`"w"`).
+**Sidearms**
 
-Aim placement abilities at a visible location; invalid placements do not consume cooldown. Failed or obstructed swaps do not consume the double's exchange. Friendly damage is disabled. Depot interiors protect spawning fighters from enemy damage.
+| Weapon | Role | Damage | Rate | Magazine / reload | Reach | Falloff | Headshot |
+|---|---|---|---|---|---|---|---|
+| Pistol | Accurate semi-auto | 18 | 0.22 s | 12 / 1.2 s | 40 m | full to 15 m, 60% at 40 m | 1.5x |
+| Burst Pistol | Three-round burst | 12 x 3 | 0.5 s per burst | 18 / 1.3 s | 32 m | full to 12 m, 60% at 32 m | 1.35x |
+| Revolver | Heavy six-shot; a miss bounces once off geometry (aim down sights to preview the bounce) | 34 | 0.5 s | 6 / 1.5 s | 45 m | none | 1.35x |
+
+Time to kill a 200-HP body-shot target, every pellet landing: Shotgun 0.85 s at 3 m (2.55 s at 15 m, with a reload on the way at longer range); Rifle 2.20 s out to 35 m; SMG 2.34 s up to 10 m, 5.05 s at 25 m. Sidearms are a little slower than each primary in that primary's own range: Pistol 2.42 s, Burst Pistol 2.57 s and Revolver 2.50 s at 10 m. A shotgun blast against one target counts as one hit. The movement speed multiplier follows the gun in your hand (Shotgun and Rifle 0.95, SMG 1.05, sidearms 1.0).
+
+**Utilities (Q)**
+
+| Utility | Cooldown | Effect |
+|---|---|---|
+| Grapple | 7 s | Hooks aimed geometry within 28 m and reels you in for up to 2.5 s; Q again lets go. Letting go (or arriving) grants 2 s of Hot Lap: wider air control, a bigger slide-jump boost and a longer wall run. |
+| Frag Grenade | 9 s | Arcing throw that bursts on contact or after 3 s: 35 on a direct hit, 15 splash within 2.5 m. |
+| Smoke Grenade | 16 s | Smoke at your feet and 2.5 s of concealment. Attacks end it, damage briefly reveals you, and close opponents can still see you. |
+| Launch Pad | 10 s | Placed pad (80 HP, 90 s) that throws anyone who steps on it 14.5 m/s upward, either team. One at a time. |
+| Sentry Turret | 12 s | Placed turret (100 HP, 90 s) covering a 120 degree cone out to 14 m, 6 damage per shot. One at a time; it slowly repairs while you are within 12 m and it has not been hit for 4 s. |
+| Barricade | 14 s | Placed 3.5 m wall of cover with 180 HP that stands for 8 s. |
+| Breach Charge | 8 s | Close blast in front of you: 20 damage within 5 m, launches enemies, triple damage to enemy deployables. |
+
+**Melee (F)**
+
+| Melee | Damage | Reach | Arc | Recovery | Notes |
+|---|---|---|---|---|---|
+| Knife | 35 | 2.2 m | 120 deg | 0.5 s | Double damage from behind |
+| Sledgehammer | 75 | 3 m | 140 deg | 0.9 s | Knocks the target back |
+| Sword | 50 | 3.5 m | 180 deg | 0.75 s | A hit refills your current magazine |
+
+No single melee hit can kill a full-health fighter. Item data is `scripts/loadout.gd` (utility and melee tables) plus `resources/weapons/*.tres` (guns); a loadout rides in the `join_request` / `loadout_request` RPCs and the snapshot (`"lo"`) as one packed int. See `docs/LOADOUTS.md` for the design and how to add an item.
+
+**Light armor:** every kill drops an armor plate where the victim died, for the killer's team to grab (walk over it; it lasts 20 s). A plate gives 15 armor, plus 10 for each objective point the killer's team is behind on (up to +20). Armor soaks damage 1:1 before health, caps at 100 and is lost on death.
+
+Aim placement utilities at a visible location; invalid placements do not consume cooldown. Friendly damage is disabled. Depot interiors protect spawning fighters from enemy damage.
 
 ## Health packs
 
-Concrete Canopy has 19 health packs, deliberately hard to find: rooftops and docks, tucked corners inside buildings, and underground dead ends (foundation pit, pump hall, market vault). The minimap marks every pack with a green plus (grey while taken, with an arrow when it is on another tier). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy hero cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
+Concrete Canopy has 19 health packs, deliberately hard to find: rooftops and docks, tucked corners inside buildings, and underground dead ends (foundation pit, pump hall, market vault). The minimap marks every pack with a green plus (grey while taken, with an arrow when it is on another tier). Walking over one while hurt heals 60 HP at once, then regenerates another 150 HP over the next 5 seconds. Damage from an enemy cancels the regeneration. A taken pack comes back after 25 seconds. They are `pickup` features in the blockout (`tools/blender/maps/canopy.py`, `stage_healpacks`).
 
 **Timed items (Concrete Canopy):** besides the hidden health packs, the Canopy has visible items on fixed timers, taken by whichever team touches them first (and only when they would help): **health bubbles** (green, +15 HP at once, no regen, back after 10 s; 8 on movement lines), **armor tier 1** (blue square, +50 armor, 30 s; 4 on the A/B approaches and in the tunnel) and **armor tier 2** (gold, +100 armor, 45 s; one in the cistern under point C). Armor stacks with kill-drop armor up to 100 and soaks damage 1:1 before health. The minimap shows every item (grey while taken). **Power-up:** one on the top plate of each construction tower (24 m up, one per side of the map, each on its own timer; reach it by the scaffold ladders, the hoist or the crane span), first available 30 s into the match, then every 90 s after it is taken. Bots go for it too: the Canopy graph has a route up each tower (ladder links the bot climbs by walking into them, and 2 m gap jumps), so a bot within 60 m will make the climb when no enemy is in sight. Each time it comes up it is randomly either **invincibility** (cyan: nothing damages you for 12 s, except the out-of-bounds kill) or **triple damage** (red: everything you deal is tripled for 12 s). Only one at a time per fighter; it is lost on death. It is announced to everyone when it appears and when someone takes it, the holder pulses a ring every second, and the HUD shows the name and time left. In the last 15 s before it comes back, the minimap shows a pulsing purple ring closing in on its spot with the seconds left (the type is only rolled when it spawns, so the ring does not say which). Taking it plays a map-wide pickup cue, a different one for invincibility (rising shimmer) and triple damage (falling growl), so every team knows it is gone and which one. Everyone hears a rising warning cue when a taken power-up enters its last 15 s, a tick at 3, 2 and 1 s, and a chime when it spawns. Kills scored while holding one build a streak that is announced to everyone from the second kill ("HELIX DOUBLE KILL · 2 kills on TRIPLE DAMAGE", then triple, quad, rampage); the count restarts with the next pickup. The scoreboard (hold Tab) has a **PWR** column counting the power-ups each player has taken. Numbers live in `scripts/items.gd`; placement is `stage_items` in `tools/blender/maps/canopy.py`. Bots detour for them when they need them (a bubble once below 75% health, armor tier 1 or 2 when under 50 or 60 armor), within 30 m, only while no enemy is in sight and not while holding a point, and give up after 10 s (`choose_bot_item` in `scripts/game.gd`).
 
@@ -85,19 +112,9 @@ At twelve minutes, an active capture enters overtime. A contested partial captur
 
 ## Balance and validation
 
-Against a 200-HP body-shot target, measured authoritative firing times are:
+Every fighter has 200 HP. `tests/run_tests.gd` fires every primary and sidearm on the authoritative path and checks the live time to kill against the model in the Loadouts section (cadence and any required reload included), and checks the role ordering: each primary beats every sidearm in its own range, and swapping is at least four times faster than any primary reload.
 
-| Class | Time to kill |
-|---|---:|
-| Skyrunner | 2.083 s |
-| Mirage Agent | 2.250 s |
-| Field Engineer | 2.800 s |
-| Enforcer, already spun up | 2.600 s |
-| Reave (shotgun, point blank, every pellet landing) | 2.100 s |
-
-All measurements include firing cadence and any required reload. Enforcer spin-up adds approximately 0.6 seconds from rest. Headshots multiply damage by 1.35 except for the electric hose. A capsule plus one revolver headshot cannot eliminate even the lowest-health class.
-
-Class tuning lives in `resources/*.tres`; movement in `scripts/fighter.gd`; combat and authority in `scripts/game.gd`; map in `scripts/map_layout.gd` (built through `scripts/map_builder.gd`, see `MAP.md`); objective rules in `scripts/acquisition.gd`; HUD in `scripts/hud.gd`; visuals in `scripts/visuals.gd`, `scripts/character_rig.gd` and `scripts/vfx.gd`. Blender exports drop into `assets/` (see `assets/README.md`).
+Item tuning lives in `scripts/loadout.gd` and `resources/weapons/*.tres`; movement in `scripts/fighter.gd`; combat and authority in `scripts/game.gd`; map in `scripts/map_layout.gd` (built through `scripts/map_builder.gd`, see `MAP.md`); objective rules in `scripts/acquisition.gd`; HUD in `scripts/hud.gd`; visuals in `scripts/visuals.gd`, `scripts/character_rig.gd` and `scripts/vfx.gd`. Blender exports drop into `assets/` (see `assets/README.md`).
 
 Run behavioral checks:
 
@@ -119,11 +136,11 @@ Run network checks in two terminals, starting the server first:
 & 'path\to\godot_console.exe' --headless --path . --script res://tests/network_test.gd -- --latency-ms=80 --drop-every=5
 ```
 
-The development flags delay outgoing movement/actions/snapshots by 80 milliseconds and drop every fifth unreliable movement or snapshot packet. Reliable ability actions are retained. These flags are off in ordinary play.
+The development flags delay outgoing movement/actions/snapshots by 80 milliseconds and drop every fifth unreliable movement or snapshot packet. Reliable actions (utility, melee, swap, reload) are retained. These flags are off in ordinary play.
 
 ## Prototype limits
 
-Art is generated primitive geometry (class rigs, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized per-class cues generated at runtime (`scripts/sfx.gd`; F3 mutes). Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level kit use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
+Art is generated primitive geometry (the fighter rig, effects and the map are code-built, with drop-in slots for authored Blender meshes and textures); dialogue is contextual text, and sound is synthesized per-weapon and per-item cues generated at runtime (`scripts/sfx.gd`; F3 mutes). Bots provide live targets and objective pressure, with simple routing rather than advanced navigation or human-level item use. Local movement prediction uses snapshot correction, and remote fighters interpolate; this is not a production rollback or lag-compensation implementation. No matchmaking, dedicated-server deployment, cosmetics, progression, or persistence is included.
 
 ## Performance notes
 
@@ -133,4 +150,4 @@ Automated checks establish rules and basic runtime behavior. Human balance sessi
 
 ## Test cheats (offline or host only)
 
-F6 toggles disabled cooldowns (abilities, dash, slide, ultimate), F8 toggles taking damage, F9 fully heals you.
+F6 toggles disabled cooldowns (utility, melee, dash, slide), F8 toggles taking damage, F9 fully heals you.

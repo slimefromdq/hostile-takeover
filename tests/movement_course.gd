@@ -52,13 +52,17 @@ func run() -> void:
 	await process_frame
 	quit(1 if failures > 0 else 0)
 
-func fighter(class_id: int = 1) -> Fighter:
+# primary_id -1: the reference body, holding a sidearm (move speed multiplier 1.0); 0..2 hold that primary.
+func fighter(primary_id: int = -1) -> Fighter:
 	var p: Fighter = game.local_player()
-	p.change_class(class_id)
+	p.apply_loadout(Loadout.encode(maxi(primary_id, 0), 0, 0, 0))
+	if primary_id < 0:
+		p.swap_weapon()
+		p.swap_timer = 0.0
 	p.velocity = Vector3.ZERO
 	p.movement = Vector2.ZERO
 	p.held = 0
-	p.hp = p.spec.health
+	p.hp = Fighter.MAX_HEALTH
 	p.idle_weapon = 2.0
 	p.wall_normal = Vector3.ZERO
 	p.wall_repeats = 0
@@ -133,9 +137,9 @@ func test_gaps() -> void:
 
 # Run at the 1.1 m hurdles along x = 10..43: each should be vaulted at speed, not stopped by.
 func test_hurdles() -> void:
-	for class_id in [1, 2]:
-		var p := fighter(class_id)
-		var title: String = p.spec.title
+	for primary_id in [0, 2]:
+		var p := fighter(primary_id)
+		var title: String = p.weapon.title
 		p.yaw = -PI / 2
 		p.movement = Vector2(0, -1)
 		p.global_position = at(3.0, 0.05, -14.0)

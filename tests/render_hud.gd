@@ -19,14 +19,14 @@ func run() -> void:
 	p.global_position = Vector3(-57, 0.1, 5)
 	p.yaw = -PI / 2
 	p.hp = 60.0
-	p.ammo = 17
-	p.cooldowns[0] = 3.5
-	p.cooldowns[2] = 1.2
+	p.ammo = 5
+	p.utility_cd = 3.5
+	p.melee_cd = 0.6
 	game.match_state.progress[2] = 0.45
 	game.match_state.owners[2] = 1
 	game.match_state.unlocked.assign([false, false, true, true, false])
-	game.hud.add_kill("Skyrunner", 0, "Enforcer", 1)
-	game.hud.add_kill("Mirage Agent", 1, "Field Engineer", 0)
+	game.hud.add_kill("Bot 103 · Rifle", 0, "Bot 107", 1)
+	game.hud.add_kill("Bot 106 · Knife", 1, "Bot 101", 0)
 	game.hud.hit(1)
 	game.hud.damaged(p.global_position + Vector3(10, 0, 4))
 	game.announce("NEW CONTRACT · Center point unlocked.")

@@ -22,22 +22,22 @@ func run() -> void:
 	await physics_frame
 	var graph: MapGraph = game.bot_graph
 	var me: Fighter = game.local_player()
-	for class_id in [0, 2]:
-		me.change_class(class_id)
+	for primary_id in [0, 2]:  # Shotgun (slowest primary) and SMG (fastest)
+		me.apply_loadout(Loadout.encode(primary_id, 0, 0, 0))
 		for family in ["blv", "roof", "trn", "aln"]:
 			for start in CivicDividend.spawn_nodes:
 				for goal in CivicDividend.goal_names:
 					# A depot's own point is next door; walk to the other four.
 					if goal == CivicDividend.goal_names[0] and start == CivicDividend.spawn_nodes[0] or goal == CivicDividend.goal_names[4] and start == CivicDividend.spawn_nodes[1]:
 						continue
-					walk(me, game, graph, family, start, goal, class_id)
+					walk(me, game, graph, family, start, goal, primary_id)
 					await physics_frame
 	print("MAP WALK: %d runs, %d failures" % [runs, failures])
 	game.queue_free()
 	await process_frame
 	quit(0 if failures == 0 else 1)
 
-func walk(p: Fighter, game: Node3D, graph: MapGraph, family: String, start: String, goal: String, class_id: int) -> void:
+func walk(p: Fighter, game: Node3D, graph: MapGraph, family: String, start: String, goal: String, primary_id: int) -> void:
 	runs += 1
 	var weights := {"blv": 5.0, "roof": 5.0, "trn": 5.0, "aln": 5.0}
 	weights[family] = 0.3
@@ -51,7 +51,7 @@ func walk(p: Fighter, game: Node3D, graph: MapGraph, family: String, start: Stri
 		length += route[i].distance_to(route[i - 1])
 	p.global_position = route[0] + Vector3(0, 0.1, 0)
 	p.velocity = Vector3.ZERO
-	p.hp = p.spec.health
+	p.hp = Fighter.MAX_HEALTH
 	p.held = 0
 	p.idle_weapon = 2.0
 	var index := 1
@@ -73,4 +73,4 @@ func walk(p: Fighter, game: Node3D, graph: MapGraph, family: String, start: Stri
 	if not arrived or worst_fall < -6.0:
 		failures += 1
 		var at := p.global_position
-		printerr("FAIL: %s class %d %s->%s stuck near %s heading to node %d/%d %s" % [family, class_id, start, goal, at, index, route.size(), route[mini(index, route.size() - 1)]])
+		printerr("FAIL: %s primary %d %s->%s stuck near %s heading to node %d/%d %s" % [family, primary_id, start, goal, at, index, route.size(), route[mini(index, route.size() - 1)]])

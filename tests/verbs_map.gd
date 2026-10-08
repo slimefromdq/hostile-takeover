@@ -1,10 +1,10 @@
 extends SceneTree
 
-# Drives every climb lane, bounce pad and cable of the loaded map with the fastest (Skyrunner) and the heaviest
-# (Enforcer) hero, and sanity-checks every mover. Needs a map with features (maps/blockout.json).
+# Drives every climb lane, bounce pad and cable of the loaded map holding the slowest (Shotgun) and the fastest (SMG)
+# primary, and sanity-checks every mover. Needs a map with features (maps/blockout.json).
 #   godot --headless --path . --script res://tests/verbs_map.gd
 
-const HEROES := [0, 2]
+const HEROES := [0, 2]  # primaries: Shotgun (slowest) and SMG (fastest)
 
 # Movers use sync_to_physics, which only takes a pose inside a physics callback; this drives them like the game does.
 class Driver extends Node:
@@ -77,7 +77,7 @@ func run() -> void:
 
 func fighter(hero: int) -> Fighter:
 	var p: Fighter = game.local_player()
-	p.change_class(hero)
+	p.apply_loadout(Loadout.encode(hero, 0, 0, 0))
 	p.velocity = Vector3.ZERO
 	p.zip_id = -1
 	p.zip_cd = 0.0
@@ -86,7 +86,7 @@ func fighter(hero: int) -> Fighter:
 	p.bounce_cd = 0.0
 	p.movement = Vector2.ZERO
 	p.held = 0
-	p.hp = p.spec.health
+	p.hp = Fighter.MAX_HEALTH
 	return p
 
 func yaw_for(face: String) -> float:
@@ -100,7 +100,7 @@ func yaw_for(face: String) -> float:
 	return 0.0
 
 func label(f: Dictionary, hero: int) -> String:
-	return "%s %s (%s)" % [f.get("tag", f.type), f.min if f.has("min") else f.get("from", ""), Fighter.SPECS[hero].title]
+	return "%s %s (%s)" % [f.get("tag", f.type), f.min if f.has("min") else f.get("from", ""), Loadout.PRIMARIES[hero].title]
 
 # A lane must carry the hero up and top out onto solid ground at its top.
 func test_climb(f: Dictionary, hero: int) -> void:
@@ -179,7 +179,7 @@ func test_cable(f: Dictionary, hero: int, reverse: bool) -> void:
 		await physics_frame
 		if attached and p.zip_id < 0:
 			break
-	var tag := "%s %s (%s)" % [f.get("tag", "cable"), "reverse" if reverse else "forward", Fighter.SPECS[hero].title]
+	var tag := "%s %s (%s)" % [f.get("tag", "cable"), "reverse" if reverse else "forward", Loadout.PRIMARIES[hero].title]
 	check(attached, "cable catches the hero: %s" % tag)
 	if grind:
 		# A rail runs along a stack or ledge; riding off its end is fine, so only the ride itself is checked.
@@ -251,7 +251,7 @@ func test_ride(f: Dictionary, hero: int) -> void:
 		var off := Vector2(p.global_position.x - pose.x, p.global_position.z - pose.z).length()
 		worst = maxf(worst, off)
 	var final_pose: Vector3 = MapVerbs.pose_at(m, driver.t)[0]
-	var tag := "%s (%s)" % [f.get("tag", "mover"), Fighter.SPECS[hero].title]
+	var tag := "%s (%s)" % [f.get("tag", "mover"), Loadout.PRIMARIES[hero].title]
 	var travelled := final_pose.distance_to(start_pose)
 	check(absf(p.global_position.y - (final_pose.y + size.y / 2.0)) < 0.6, "rider stays on top of %s (rider y %.2f, platform top %.2f)" % [tag, p.global_position.y, final_pose.y + size.y / 2.0])
 	check(worst < maxf(size.x, size.z) / 2.0 + 1.0, "rider is carried along by %s (worst offset %.1f m over %.1f m travelled)" % [tag, worst, travelled])

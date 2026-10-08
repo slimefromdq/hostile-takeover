@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Renders res://docs/previews/preview.png (gameplay view) and res://docs/previews/preview_classes.png (class lineup).
+# Renders res://docs/previews/preview.png (gameplay view) and res://docs/previews/preview_loadouts.png (loadout lineup).
 func _initialize() -> void:
 	call_deferred("run")
 
@@ -14,25 +14,27 @@ func run() -> void:
 	await create_timer(3).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://docs/previews/preview.png")
-	# Lineup: every hero, allies (left row) and enemies (right row) facing the camera.
+	# Lineup: the shared body holding each primary and sidearm, facing the camera.
 	for p in game.fighters.values():
 		p.global_position = Vector3(0, -50, 80)
 	var spots := []
-	for i in range(Fighter.SPECS.size()):
+	var lineup := [Loadout.encode(0, 0, 0, 0), Loadout.encode(1, 1, 0, 1), Loadout.encode(2, 2, 0, 2), Loadout.encode(1, 0, 0, 2), Loadout.encode(0, 2, 0, 1)]
+	for i in range(lineup.size()):
 		var ally: Fighter = game.fighters[1] if i == 0 else game.fighters[100 + i - 1]
 		spots.append(ally)
 	var x := -6.0
 	game.set_physics_process(false)
-	var order := range(Fighter.SPECS.size())
-	for i in range(Fighter.SPECS.size()):
+	for i in range(lineup.size()):
 		var f: Fighter = spots[i]
 		f.team = 0
-		f.change_class(order[i])
+		f.apply_loadout(lineup[i])
+		if i >= 3:
+			f.swap_weapon()  # the last two show their sidearm
 		f.global_position = Vector3(x + i * 3.0, 0, -12)
 		f.yaw = PI
 		f.pitch = 0.0
 		f.velocity = Vector3.ZERO
-		f.hp = f.spec.health
+		f.hp = Fighter.MAX_HEALTH
 	game.local_player().camera.current = false
 	var cam := Camera3D.new()
 	game.add_child(cam)
@@ -43,7 +45,7 @@ func run() -> void:
 	game.hud.hide()
 	await create_timer(0.5).timeout
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("res://docs/previews/preview_classes.png")
+	root.get_texture().get_image().save_png("res://docs/previews/preview_loadouts.png")
 	print("RENDER PREVIEW SAVED")
 	game.queue_free()
 	await process_frame

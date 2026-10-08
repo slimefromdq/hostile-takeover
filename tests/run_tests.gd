@@ -5,6 +5,13 @@ var failures := 0
 var game: Node3D
 const O := ProvingGround.ORIGIN
 const GameScript := preload("res://scripts/game.gd")
+# The reference body for movement and pickup tests: a Rifle loadout holding its Pistol (move speed multiplier 1.0).
+const REFERENCE := 1  # Loadout.encode(1, 0, 0, 0)
+
+func neutral(p: Fighter, loadout_code: int = REFERENCE) -> void:
+	p.apply_loadout(loadout_code)
+	p.swap_weapon()
+	p.swap_timer = 0.0
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -40,10 +47,10 @@ func run() -> void:
 	await process_frame
 	await test_movement()
 	await test_weapons()
-	await test_shared_weapons()
-	await test_mirage()
-	await test_reave()
-	await test_machinery()
+	await test_sidearm_swap()
+	await test_utilities()
+	await test_melee()
+	await test_armor_and_snapshot()
 	test_healpack()
 	test_items()
 	test_bot_items()
@@ -125,17 +132,29 @@ func test_objectives() -> void:
 	check(copy.owners == state.owners and copy.unlocked == state.unlocked, "match snapshot round trip")
 
 func test_specs() -> void:
-	var expected := [2.07, 2.8, 2.6, 2.2, 2.1]
-	for i in range(Fighter.SPECS.size()):
-		var spec: ClassSpec = Fighter.SPECS[i]
-		print("MODEL TTK %s: %.3fs" % [spec.title, spec.body_ttk()])
-		check(absf(spec.body_ttk() - expected[i]) < 0.02, "weapon model target: " + spec.title)
-		check(spec.abilities.size() == spec.cooldowns.size() and spec.abilities.size() <= 3, "ability names and cooldowns line up: " + spec.title)
-		check(i >= 4 or spec.abilities.size() == 3, "the four original fighters keep three abilities: " + spec.title)
-		check(spec.display_name() != "" and spec.quips.size() > 0, "every hero has a name and lines: " + spec.title)
-	check(Fighter.SPECS[0].body_ttk() < Fighter.SPECS[3].body_ttk(), "Skyrunner fastest primary")
-	check(35 + Fighter.SPECS[3].damage * 1.35 < 160, "capsule plus one headshot cannot instant kill lowest-health class")
-	var limited := ClassSpec.new()
+	check(Fighter.MAX_HEALTH == 200.0, "every fighter has the same 200 HP")
+	var sizes := Loadout.slot_sizes()
+	check(sizes == [3, 3, 7, 3], "loadout tables: 3 primaries, 3 sidearms, 7 utilities, 3 melee weapons")
+	for slot in range(4):
+		var names := {}
+		for i in range(sizes[slot]):
+			var item := Loadout.item_name(slot, i)
+			check(item != "" and not names.has(item) and Loadout.item_blurb(slot, i) != "", "item is named, unique and described: %s" % item)
+			names[item] = true
+	for u in Loadout.UTILITIES:
+		check(u.cooldown > 0.0, "utility has a cooldown: " + u.name)
+	for m in Loadout.MELEES:
+		check(m.damage > 0.0 and m.reach > 0.0 and m.recovery > 0.0, "melee has damage, reach and recovery: " + m.name)
+		check(m.damage * m.backstab < Fighter.MAX_HEALTH, "no single melee hit kills a full-health fighter: " + m.name)
+	for code in [Loadout.encode(0, 0, 0, 0), Loadout.encode(2, 2, 6, 2), Loadout.encode(1, 2, 3, 0)]:
+		var ids := Loadout.decode(code)
+		check(Loadout.encode(ids[0], ids[1], ids[2], ids[3]) == code, "loadout encode/decode round trip (%d)" % code)
+	check(Loadout.encode(1, 0, 0, 0) == REFERENCE, "reference loadout code")
+	check(Loadout.decode(Loadout.encode(9, -3, 99, 7)) == [2, 0, 6, 2], "loadout slots clamp into their tables")
+	check(Loadout.decode(-1) == [2, 2, 6, 2] and Loadout.decode(0xFFFF) == [2, 2, 6, 2], "any network int decodes to a valid loadout")
+	check(Loadout.with_slot(Loadout.encode(0, 0, 0, 0), 2, 4) == Loadout.encode(0, 0, 4, 0), "with_slot changes one slot")
+	check(Loadout.describe(REFERENCE) == "Rifle · Pistol · Grapple · Knife", "loadout description")
+	var limited := WeaponSpec.new()
 	limited.damage = 50
 	limited.magazine = 2
 	limited.interval = 0.5
@@ -145,7 +164,7 @@ func test_specs() -> void:
 func test_movement() -> void:
 	var p: Fighter = game.local_player()
 	p.global_position = O + Vector3(-10, 0.01, -21)
-	p.change_class(0)
+	neutral(p)
 	p.movement = Vector2(0, -1)
 	p.yaw = -PI / 2
 	p.held = 0
@@ -173,8 +192,8 @@ func test_movement() -> void:
 	for i in range(150):
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.air_dash, "dash recharges after its 2.5 s cooldown")
-	for archetype in range(Fighter.SPECS.size()):
-		p.change_class(archetype)
+	for primary_id in range(Loadout.PRIMARIES.size()):
+		p.apply_loadout(Loadout.encode(primary_id, 0, 0, 0))
 		p.global_position = O + Vector3(88.8, 3, 20)
 		p.wall_repeats = 0
 		p.wall_normal = Vector3.ZERO
@@ -183,7 +202,8 @@ func test_movement() -> void:
 		p.movement = Vector2.ZERO
 		p.simulate_movement(1.0 / 60, 0)
 		p.simulate_movement(1.0 / 60, 1)
-		check(p.velocity.x < -6 and p.velocity.y >= 10.4, "universal wall kick: " + p.spec.title)
+		check(p.velocity.x < -6 and p.velocity.y >= 10.4, "universal wall kick: " + p.weapon.title)
+	neutral(p)
 	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	p.movement = Vector2.ZERO
@@ -250,19 +270,31 @@ func aim_at(p: Fighter, target: Vector3) -> void:
 		p.yaw = atan2(-diff.x, -diff.z)
 		p.pitch = asin(diff.y)
 
+# Live cadence for every gun, primary and sidearm, at a range inside its full-damage band (shotguns point blank).
+const LIVE_RANGES := {"Shotgun": 3.0, "Rifle": 20.0, "SMG": 10.0, "Pistol": 10.0, "Burst Pistol": 10.0, "Revolver": 10.0}
+
 func test_weapons() -> void:
 	var p: Fighter = game.local_player()
 	var target: Fighter = game.fighters[105]
-	target.team = 1 - p.team  # with 10v10 rosters bot 105 starts as a teammate
-	for class_index in range(Fighter.SPECS.size()):
-		p.change_class(class_index)
-		p.global_position = O + Vector3(-10, 0, -21)
+	target.team = 1 - p.team  # with 5v5 rosters bot 105 may start as a teammate
+	var guns: Array = []
+	for i in range(Loadout.PRIMARIES.size()):
+		guns.append([Loadout.encode(i, 0, 0, 0), false])
+	for i in range(Loadout.SIDEARMS.size()):
+		guns.append([Loadout.encode(1, i, 0, 0), true])
+	for entry in guns:
+		p.apply_loadout(entry[0])
+		if entry[1]:
+			p.swap_weapon()
+			p.swap_timer = 0.0
+		var w: WeaponSpec = p.weapon
+		var distance: float = LIVE_RANGES[w.title]
+		check(p.ammo == w.magazine, "equip %s with a full magazine" % w.title)
+		p.global_position = O + Vector3(-distance, 0, -21)
 		p.velocity = Vector3.ZERO
 		p.held = 1
-		p.spin = 1
-		target.change_class(1)
-		# Shotguns are modelled point blank (every pellet lands); the Gunblade is measured inside her spread.
-		target.global_position = O + Vector3(0 if class_index != Fighter.REAVE_ID else -7.5, 0, -21)
+		neutral(target)
+		target.global_position = O + Vector3(0, 0, -21)
 		target.hp = 200
 		target.update_visual()
 		await physics_frame
@@ -270,7 +302,7 @@ func test_weapons() -> void:
 		aim_at(p, target.global_position + Vector3.UP * 1.1)
 		var elapsed := 0.0
 		var first_hit := -1.0
-		for frame in range(360):
+		for frame in range(600):
 			game.combat_tick(p, 1.0 / 60.0)
 			if target.hp < 200 and first_hit < 0:
 				first_hit = elapsed
@@ -278,206 +310,319 @@ func test_weapons() -> void:
 				break
 			elapsed += 1.0 / 60.0
 		var ttk := elapsed - first_hit
-		print("LIVE TTK %s: %.3fs" % [p.spec.title, ttk])
-		check(target.hp <= 0, "authoritative primary hits target: " + p.spec.title)
-		check(absf(ttk - p.spec.body_ttk()) <= 0.11, "live primary cadence matches model: " + p.spec.title)
-	p.held = 0
+		print("LIVE TTK %s: %.3fs at %.0f m (model %.3fs)" % [w.title, ttk, distance, w.body_ttk(200.0, distance)])
+		check(target.hp <= 0, "authoritative fire kills: " + w.title)
+		check(absf(ttk - w.body_ttk(200.0, distance)) <= 0.15, "live cadence matches model: " + w.title)
+		p.held = 0
+	# Shotgun out of range: falloff and reach both bite.
+	p.apply_loadout(Loadout.encode(0, 0, 0, 0))
+	neutral(target)  # the last gun killed it: restore its collider
+	target.global_position = O + Vector3(0, 0, -21)
+	p.global_position = O + Vector3(-3, 0, -21)
+	await physics_frame
+	aim_at(p, target.global_position + Vector3.UP * 1.1)
+	game.fire_ray(p, p.weapon.damage)
+	check(target.hp < 200 and target.hp >= 200 - p.weapon.damage * p.weapon.pellets * p.weapon.headshot_mult, "one shotgun blast damages the target once")
+	target.hp = 200
+	p.global_position = O + Vector3(-40, 0, -21)
+	aim_at(p, target.global_position + Vector3.UP * 1.1)
+	game.fire_ray(p, p.weapon.damage)
+	check(target.hp == 200, "shotgun cannot reach 40 m")
 	# Friendly hits cannot award damage.
-	target.change_class(1)
 	target.team = p.team
 	game.apply_hit(p, {"collider": target, "position": target.global_position + Vector3.UP}, 100)
-	check(target.hp == target.spec.health, "friendly fire disabled")
-	target.team = 1
+	check(target.hp == Fighter.MAX_HEALTH, "friendly fire disabled")
+	target.team = 1 - p.team
+	neutral(p)
 
-func test_mirage() -> void:
+func test_sidearm_swap() -> void:
 	var p: Fighter = game.local_player()
-	p.change_class(3)
-	p.global_position = O + Vector3(-10, 0.05, -21)
-	var pos := O + Vector3(-3, 0.05, -21)
-	p.double_id = game.create_entity(p, "double", pos, 45, 8)
+	var target: Fighter = game.fighters[105]
+	target.team = 1 - p.team
+	neutral(target)
+	p.apply_loadout(Loadout.encode(0, 0, 0, 0))  # Shotgun + Pistol
+	check(p.slot == 0 and p.weapon == Loadout.PRIMARIES[0] and p.ammo == p.primary.magazine and p.stowed_ammo == p.sidearm.magazine, "spawn with the primary out and both magazines full")
+	p.global_position = O + Vector3(-10, 0, -21)
+	p.velocity = Vector3.ZERO
+	p.held = 0
+	target.global_position = O + Vector3(0, 0, -21)
+	target.hp = 200
 	await physics_frame
 	await process_frame
-	var e: Deployable = game.entities[p.double_id]
-	p.velocity = Vector3(3, 2, -4)
-	p.yaw = 0.9
-	p.ammo = 2
-	p.idle_weapon = 0
-	var old := p.global_position
-	game.activate(p, 0)
-	check(p.global_position.is_equal_approx(pos) and e.global_position.is_equal_approx(old), "double exchanges both positions")
-	check(p.velocity.is_equal_approx(Vector3(3, 2, -4)) and p.yaw == 0.9, "swap preserves velocity and facing")
-	check(e.used and p.ammo == 3 and p.idle_weapon >= 1.25, "swap consumes use and triggers Clean Getaway")
-	game.activate(p, 0)
-	check(p.global_position.is_equal_approx(pos), "second swap unavailable")
-	game.remove_owned(p.fighter_id)
-	p.double_id = game.create_entity(p, "double", O + Vector3(9, 0.05, -13), 45, 8)
+	aim_at(p, target.global_position + Vector3.UP * 1.1)
+	p.ammo = 0
+	p.edges = GameScript.EDGE_RELOAD
+	game.combat_tick(p, 1.0 / 60)
+	check(p.reload_timer > 0.0, "reloading the empty primary")
+	p.edges = GameScript.EDGE_SWAP
+	game.combat_tick(p, 1.0 / 60)
+	check(p.slot == 1 and p.weapon == p.sidearm and p.reload_timer == 0.0, "swap draws the sidearm and drops the reload in progress")
+	check(p.ammo == p.sidearm.magazine and p.stowed_ammo == 0, "each gun keeps its own magazine")
+	p.edges = 0
+	p.held = 1
+	game.combat_tick(p, 1.0 / 60)
+	check(target.hp == 200 and p.ammo == p.sidearm.magazine, "the sidearm cannot fire mid-swap")
+	var elapsed := 2.0 / 60
+	while p.ammo == p.sidearm.magazine and elapsed < 1.0:
+		game.combat_tick(p, 1.0 / 60)
+		elapsed += 1.0 / 60
+	check(elapsed <= Fighter.SWAP_TIME + 0.05 and target.hp < 200, "the sidearm fires once the swap finishes (%.2f s)" % elapsed)
+	for w in Loadout.PRIMARIES:
+		check(Fighter.SWAP_TIME * 4.0 <= w.reload_time, "swapping is far faster than reloading the %s" % w.title)
+	p.held = 0
+	p.edges = GameScript.EDGE_SWAP
+	game.combat_tick(p, 1.0 / 60)
+	check(p.slot == 0 and p.ammo == 0 and p.stowed_ammo < p.sidearm.magazine, "swapping back keeps both magazines as they were")
+	# The rig shows only the gun in hand.
+	var guns: Node3D = p.equipment.get_node_or_null("Body/Weapon")
+	check(guns != null and guns.get_node("Primary").visible and not guns.get_node("Sidearm").visible, "rig shows the primary in hand")
+	p.edges = GameScript.EDGE_SWAP
+	game.combat_tick(p, 1.0 / 60)
+	p.edges = 0
+	check(not guns.get_node("Primary").visible and guns.get_node("Sidearm").visible, "rig shows the sidearm after a swap")
+	# The snapshot carries the loadout, the gun in hand and the holstered magazine.
+	var state := p.pack()
+	check(state["lo"] == p.loadout and state.get("slot", 0) == 1 and state.get("ammo2", -1) == 0 and state.has("swap"), "snapshot carries loadout, slot, swap and stowed magazine")
+	var mirror: Fighter = game.fighters[107]
+	var mirror_loadout: int = mirror.loadout
+	mirror.unpack(state, false)
+	check(mirror.loadout == p.loadout and mirror.slot == 1 and mirror.weapon == mirror.sidearm and mirror.stowed_ammo == 0, "snapshot restores the loadout and the gun in hand")
+	mirror.apply_loadout(mirror_loadout)
+	mirror.global_position = O + Vector3(60, 0, 20)  # unpack moved it onto the player
+	game.respawn(p)
+	check(p.slot == 0 and p.ammo == p.primary.magazine and p.stowed_ammo == p.sidearm.magazine, "respawn draws the primary with both magazines full")
+	check(not p.pack().has("slot") and not p.pack().has("ammo2") and not p.pack().has("swap"), "idle snapshots omit sidearm fields")
+	neutral(p)
+
+# Puts the utility `kind` in the local player's loadout and stands them at `at`, facing +x.
+func with_utility(p: Fighter, kind: int, at: Vector3) -> void:
+	p.apply_loadout(Loadout.encode(1, 0, kind, 0))
+	p.global_position = at
+	p.velocity = Vector3.ZERO
+	p.yaw = -PI / 2
+	p.pitch = 0.0
+	p.held = 0
+	p.edges = 0
+
+func owned(p: Fighter, kind: String) -> Array:
+	return game.entities.values().filter(func(e): return e.owner_id == p.fighter_id and e.kind == kind)
+
+func test_utilities() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	foe.team = 1 - p.team
+	neutral(foe)
+	foe.global_position = O + Vector3(60, 0, 20)
+	var start := O + Vector3(-10, 0, -21)
+	# Grapple: nothing in reach costs nothing; a hook starts the cooldown; Q again lets go into Hot Lap.
+	with_utility(p, Loadout.Utility.GRAPPLE, start)
+	p.yaw = PI / 2
 	await physics_frame
-	await process_frame
-	var blocked: Deployable = game.entities[p.double_id]
-	old = p.global_position
-	game.activate(p, 0)
-	check(p.global_position.is_equal_approx(old) and not blocked.used, "obstructed swap fails without consuming")
-	blocked.hp = 0
-	game.activate(p, 0)
-	check(p.global_position.is_equal_approx(old), "destroyed double cannot swap before removal tick")
-	game.entities_tick(0.01)
-	check(p.double_id == -1, "destroying double removes escape")
-	p.double_id = game.create_entity(p, "double", game.points[2], 45, 8)
-	game.match_state.reset()
-	for other in game.fighters.values():
-		other.global_position = O + Vector3(60, 0, 20)
-	game.objectives_tick(10)
-	check(game.match_state.progress[2] == 0 and game.match_state.owners[2] == -1, "double cannot capture or contest")
-	game.entities_tick(8.1)
-	check(p.double_id == -1, "double expires")
-	check(p.collision_mask & 8 == 0, "double collision layer cannot block fighters")
-	p.cooldowns[2] = 0
-	game.activate(p, 2)
-	check(p.conceal == 2.5, "concealment activates")
+	game.use_utility(p)
+	check(p.grapple_time == 0.0 and p.utility_cd == 0.0, "a grapple with nothing to hook costs no cooldown")
+	with_utility(p, Loadout.Utility.GRAPPLE, O + Vector3(70, 0, 0))
+	await physics_frame
+	p.edges = GameScript.EDGE_UTILITY
+	game.combat_tick(p, 1.0 / 60)
+	p.edges = 0
+	check(p.grapple_time > 0.0 and is_equal_approx(p.utility_cd, 7.0), "Q grapples to the wall and starts the 7 s cooldown")
+	game.use_utility(p)
+	check(p.grapple_time == 0.0 and p.hot_lap > 0.0, "Q again lets go and grants Hot Lap")
+	# Frag Grenade: thrown along the aim, bursts on the target.
+	with_utility(p, Loadout.Utility.FRAG_GRENADE, start)
+	foe.global_position = O + Vector3(-2, 0, -21)
+	foe.hp = 200
+	await physics_frame
+	game.use_utility(p)
+	check(is_equal_approx(p.utility_cd, 9.0), "Frag Grenade starts its cooldown")
+	for i in range(40):
+		await physics_frame
+	check(foe.hp == 165.0 or foe.hp == 185.0, "Frag Grenade deals 35 direct or 15 splash (%.0f left)" % foe.hp)
+	# Smoke Grenade: smoke and concealment; firing ends it, damage only reveals.
+	with_utility(p, Loadout.Utility.SMOKE_GRENADE, start)
+	game.use_utility(p)
+	check(owned(p, "smoke").size() == 1 and p.conceal == 2.5, "Smoke Grenade lays smoke and conceals")
+	p.conceal = 2.0
+	game.damage_fighter(p, 10, foe.fighter_id)
+	check(p.conceal == 2.0 and p.reveal > 0.0, "damage reveals without cancelling concealment")
 	p.held = 1
 	p.shot_timer = 0
 	game.combat_tick(p, 1.0 / 60)
-	check(p.conceal == 0, "firing ends concealment")
-	p.conceal = 2
-	game.damage_fighter(p, 10, 105)
-	check(p.conceal == 2 and p.reveal > 0, "damage reveals without cancelling concealment")
-	p.cooldowns[1] = 0
 	p.held = 0
-	game.activate(p, 1)
-	check(p.conceal == 0, "Dead Drop ends concealment")
+	check(p.conceal == 0.0, "firing ends concealment")
+	# Launch Pad: one per owner, throws anyone upward.
+	with_utility(p, Loadout.Utility.LAUNCH_PAD, start)
+	game.use_utility(p)
+	p.utility_cd = 0.0
+	game.use_utility(p)
+	var pads := owned(p, "pad")
+	check(pads.size() == 1 and is_equal_approx(p.utility_cd, 10.0), "one launch pad at a time, 10 s cooldown")
+	if pads.size() == 1:
+		var pad: Deployable = pads[0]
+		p.global_position = pad.global_position
+		game.entities_tick(0.01)
+		check(p.velocity.y == 14.5, "launch pad propels its owner")
+		foe.global_position = pad.global_position + Vector3(0.5, 0, 0)
+		foe.velocity = Vector3.ZERO
+		pad.timer = 0
+		game.entities_tick(0.01)
+		check(foe.velocity.y == 14.5, "enemies can use a launch pad too")
+		game.remove_entity(pad.entity_id)
+	# Sentry Turret: one per owner, fires in its arc, repairs near its owner while undamaged.
+	with_utility(p, Loadout.Utility.SENTRY_TURRET, start)
+	game.use_utility(p)
+	p.utility_cd = 0.0
+	game.use_utility(p)
+	check(owned(p, "turret").size() == 1 and is_equal_approx(p.utility_cd, 12.0), "one sentry turret at a time, 12 s cooldown")
+	game.remove_owned(p.fighter_id)
+	var turret_id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
+	var turret: Deployable = game.entities[turret_id]
+	turret.hp = 50
+	turret.age = 5
+	game.entities_tick(1)
+	check(turret.hp > 50, "a sentry repairs while its owner is near")
+	turret.last_damage = turret.age
+	var repaired := turret.hp
+	game.entities_tick(1)
+	check(turret.hp == repaired, "recent damage stops the repair")
+	turret.rotation.y = 0
+	foe.hp = 200
+	foe.global_position = turret.global_position + Vector3(0, 0, 3)
+	await physics_frame
+	await process_frame
+	turret.timer = 0
+	game.entities_tick(0.1)
+	check(foe.hp == 200, "the sentry cannot fire outside its arc")
+	foe.global_position = turret.global_position + Vector3(0, 0, -4)
+	await physics_frame
+	await process_frame
+	turret.timer = 0
+	game.entities_tick(0.1)
+	check(foe.hp < 200, "the sentry fires on an enemy in its arc")
+	turret.hp = 0
+	game.entities_tick(0.01)
+	check(not game.entities.has(turret_id), "a destroyed sentry is removed")
+	# Barricade: placed cover that expires; no ground to stand on means no cost.
+	with_utility(p, Loadout.Utility.BARRICADE, O + Vector3(0, 0, 39))
+	p.yaw = PI
+	game.use_utility(p)
+	check(owned(p, "cover").is_empty() and p.utility_cd == 0.0, "a placement with no ground costs no cooldown")
+	with_utility(p, Loadout.Utility.BARRICADE, start)
+	game.use_utility(p)
+	var covers := owned(p, "cover")
+	check(covers.size() == 1 and covers[0].hp == 180.0 and is_equal_approx(p.utility_cd, 14.0), "Barricade places 180 HP of cover")
+	game.entities_tick(8.1)
+	check(owned(p, "cover").is_empty(), "the barricade expires after 8 s")
+	# Breach Charge: damages and launches close enemies, triple damage to their deployables.
+	with_utility(p, Loadout.Utility.BREACH_CHARGE, start)
+	foe.global_position = start + Vector3(3, 0, 0)
+	foe.velocity = Vector3.ZERO
+	foe.hp = 200
+	var enemy_turret: int = game.create_entity(foe, "turret", start + Vector3(2.5, 0, 1.0), 100, 90)
+	await physics_frame
+	await process_frame
+	game.use_utility(p)
+	check(foe.hp == 180.0 and foe.velocity.length() > 5.0, "Breach Charge deals 20 and launches")
+	check(game.entities[enemy_turret].hp == 40.0, "Breach Charge deals triple damage to deployables")
+	check(is_equal_approx(p.utility_cd, 8.0), "Breach Charge has an 8 s cooldown")
+	game.remove_entity(enemy_turret)
+	game.remove_owned(p.fighter_id)
+	foe.hp = 200
+	foe.velocity = Vector3.ZERO
+	foe.global_position = O + Vector3(60, 0, 20)
+	neutral(p)
 	await create_timer(0.2).timeout
+
+func test_melee() -> void:
+	var p: Fighter = game.local_player()
+	var foe: Fighter = game.fighters[105]
+	foe.team = 1 - p.team
+	neutral(foe)
+	var start := O + Vector3(-10, 0, -21)
+	for m in range(Loadout.MELEES.size()):
+		var spec: Dictionary = Loadout.MELEES[m]
+		p.apply_loadout(Loadout.encode(1, 0, 0, m))
+		p.global_position = start
+		p.yaw = -PI / 2
+		p.pitch = 0
+		foe.global_position = start + Vector3(2, 0, 0)
+		foe.yaw = PI / 2  # facing the attacker
+		foe.velocity = Vector3.ZERO
+		foe.hp = 200
+		await physics_frame
+		await process_frame
+		p.edges = GameScript.EDGE_MELEE
+		game.combat_tick(p, 1.0 / 60)
+		check(is_equal_approx(foe.hp, 200.0 - spec.damage), "%s hits for %d" % [spec.name, int(spec.damage)])
+		check(is_equal_approx(p.melee_cd, spec.recovery), "%s recovery is %.2f s" % [spec.name, spec.recovery])
+		var after: float = foe.hp
+		game.combat_tick(p, 1.0 / 60)
+		p.edges = 0
+		check(foe.hp == after, "no second swing during recovery: " + spec.name)
+		p.held = 1
+		var ammo := p.ammo
+		game.combat_tick(p, 1.0 / 60)
+		p.held = 0
+		check(p.ammo == ammo, "recovery holds the gun: " + spec.name)
+	# Knife: double damage from behind, nothing past its reach.
+	p.apply_loadout(Loadout.encode(1, 0, 0, Loadout.Melee.KNIFE))
+	foe.yaw = -PI / 2  # facing away
+	foe.hp = 200
+	game.use_melee(p)
+	check(foe.hp == 130.0, "Knife backstab deals double (70)")
+	p.melee_cd = 0
+	foe.yaw = PI / 2
+	foe.hp = 200
+	foe.global_position = start + Vector3(3, 0, 0)
+	await physics_frame
+	game.use_melee(p)
+	check(foe.hp == 200.0, "Knife cannot reach 3 m")
+	# Sword: the wide arc reaches the side, which the Knife's does not; a hit refills the magazine.
+	foe.global_position = start + Vector3(0.2, 0, 2.0)
+	await physics_frame
+	p.melee_cd = 0
+	game.use_melee(p)
+	check(foe.hp == 200.0, "Knife misses a target at your side")
+	p.apply_loadout(Loadout.encode(1, 0, 0, Loadout.Melee.SWORD))
+	p.ammo = 0
+	game.use_melee(p)
+	check(foe.hp == 150.0 and p.ammo == p.weapon.magazine, "Sword's arc reaches the side and a hit refills the magazine")
+	foe.global_position = O + Vector3(60, 0, 20)
+	await physics_frame
+	p.melee_cd = 0
+	p.ammo = 0
+	game.use_melee(p)
+	check(p.ammo == 0, "a Sword whiff refills nothing")
+	# Sledgehammer knocks back.
+	p.apply_loadout(Loadout.encode(1, 0, 0, Loadout.Melee.SLEDGEHAMMER))
+	foe.global_position = start + Vector3(2, 0, 0)
+	foe.velocity = Vector3.ZERO
+	foe.hp = 200
+	await physics_frame
+	game.use_melee(p)
+	check(foe.hp == 125.0 and foe.velocity.x > 2.0, "Sledgehammer hits for 75 and knocks back")
+	foe.hp = 200
+	foe.velocity = Vector3.ZERO
+	foe.global_position = O + Vector3(60, 0, 20)
+	neutral(p)
+	await physics_frame
 
 func test_armor_rules() -> void:
 	check(Fighter.ARMOR_MAX == 100.0 and GameScript.ARMOR_DROP == 15.0 and GameScript.ARMOR_DROP_BEHIND == 10.0, "light armor: 15 per kill, +10 per point behind, capped at 100")
 
-func test_reave() -> void:
+# Armor soaks damage before health, a kill drops armor for the killer's team (more when behind), and it is lost on death.
+func test_armor_and_snapshot() -> void:
 	var p: Fighter = game.local_player()
 	var foe: Fighter = game.fighters[105]
 	var helper: Fighter = game.fighters[106]
 	foe.team = 1 - p.team
 	helper.team = p.team
-	foe.change_class(1)
-	helper.change_class(1)
-	p.change_class(4, 2)
-	check(p.class_id == 4 and p.weapon_id == 0 and p.hp == 300.0, "Reave is 300 HP and keeps her own shotgun whatever weapon is requested")
-	check(p.spec.ultimate == "Pyre Edge" and p.spec.abilities.size() == 1, "Reave has one ability plus an ultimate")
+	neutral(foe)
+	neutral(helper)
+	neutral(p)
 	p.global_position = O + Vector3(-10, 0, -21)
-	p.velocity = Vector3.ZERO
-	p.yaw = -PI / 2
-	p.pitch = 0
 	foe.global_position = O + Vector3(-4, 0, -21)
 	helper.global_position = O + Vector3(60, 0, 20)
-	foe.hp = 200
-	await physics_frame
-	await process_frame
-	await process_frame
-	# Guard: front hits become Charge and stamina cost; from behind or above they go through.
-	p.held = Fighter.GUARD_BIT
-	check(p.is_guarding(), "holding secondary guards")
-	var landed: bool = game.damage_fighter(p, 40.0, foe.fighter_id)
-	check(not landed and p.hp == 300.0, "guard absorbs a front hit")
-	check(is_equal_approx(p.blade_charge, 60.0), "a big hit (40+) charges 1.5x")
-	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - 24.0), "absorbing costs 0.6 stamina per point")
-	game.damage_fighter(p, 5.0, foe.fighter_id)
-	check(is_equal_approx(p.blade_charge, 62.5), "chip damage (<10) charges at half rate")
-	game.damage_fighter(p, 9.0, foe.fighter_id, O + Vector3(-16, 0, -21))
-	check(is_equal_approx(p.hp, 291.0), "a hit from behind goes straight through")
-	game.damage_fighter(p, 9.0, foe.fighter_id, O + Vector3(-9.5, 12, -21))
-	check(is_equal_approx(p.hp, 282.0), "a steep hit from above goes over the blade")
-	game.damage_fighter(p, 10.0, foe.fighter_id, Vector3.INF, false)
-	check(is_equal_approx(p.hp, 272.0), "unblockable damage ignores the guard")
-	for i in range(5):
-		game.damage_fighter(p, 45.0, foe.fighter_id)
-	check(p.blade_charge == Fighter.CHARGE_MAX or p.stun > 0.0, "Charge is capped at 100")
-	# Breaking the guard stuns and loses the Charge.
-	p.stun = 0
-	p.guard_stamina = 5.0
-	p.blade_charge = 70.0
-	game.damage_fighter(p, 20.0, foe.fighter_id)
-	check(p.stun >= Fighter.GUARD_BREAK_STUN - 0.001 and p.blade_charge == 0.0 and p.guard_stamina == 0.0, "an emptied stamina bar breaks the guard: stun, Charge lost")
-	check(not p.is_guarding(), "a broken guard cannot guard")
-	p.stun = 0
-	p.guard_stamina = Fighter.GUARD_STAMINA_MAX
-	# Guard drains stamina while held and regenerates after a delay when released.
-	p.held = Fighter.GUARD_BIT
-	p.prev_held = Fighter.GUARD_BIT
-	p.hp = 300
-	game.reave_tick(p, 1.0)
-	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - Fighter.GUARD_DRAIN) and p.guarding, "holding guard drains stamina")
-	p.held = 0
-	p.alt_timer = 1.0  # keep the release from also swinging
-	game.reave_tick(p, 0.5)
-	var drained := p.guard_stamina
-	game.reave_tick(p, 0.6)
-	check(p.guard_stamina > drained and not p.guarding, "stamina regenerates once the guard is down")
-	# Turn rate is capped while guarding.
-	p.held = Fighter.GUARD_BIT
-	p.yaw = 1.0
-	game.guard_yaw = 0.0
-	game.limit_guard_turn(p, 1.0 / 60.0)
-	check(p.yaw <= Fighter.GUARD_TURN_RATE / 60.0 + 0.0001, "guarding caps the turn rate")
-	p.held = 0
-	p.yaw = -PI / 2
-	game.guard_yaw = p.yaw
-	# Slash: tap is small and keeps the Charge; a held guard cashes it in and refills the shells.
-	p.alt_timer = 0
-	p.blade_charge = 60.0
-	p.ammo = 0
-	foe.hp = 200
-	foe.global_position = O + Vector3(-8, 0, -21)
-	await physics_frame
-	await process_frame
-	game.reave_slash(p, false)
-	check(is_equal_approx(foe.hp, 175.0), "tap Slash deals 25")
-	check(p.blade_charge == 60.0 and p.ammo == p.weapon.magazine, "a tap that connects keeps the Charge and refills the shotgun")
-	foe.hp = 200
-	p.ammo = 0
-	game.reave_slash(p, true)
-	check(is_equal_approx(foe.hp, 200.0 - (25.0 + 0.9 * 60.0)), "big Slash scales with stored Charge")
-	check(p.blade_charge == 0.0 and p.ammo == p.weapon.magazine, "big Slash spends the Charge and refills the shotgun")
-	foe.hp = 200
-	foe.global_position = O + Vector3(-16, 0, -21)
-	await physics_frame
-	await process_frame
-	p.ammo = 0
-	game.reave_slash(p, false)
-	check(foe.hp == 200.0 and p.ammo == 0, "a whiffed tap neither hits nor refills")
-	# Release detection wires the Slash into the tick: guard held long enough with Charge becomes the big swing.
-	foe.hp = 200
-	foe.global_position = O + Vector3(-8, 0, -21)
-	await physics_frame
-	await process_frame
-	p.alt_timer = 0
-	p.held = Fighter.GUARD_BIT
-	p.prev_held = Fighter.GUARD_BIT
-	p.guard_hold = 0.5
-	p.blade_charge = 40.0
-	p.held = 0
-	game.reave_tick(p, 1.0 / 60.0)
-	check(is_equal_approx(foe.hp, 200.0 - (25.0 + 0.9 * 40.0)) and p.blade_charge == 0.0, "releasing a held guard with Charge cashes it in")
-	# Breach breaks a Reave guard and cancels Enforcer spin-up.
-	p.cooldowns[0] = 0
-	foe.change_class(4)
-	foe.hp = 300
-	foe.global_position = O + Vector3(-7, 0, -21)
-	foe.yaw = PI / 2
-	foe.held = Fighter.GUARD_BIT
-	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
-	await physics_frame
-	await process_frame
-	check(foe.is_guarding(), "enemy Reave is guarding the shooter")
-	game.activate(p, 0)
-	check(foe.stun > 0.0 and foe.hp == 280.0 and foe.velocity.length() > 5.0, "Breach breaks the guard, damages and launches")
-	check(p.cooldowns[0] == 8.0, "Breach has an 8 s cooldown")
-	foe.change_class(2)
-	foe.hp = 200
-	foe.held = 0
-	foe.spin = 1.0
-	p.cooldowns[0] = 0
-	game.activate(p, 0)
-	check(foe.spin == 0.0, "Breach cancels Enforcer spin-up")
-	# Armor soaks damage before health, a kill drops armor for the killer's team (more when behind), and it is lost on death.
-	foe.change_class(1)
 	foe.hp = 200
 	foe.armor = 30.0
 	game.damage_fighter(foe, 100.0, p.fighter_id)
@@ -489,7 +634,7 @@ func test_reave() -> void:
 	foe.armor = 20.0
 	game.damage_fighter(foe, 5.0, helper.fighter_id)
 	game.damage_fighter(foe, 50.0, p.fighter_id)
-	check(foe.hp <= 0 and p.kills >= 1, "Reave scores a kill")
+	check(foe.hp <= 0 and p.kills >= 1, "the killer scores a kill")
 	check(foe.armor == 0.0, "armor is lost on death")
 	var drop: Deployable = null
 	for e in game.entities.values():
@@ -507,101 +652,40 @@ func test_reave() -> void:
 	game.match_state.reset()
 	helper.global_position = O + Vector3(40, 0, 40)
 	p.global_position = drop.global_position
-	p.hp = p.spec.health
+	p.hp = Fighter.MAX_HEALTH
 	p.armor = 0.0
 	game.entities_tick(0.016)
 	check(is_equal_approx(p.armor, GameScript.ARMOR_DROP) and not game.entities.has(drop.entity_id), "the killer's team picks the armor up")
 	foe.hp = 200
 	foe.dead_time = 0
-	# Pyre Edge: costs half the bar, pierces, burns, is stopped by an enemy guard.
-	foe.change_class(1)
-	foe.hp = 200
-	foe.global_position = O + Vector3(0, 0, -21)
-	foe.velocity = Vector3.ZERO
-	p.yaw = -PI / 2
-	p.pitch = 0
-	p.stun = 0
-	p.ult_cd = 10.0
-	var before := game.get_child_count()
-	game.activate_ultimate(p)
-	check(game.get_child_count() == before, "Pyre Edge is refused while on cooldown")
-	p.ult_cd = 0.0
-	game.activate_ultimate(p)
-	check(is_equal_approx(p.ult_cd, p.spec.ultimate_cooldown) and game.get_child_count() == before + 1, "Pyre Edge starts its cooldown and fires a blade")
-	var blade = game.get_child(game.get_child_count() - 1)
-	for i in range(60):
-		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
-			blade._physics_process(1.0 / 30.0)
-	check(is_equal_approx(foe.hp, 130.0) and foe.burn > 0.0, "Pyre Edge hits for 70 and sets the target burning")
-	game.combat_tick(foe, 1.0)
-	check(foe.hp < 130.0, "burning deals damage over time")
-	foe.hp = 200
-	foe.burn = 0
-	foe.change_class(4)
-	foe.global_position = O + Vector3(0, 0, -21)
-	foe.yaw = PI / 2
-	foe.held = Fighter.GUARD_BIT
-	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
-	p.ult_cd = 0.0
-	game.activate_ultimate(p)
-	blade = game.get_child(game.get_child_count() - 1)
-	for i in range(60):
-		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
-			blade._physics_process(1.0 / 30.0)
-	check(foe.hp == 300.0 and foe.burn == 0.0 and foe.blade_charge > 0.0, "an enemy Reave's guard swallows Pyre Edge and banks the Charge")
-	# Snapshot round trip carries armor, the ultimate cooldown and her guard state, and omits them when idle.
-	p.change_class(4)
+	# Snapshot round trip carries armor and item cooldowns, and omits them when idle.
 	p.armor = 31.2
-	p.ult_cd = 12.5
-	p.blade_charge = 42.0
-	p.guard_stamina = 71.0
-	p.guarding = true
-	p.stun = 0.5
-	p.burn = 2.0
-	var packed: Dictionary = p.pack()
+	p.utility_cd = 3.5
+	p.melee_cd = 0.4
 	var mirror: Fighter = game.fighters[107]
-	mirror.unpack(packed, false)
-	check(mirror.class_id == 4 and mirror.armor == 32.0 and mirror.ult_cd == 12.5 and mirror.blade_charge == 42.0 and mirror.guard_stamina == 71.0, "snapshot carries armor, ultimate cooldown, Charge and stamina")
-	check(mirror.guarding and mirror.stun == 0.5 and mirror.burn == 2.0, "snapshot carries guard, stun and burn")
-	mirror.change_class(1)
-	p.change_class(0)
-	p.armor = 0.0
-	p.ult_cd = 0.0
-	check(not p.pack().has("ar") and not p.pack().has("ucd") and not p.pack().has("guard") and not p.pack().has("burn"), "idle non-Reave snapshots carry no extra fields")
-	# Switching hero clears her state.
-	foe.held = 0
-	p.blade_charge = 50.0
-	p.stun = 1.0
-	p.change_class(0)
-	check(p.blade_charge == 0.0 and p.stun == 0.0, "leaving Reave clears guard state")
-	p.hp = 0
-	game.apply_class(p.fighter_id, 4)
-	check(is_equal_approx(p.ult_cd, p.spec.ultimate_cooldown) and p.class_id == 4, "a hero swap restarts the ultimate cooldown")
-	p.change_class(0)
-	foe.change_class(1)
-	foe.hp = 200
-	foe.held = 0
-	p.held = 0
-	p.alt_timer = 0
-	p.shot_timer = 0
-	p.cooldowns.fill(0.0)
-	for child in game.get_children():
-		if child.get_script() != null and child.get_script().resource_path.ends_with("pyre_edge.gd"):
-			child.queue_free()
+	var mirror_loadout: int = mirror.loadout
+	mirror.unpack(p.pack(), false)
+	check(mirror.armor == 32.0 and mirror.utility_cd == 3.5 and mirror.melee_cd == 0.4, "snapshot carries armor and item cooldowns")
+	mirror.apply_loadout(mirror_loadout)
+	mirror.global_position = O + Vector3(60, 0, 20)  # unpack moved it onto the player
+	p.apply_loadout(REFERENCE)
+	check(not p.pack().has("ar") and not p.pack().has("ucd") and not p.pack().has("mcd"), "idle snapshots carry no extra fields")
+	check(p.armor == 0.0 and p.utility_cd == 0.0, "a new loadout clears armor and cooldowns")
+	neutral(p)
 	await physics_frame
 	await process_frame
 
 func test_healpack() -> void:
 	var p: Fighter = game.local_player()
 	var foe: Fighter = game.fighters[105]
-	p.change_class(2)
+	neutral(p)
 	p.global_position = O + Vector3(30, 0, 30)
 	var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": p.global_position, "yaw": 0.0, "used": false}
 	game.entity_next += 1
 	game.create_entity_from(data)
 	var pack: Deployable = game.entities[data.id]
 	game.entities_tick(0.1)
-	check(not pack.used and p.hp == p.spec.health, "health pack ignores a fighter at full health")
+	check(not pack.used and p.hp == Fighter.MAX_HEALTH, "health pack ignores a fighter at full health")
 	p.hp = 100.0
 	game.entities_tick(0.1)
 	check(is_equal_approx(p.hp, 160.0) and pack.used, "health pack heals 60 at once and is taken")
@@ -621,7 +705,7 @@ func test_healpack() -> void:
 func test_items() -> void:
 	var p: Fighter = game.local_player()
 	var foe: Fighter = game.fighters[105]
-	p.change_class(2)
+	neutral(p)
 	p.global_position = O + Vector3(30, 0, 30)
 	foe.global_position = O + Vector3(60, 0, 60)
 	check(Items.entity_kind("bubble") == "bubble" and Items.entity_kind("armor2") == "armor2" and Items.entity_kind("health") == "healpack", "blockout pickup kinds map to entity kinds")
@@ -637,7 +721,7 @@ func test_items() -> void:
 	game.entities[ids.armor2].global_position = O + Vector3(30, 0, 50)
 	var bubble: Deployable = game.entities[ids.bubble]
 	game.entities_tick(0.1)
-	check(not bubble.used and p.hp == p.spec.health, "a health bubble ignores a fighter at full health")
+	check(not bubble.used and p.hp == Fighter.MAX_HEALTH, "a health bubble ignores a fighter at full health")
 	p.hp = 100.0
 	game.entities_tick(0.1)
 	check(is_equal_approx(p.hp, 115.0) and bubble.used and p.heal_left == 0.0, "a health bubble heals 15 at once with no regen tail")
@@ -646,9 +730,9 @@ func test_items() -> void:
 	check(p.hp == 50.0, "a taken bubble heals nobody until it respawns")
 	game.entities_tick(Items.KINDS.bubble.respawn + 1.0)
 	check(not bubble.used, "a health bubble respawns after 10 s")
-	p.hp = p.spec.health - 5.0
+	p.hp = Fighter.MAX_HEALTH - 5.0
 	game.entities_tick(0.1)
-	check(p.hp == p.spec.health, "a bubble never heals past full health")
+	check(p.hp == Fighter.MAX_HEALTH, "a bubble never heals past full health")
 	game.entities_tick(Items.KINDS.bubble.respawn + 1.0)
 	# Armor tiers: stack up to the cap, either team may take them.
 	p.armor = 0.0
@@ -682,7 +766,7 @@ func test_bot_items() -> void:
 	var base := O + Vector3(100, 0, 100)
 	bot.global_position = base
 	bot.bot_role = Fighter.BotRole.ROAM
-	bot.change_class(2)
+	neutral(bot)
 	bot.bot_item = -1
 	var ids := {}
 	for entry in [["bubble", Vector3(8, 0, 0)], ["armor1", Vector3(12, 0, 0)], ["armor2", Vector3(0, 0, 40)]]:
@@ -700,9 +784,9 @@ func test_bot_items() -> void:
 	game.update_bot_item(bot, now + 1.0)
 	check(bot.bot_item == -1 and bot.bot_path.is_empty(), "a detour ends when the item is taken")
 	bot.armor = 55.0
-	bot.hp = bot.spec.health
+	bot.hp = Fighter.MAX_HEALTH
 	check(not game.choose_bot_item(bot, 2, now), "a healthy bot with armor above 50 and no way to use armor 2 in range ignores everything")
-	bot.hp = bot.spec.health * 0.5
+	bot.hp = Fighter.MAX_HEALTH * 0.5
 	check(game.choose_bot_item(bot, 2, now) and bot.bot_item == ids.bubble, "a hurt bot takes the bubble")
 	game.update_bot_item(bot, now + GameScript.BOT_ITEM_TIME + 1.0)
 	check(bot.bot_item == -1, "a detour times out")
@@ -710,7 +794,7 @@ func test_bot_items() -> void:
 	check(not game.choose_bot_item(bot, 2, now), "a taken bubble is ignored")
 	for id in ids.values():
 		game.remove_entity(id)
-	bot.hp = bot.spec.health
+	bot.hp = Fighter.MAX_HEALTH
 	bot.armor = 0.0
 
 func test_power_ups() -> void:
@@ -718,12 +802,12 @@ func test_power_ups() -> void:
 	var foe: Fighter = game.fighters[105]
 	if foe.team == p.team:
 		foe = game.fighters[106]
-	p.change_class(2)
-	foe.change_class(2)
+	neutral(p)
+	neutral(foe)
 	p.global_position = O + Vector3(0, 0, -21)
 	foe.global_position = O + Vector3(0, 0, -25)
-	p.hp = p.spec.health
-	foe.hp = foe.spec.health
+	p.hp = Fighter.MAX_HEALTH
+	foe.hp = Fighter.MAX_HEALTH
 	p.power = 0
 	foe.power = 0
 	var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "power", "hp": float(Items.POWER_QUAD), "life": 1e9, "pos": p.global_position, "yaw": 0.0, "used": false}
@@ -736,7 +820,7 @@ func test_power_ups() -> void:
 	game.damage_fighter(foe, 10.0, p.fighter_id)
 	check(is_equal_approx(before - foe.hp, 30.0), "triple damage triples what the holder deals")
 	game.damage_fighter(p, 10.0, foe.fighter_id)
-	check(is_equal_approx(p.hp, p.spec.health - 10.0), "the holder takes normal damage")
+	check(is_equal_approx(p.hp, Fighter.MAX_HEALTH - 10.0), "the holder takes normal damage")
 	check(Items.KINDS.power.respawn == 90.0, "the power-up respawns after 90 s")
 	check(Items.POWER_TAKEN_CUES[1] != Items.POWER_TAKEN_CUES[2] and Sfx.stream(Items.POWER_TAKEN_CUES[1]) != Sfx.stream(Items.POWER_TAKEN_CUES[2]) and not Items.POWER_TAKEN_CUES.values().has(Items.KINDS.power.sound), "each power-up type has its own pickup cue, different from the spawn chime")
 	check(Items.power_cue(16.0, 15.0) == Sfx.Kind.POWER_WARN and Items.power_cue(15.0, 14.0) == -1 and Items.power_cue(3.05, 2.95) == Sfx.Kind.POWER_TICK and Items.power_cue(1.1, 0.9) == Sfx.Kind.POWER_TICK and Items.power_cue(8.0, 7.9) == -1, "the countdown cues once at 15 s and ticks at 3, 2 and 1 s")
@@ -756,16 +840,16 @@ func test_power_ups() -> void:
 	p.power_time = Items.POWER_DURATION
 	p.power_kills = 0
 	for i in range(2):
-		foe.hp = foe.spec.health
+		foe.hp = Fighter.MAX_HEALTH
 		foe.dead_time = 0.0
 		game.damage_fighter(foe, 10000.0, p.fighter_id)
 	check(p.power_kills == 2, "kills while holding a power-up build a streak")
-	foe.hp = foe.spec.health
+	foe.hp = Fighter.MAX_HEALTH
 	foe.dead_time = 0.0
 	p.power = 0
 	game.damage_fighter(foe, 10000.0, p.fighter_id)
 	check(p.power_kills == 2, "kills without a power-up do not extend it")
-	foe.hp = foe.spec.health
+	foe.hp = Fighter.MAX_HEALTH
 	foe.dead_time = 0.0
 	# Invincibility: nothing hurts the holder except the out-of-bounds kill.
 	item.hp = float(Items.POWER_INVULNERABLE)
@@ -780,12 +864,11 @@ func test_power_ups() -> void:
 	check(row_pp == p.power_pickups + foe.power_pickups, "scoreboard rows carry power-up pickups")
 	before = foe.hp
 	game.damage_fighter(foe, 50.0, p.fighter_id)
-	foe.burn = 0.0
 	check(foe.hp == before, "invincibility blocks enemy damage")
 	game.damage_fighter(foe, 10000.0, -1)
 	check(foe.hp <= 0, "invincibility does not stop the out-of-bounds kill")
 	check(foe.power == 0, "a power-up is lost on death")
-	foe.hp = foe.spec.health
+	foe.hp = Fighter.MAX_HEALTH
 	foe.dead_time = 0.0
 	# Snapshot round trip.
 	p.power = Items.POWER_INVULNERABLE
@@ -794,172 +877,46 @@ func test_power_ups() -> void:
 	mirror.unpack(p.pack(), false)
 	check(mirror.power_pickups == p.power_pickups, "snapshot carries the power-up pickup count")
 	check(mirror.power == Items.POWER_INVULNERABLE and is_equal_approx(mirror.power_time, 5.5), "snapshot carries the active power-up")
-	mirror.change_class(1)
+	neutral(mirror)
 	p.power = 0
 	check(not p.pack().has("pw"), "idle fighters carry no power-up fields")
 	game.remove_entity(data.id)
 
-func test_machinery() -> void:
-	var p: Fighter = game.local_player()
-	p.change_class(1)
-	p.global_position = O + Vector3(-10, 0, -21)
-	var id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
-	var e: Deployable = game.entities[id]
-	e.hp = 50
-	e.age = 5
-	game.entities_tick(1)
-	check(e.hp > 50, "engineer passive repairs idle nearby machinery")
-	e.last_damage = e.age
-	var hp := e.hp
-	game.entities_tick(1)
-	check(e.hp == hp, "recent damage stops passive repair")
-	game.activate(p, 2)
-	check(not game.entities.has(id), "recall removes installation")
-	var pad: int = game.create_entity(p, "pad", p.global_position, 80, 90)
-	game.entities_tick(0.01)
-	check(p.velocity.y == 14.5, "launch pad propels fighters")
-	var opponent: Fighter = game.fighters[105]
-	opponent.change_class(1)
-	opponent.global_position = p.global_position + Vector3(0.5, 0, 0)
-	game.entities[pad].timer = 0
-	game.entities_tick(0.01)
-	check(opponent.velocity.y == 14.5, "enemy can use engineer launch pad")
-	game.remove_entity(pad)
-	await physics_frame
-	await process_frame
-	var turret_id: int = game.create_entity(p, "turret", p.global_position + Vector3(1, 0, 0), 100, 90)
-	var turret: Deployable = game.entities[turret_id]
-	turret.rotation.y = 0
-	opponent.global_position = turret.global_position + Vector3(0, 0, 3)
-	await physics_frame
-	await process_frame
-	game.entities_tick(0.1)
-	check(opponent.hp == 200, "turret cannot attack outside firing arc")
-	opponent.global_position = turret.global_position + Vector3(0, 0, -4)
-	await physics_frame
-	await process_frame
-	game.entities_tick(0.1)
-	check(opponent.hp < 200, "turret supplements primary with aimed pressure")
-	turret.hp = 0
-	game.entities_tick(0.01)
-	check(not game.entities.has(turret_id), "destroyed turret is removed")
-	p.change_class(2)
-	p.global_position = O + Vector3(-10, 0, -21)
-	p.yaw = -PI / 2
-	opponent.global_position = O + Vector3(-8, 0, -21)
-	opponent.hp = 200
-	await physics_frame
-	await process_frame
-	p.held = 2
-	game.combat_tick(p, 1.0 / 60)
-	check(opponent.hp == 125 and p.melee_buff > 0, "Enforcer melee damages and improves spin-up")
-	for i in range(5):
-		game.apply_hit(p, {"collider": opponent, "position": opponent.global_position + Vector3.UP}, p.spec.damage)
-	check(p.gun_buff > 0, "sustained gun hits improve melee recovery")
-	p.held = 0
-
 func test_weapon_specs() -> void:
-	var breacher: WeaponSpec = Fighter.WEAPONS[1]
-	var longshot: WeaponSpec = Fighter.WEAPONS[2]
-	var chatterbox: WeaponSpec = Fighter.WEAPONS[3]
-	check(Fighter.WEAPONS[0] == null and Fighter.WEAPONS.size() == 4, "weapon table: signature plus three shared guns")
-	for i in range(Fighter.SPECS.size()):
-		var signature := WeaponSpec.from_class(Fighter.SPECS[i], i)
-		check(absf(signature.body_ttk() - Fighter.SPECS[i].body_ttk()) < 0.001, "signature weapon mirrors class gun: " + Fighter.SPECS[i].title)
-	check(WeaponSpec.from_class(Fighter.SPECS[1], 1).headshot_mult == 1.0, "engineer signature cannot headshot")
+	var shotgun: WeaponSpec = Loadout.PRIMARIES[0]
+	var rifle: WeaponSpec = Loadout.PRIMARIES[1]
+	var smg: WeaponSpec = Loadout.PRIMARIES[2]
+	check(shotgun.title == "Shotgun" and rifle.title == "Rifle" and smg.title == "SMG", "primary table: shotgun, rifle, smg")
 	# Falloff: flat inside the start range, linear to the floor, flat after.
-	check(is_equal_approx(breacher.falloff_at(3.0), 1.0), "shotgun full damage up close")
-	check(is_equal_approx(breacher.falloff_at(13.0), 0.6), "shotgun falloff is linear (13 m of 6..20)")
-	check(is_equal_approx(breacher.falloff_at(60.0), breacher.falloff_min), "shotgun falloff floors")
-	check(is_equal_approx(longshot.falloff_at(30.0), 1.0) and longshot.falloff_at(80.0) >= 0.7 - 0.001, "rifle barely falls off")
+	check(is_equal_approx(shotgun.falloff_at(3.0), 1.0), "shotgun full damage up close")
+	check(is_equal_approx(shotgun.falloff_at(13.0), 0.6), "shotgun falloff is linear (13 m of 6..20)")
+	check(is_equal_approx(shotgun.falloff_at(60.0), shotgun.falloff_min), "shotgun falloff floors")
+	check(is_equal_approx(rifle.falloff_at(30.0), 1.0) and rifle.falloff_at(80.0) >= 0.7 - 0.001, "rifle barely falls off")
 	var last := 2.0
 	for d in range(0, 100, 5):
-		var f := chatterbox.falloff_at(float(d))
+		var f := smg.falloff_at(float(d))
 		check(f <= last + 0.0001, "smg falloff never increases (%d m)" % d)
 		last = f
 	# Role ordering: the shotgun wins up close, the rifle at range, and reach grows shotgun < smg < rifle.
-	check(breacher.reach < chatterbox.reach and chatterbox.reach < longshot.reach, "reach order shotgun < smg < rifle")
-	check(breacher.body_ttk(200.0, 3.0) < chatterbox.body_ttk(200.0, 3.0), "shotgun kills fastest point blank")
-	check(longshot.body_ttk(200.0, 40.0) < chatterbox.body_ttk(200.0, 28.0), "rifle out-trades the smg at range")
-	check(breacher.body_ttk(200.0, 19.0) > 3.0 * breacher.body_ttk(200.0, 3.0), "shotgun collapses at range")
-	check(chatterbox.interval < 0.1 and chatterbox.magazine >= 30, "smg is rapid fire")
-	for w in [breacher, longshot, chatterbox]:
+	check(shotgun.reach < smg.reach and smg.reach < rifle.reach, "reach order shotgun < smg < rifle")
+	check(shotgun.body_ttk(200.0, 3.0) < smg.body_ttk(200.0, 3.0), "shotgun kills fastest point blank")
+	check(rifle.body_ttk(200.0, 40.0) < smg.body_ttk(200.0, 28.0), "rifle out-trades the smg at range")
+	check(shotgun.body_ttk(200.0, 19.0) > 3.0 * shotgun.body_ttk(200.0, 3.0), "shotgun collapses at range")
+	check(smg.interval < 0.1 and smg.magazine >= 30, "smg is rapid fire")
+	for w in Loadout.PRIMARIES:
 		var t: float = w.body_ttk(200.0, 10.0)
-		check(t > 0.5 and t < 4.0, "weapon time-to-kill in band: %s (%.2fs)" % [w.title, t])
-		print("WEAPON TTK %s: %.2fs at 3 m, %.2fs at 25 m" % [w.title, w.body_ttk(200.0, 3.0), w.body_ttk(200.0, 25.0)])
-
-func test_shared_weapons() -> void:
-	var p: Fighter = game.local_player()
-	var target: Fighter = game.fighters[105]
-	var cases := [[1, 3.0], [2, 20.0], [3, 10.0]]
-	for class_index in [0, 2]:
-		for entry in cases:
-			var weapon_id: int = entry[0]
-			var distance: float = entry[1]
-			p.change_class(class_index, weapon_id)
-			var w: WeaponSpec = p.weapon
-			check(p.weapon_id == weapon_id and p.ammo == w.magazine, "equip %s on %s" % [w.title, p.spec.title])
-			p.global_position = O + Vector3(-distance, 0, -21)
-			p.velocity = Vector3.ZERO
-			p.held = 1
-			p.spin = 0  # the Enforcer's spin-up belongs to its Signature gun only
-			target.change_class(1)
-			target.global_position = O + Vector3(0, 0, -21)
-			target.hp = 200
-			target.update_visual()
-			await physics_frame
-			await process_frame
-			aim_at(p, target.global_position + Vector3.UP * 1.1)
-			var elapsed := 0.0
-			var first_hit := -1.0
-			for frame in range(600):
-				game.combat_tick(p, 1.0 / 60.0)
-				if target.hp < 200 and first_hit < 0:
-					first_hit = elapsed
-				if target.hp <= 0:
-					break
-				elapsed += 1.0 / 60.0
-			var ttk := elapsed - first_hit
-			var label := "%s on %s" % [w.title, p.spec.title]
-			print("LIVE TTK %s: %.3fs at %.0f m" % [label, ttk, distance])
-			check(target.hp <= 0, "shared weapon kills: " + label)
-			check(absf(ttk - w.body_ttk(200.0, distance)) <= 0.15, "shared weapon cadence matches model: " + label)
-			p.held = 0
-	# One shotgun blast on one target is one hit: five pellets landing must not trip the Enforcer's five-hit buff.
-	p.change_class(2, 1)
-	p.consecutive_hits = 0
-	p.gun_buff = 0
-	p.global_position = O + Vector3(-3, 0, -21)
-	target.change_class(1)
-	target.global_position = O + Vector3(0, 0, -21)
-	target.hp = 200
-	await physics_frame
-	aim_at(p, target.global_position + Vector3.UP * 1.1)
-	game.fire_ray(p, p.weapon.damage, false)
-	check(p.consecutive_hits == 1 and p.gun_buff <= 0, "a shotgun blast counts as one hit")
-	check(target.hp < 200, "blast damaged the target")
-	# Out of range: falloff and reach both bite.
-	target.hp = 200
-	p.global_position = O + Vector3(-40, 0, -21)
-	aim_at(p, target.global_position + Vector3.UP * 1.1)
-	game.fire_ray(p, p.weapon.damage, false)
-	check(target.hp == 200, "shotgun cannot reach 40 m")
-	# Loadout survives the snapshot, respawn and class swaps.
-	p.change_class(0, 3)
-	var state := p.pack()
-	check(state["w"] == 3, "snapshot carries weapon id")
-	p.change_class(1, 0)
-	p.unpack(state, true)
-	check(p.weapon_id == 3 and p.class_id == 0, "snapshot restores class and weapon")
-	game.respawn(p)
-	check(p.weapon_id == 3 and p.ammo == p.weapon.magazine, "respawn keeps the weapon and refills it")
-	game.apply_class(p.fighter_id, 3, 2)
-	check(p.class_id == 3 and p.weapon_id == 2, "class request carries a weapon")
-	p.change_class(0, 99)
-	check(p.weapon_id == Fighter.WEAPONS.size() - 1, "weapon id is clamped")
-	p.change_class(0, 0)
-	p.held = 0
-	target.hp = 200
+		check(t > 0.5 and t < 4.0, "primary time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		print("PRIMARY TTK %s: %.2fs at 3 m, %.2fs at 25 m" % [w.title, w.body_ttk(200.0, 3.0), w.body_ttk(200.0, 25.0)])
+	# Sidearms are the fallback: quick to draw, a little weaker than each primary in that primary's own range.
+	for w in Loadout.SIDEARMS:
+		var t: float = w.body_ttk(200.0, 10.0)
+		print("SIDEARM TTK %s: %.2fs at 10 m, %.2fs at 30 m" % [w.title, t, w.body_ttk(200.0, 30.0)])
+		check(t > 2.0 and t < 3.5, "sidearm time-to-kill in band: %s (%.2fs)" % [w.title, t])
+		check(shotgun.body_ttk(200.0, 3.0) < w.body_ttk(200.0, 3.0), "shotgun beats the %s point blank" % w.title)
+		check(smg.body_ttk(200.0, 10.0) < t, "smg beats the %s at 10 m" % w.title)
+		check(rifle.body_ttk(200.0, 30.0) < w.body_ttk(200.0, 30.0), "rifle beats the %s at 30 m" % w.title)
+		check(w.reach <= rifle.reach, "sidearm reach stays under the rifle's: " + w.title)
+	check(Loadout.SIDEARMS[2].ricochet and not Loadout.SIDEARMS[0].ricochet, "only the revolver ricochets")
 
 func test_authority_and_respawn() -> void:
 	var p: Fighter = game.local_player()
@@ -972,12 +929,14 @@ func test_authority_and_respawn() -> void:
 	game.damage_fighter(p, 10000, 105)
 	check(p.hp == 0 and p.dead_time == 5, "death schedules respawn")
 	game.respawn(p)
-	check(p.hp == p.spec.health and p.ammo == p.spec.magazine, "respawn restores class and ammunition")
-	game.apply_class(p.fighter_id, 0)
-	check(p.class_id == 0, "class change permitted at spawn")
+	check(p.hp == Fighter.MAX_HEALTH and p.ammo == p.weapon.magazine and p.slot == 0, "respawn restores health and ammunition")
+	var chosen := Loadout.encode(2, 1, Loadout.Utility.BARRICADE, Loadout.Melee.SWORD)
+	game.apply_loadout(p.fighter_id, chosen)
+	check(p.loadout == chosen and p.weapon.title == "SMG", "loadout change permitted at spawn")
 	p.global_position = Vector3.ZERO
-	game.apply_class(p.fighter_id, 2)
-	check(p.class_id == 0, "class change forbidden away from spawn")
+	game.apply_loadout(p.fighter_id, REFERENCE)
+	check(p.loadout == chosen, "loadout change forbidden away from spawn")
+	neutral(p)
 	game.last_world_tick = 100
 	var count: int = game.fighters.size()
 	game.apply_world({"tick": 99, "players": [], "entities": [], "match": game.match_state.pack()})
@@ -986,7 +945,7 @@ func test_authority_and_respawn() -> void:
 	game.match_state.winner = 1
 	game.start_game("restart")
 	check(game.match_state.winner == -2 and game.match_state.remaining == 720, "host restart resets round")
-	check(game.entities.is_empty() and p.hp == p.spec.health, "restart clears deployables and restores fighters")
+	check(game.entities.is_empty() and p.hp == Fighter.MAX_HEALTH, "restart clears deployables and restores fighters")
 
 func test_roster_and_roles() -> void:
 	check(game.fighters.size() == CivicDividend.TEAM_SIZE * 2, "full roster of %d fighters" % (CivicDividend.TEAM_SIZE * 2))
@@ -999,10 +958,19 @@ func test_roster_and_roles() -> void:
 		for slot in range(CivicDividend.TEAM_SIZE):
 			spawns[CivicDividend.spawn_slot_position(side, slot)] = true
 	check(spawns.size() == CivicDividend.TEAM_SIZE * 2, "spawn slot positions never overlap")
+	var primaries := {}
+	var valid := true
+	for p in game.fighters.values():
+		var ids := Loadout.decode(p.loadout)
+		valid = valid and Loadout.encode(ids[0], ids[1], ids[2], ids[3]) == p.loadout and p.hp <= Fighter.MAX_HEALTH
+		if p.bot:
+			primaries[ids[0]] = true
+	check(valid, "every fighter carries a valid loadout")
+	check(primaries.size() == Loadout.PRIMARIES.size(), "bots carry every primary")
 	game.refresh_bot_enemies()
 	for p in game.fighters.values():
 		if p.bot:
-			p.hp = p.spec.health
+			p.hp = Fighter.MAX_HEALTH
 			p.bot_think = 0.0
 			p.bot_role_until = 0.0
 			p.bot_goal = -1
@@ -1033,13 +1001,13 @@ func test_hud() -> void:
 	killer.team = 1
 	victim.global_position = O + Vector3(0, 0, 20)
 	killer.global_position = O + Vector3(1, 0, 20)
-	victim.hp = victim.spec.health
+	victim.hp = Fighter.MAX_HEALTH
 	var before: int = game.hud.feed.size()
 	var kills_before: int = killer.kills
 	var deaths_before: int = victim.deaths
 	game.damage_fighter(victim, 10000, 105)
 	check(killer.kills == kills_before + 1 and victim.deaths == deaths_before + 1, "kill increments killer kills and victim deaths")
-	check(game.hud.feed.size() == mini(5, before + 1) and game.hud.feed[0].killer == killer.spec.title, "kill feed records the kill")
+	check(game.hud.feed.size() == mini(5, before + 1) and game.hud.feed[0].killer == "%s · %s" % [killer.callsign(), killer.weapon.title] and game.hud.feed[0].victim == victim.callsign(), "kill feed records the kill and the weapon")
 	check(killer.pack().k == killer.kills and victim.pack().d == victim.deaths, "kills and deaths are replicated in snapshots")
 	var twin: Fighter = game.fighters[101]
 	twin.unpack(killer.pack(), false)
@@ -1061,7 +1029,12 @@ func test_hud() -> void:
 	check(true, "minimap draws health packs above, below and without a local player")
 	game.remove_entity(pack_data.id)
 	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
-	check(game.menu.cards.size() == Fighter.SPECS.size(), "menu has a card per class")
+	var row_sizes: Array = game.menu.item_buttons.map(func(row): return row.size())
+	check(row_sizes == Loadout.slot_sizes(), "menu has a button per item in every loadout slot")
+	var picked: int = game.selected_loadout
+	game.menu._pick(2, Loadout.Utility.SENTRY_TURRET)
+	check(Loadout.utility(game.selected_loadout) == Loadout.Utility.SENTRY_TURRET and Loadout.primary(game.selected_loadout) == Loadout.primary(picked), "picking a menu item changes only its slot")
+	game.selected_loadout = picked
 	game.hud.hit(2)
 	game.hud.damaged(Vector3(5, 0, 5))
 	game.hud.refresh(game, 0.016)
@@ -1081,12 +1054,12 @@ func test_sfx() -> void:
 		if wave.data.size() < 1000 or peak < 1500:
 			silent += 1
 	check(silent == 0 and total == Sfx.RECIPES.size(), "every sound cue synthesises audible audio (%d cues)" % total)
-	check(Sfx.stream(Sfx.Kind.SHOT_ENFORCER) == Sfx.stream(Sfx.Kind.SHOT_ENFORCER), "cues are cached")
+	check(Sfx.stream(Sfx.Kind.SHOT_SHOTGUN) == Sfx.stream(Sfx.Kind.SHOT_SHOTGUN), "cues are cached")
 
 func test_effect_pool() -> void:
 	var root_node: Node3D = game.tracer_root
 	for i in range(600):
-		Vfx.tracer(root_node, Vector3(0, 1, 0), Vector3(20, 1, 0), Vfx.Style.ARC, Color.WHITE, true)
+		Vfx.tracer(root_node, Vector3(0, 1, 0), Vector3(20, 1, 0), Vfx.Style.REVOLVER, Color.WHITE, true)
 	check(root_node.get_child_count() <= Vfx.MAX_EFFECT_NODES + 40, "effect nodes stay capped under a tracer flood (%d)" % root_node.get_child_count())
 
 func test_visual_pipeline() -> void:
@@ -1098,7 +1071,7 @@ func test_visual_pipeline() -> void:
 func test_input_forgiveness() -> void:
 	await physics_frame
 	var p: Fighter = game.local_player()
-	p.change_class(1)
+	neutral(p)
 	p.held = 0
 	p.movement = Vector2.ZERO
 	var base := O + Vector3(-30, 0, -20)
@@ -1150,7 +1123,7 @@ func test_input_forgiveness() -> void:
 func test_slide_jump() -> void:
 	await physics_frame
 	var p: Fighter = game.local_player()
-	p.change_class(1)
+	neutral(p)
 	p.movement = Vector2.ZERO
 	p.yaw = 0.0
 	var base := O + Vector3(-30, 0.01, -20)
@@ -1183,7 +1156,7 @@ func test_slide_jump() -> void:
 func test_wall_run() -> void:
 	await physics_frame
 	var p: Fighter = game.local_player()
-	p.change_class(1)
+	neutral(p)
 	p.held = 0
 	# The proving-ground end wall faces -x at x=89.5; running along -z keeps it on the right-hand side.
 	var start := O + Vector3(88.9, 6.0, 25.0)
@@ -1234,8 +1207,7 @@ func test_wall_run() -> void:
 		p.simulate_movement(1.0 / 60, 0)
 	check(not p.wall_running, "moving too slowly does not start a wall run")
 	await physics_frame
-	# Skyrunner's Hot Lap runs longer.
-	p.change_class(0)
+	# Hot Lap (after letting go of a Grapple) runs longer.
 	p.hot_lap = 2.0
 	p.movement = Vector2(0, -1)
 	p.global_position = start
@@ -1243,13 +1215,13 @@ func test_wall_run() -> void:
 	for i in range(3):
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.wall_running and p.wall_run_time > 1.2, "Hot Lap extends the wall run (%.2f s)" % p.wall_run_time)
-	p.change_class(1)
+	neutral(p)
 	await physics_frame
 
 func test_ledges() -> void:
 	await physics_frame
 	var p: Fighter = game.local_player()
-	p.change_class(1)
+	neutral(p)
 	p.held = 0
 	# Vault: running into the 1.2 m crate (x -4.5..-1.5) carries you over without stopping.
 	p.yaw = -PI / 2
@@ -1309,7 +1281,7 @@ func test_air_movement() -> void:
 	# move_and_slide uses the physics delta only inside a physics frame, so each section starts on one.
 	await physics_frame
 	var p: Fighter = game.local_player()
-	p.change_class(1)
+	neutral(p)
 	p.held = 0
 	# Jump height: a full jump should clear a 1.9 m ledge but not much more.
 	p.global_position = O + Vector3(-30, 0.01, -20)

@@ -26,11 +26,11 @@ func configure(g: Node3D, data: Dictionary) -> void:
 	hp = data.hp
 	lifetime = data.life
 	name = "Entity_%d" % entity_id
-	collision_layer = 8 if kind == "double" else (4 if kind in ["cover", "turret", "pad"] else 0)
+	collision_layer = 4 if kind in ["cover", "turret", "pad"] else 0
 	collision_mask = 0
 	mesh = MeshInstance3D.new()
 	var box := BoxMesh.new()
-	box.size = Vector3(0.7, 1.7, 0.55) if kind == "double" else Vector3(0.8, 0.9, 0.8)
+	box.size = Vector3(0.8, 0.9, 0.8)
 	if kind == "cover":
 		box.size = Vector3(3.5, 1.8, 0.3)
 	elif kind == "pad":
@@ -51,15 +51,11 @@ func configure(g: Node3D, data: Dictionary) -> void:
 		box.size = Vector3(0.9, 0.9, 0.9)
 	mesh.mesh = box
 	mesh.position.y = box.size.y / 2
-	if kind == "double":
-		# The double is a ghosted Mirage Agent rig; the box mesh only sizes the collider.
-		mesh.visible = false
-		preload("res://scripts/class_identity.gd").build(self, 3, game.team_color(team), true)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = g.team_color(team)
 	if kind == "smoke":
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.albedo_color.a = 0.65 if kind == "double" else 0.25
+		mat.albedo_color.a = 0.25
 		mat.emission_enabled = true
 		mat.emission = g.team_color(team) * 0.3
 	if kind != "smoke":
@@ -83,6 +79,7 @@ func configure(g: Node3D, data: Dictionary) -> void:
 	add_child(display)
 
 var chevrons: Array[StandardMaterial3D] = []
+const DISPLAY_NAMES := {"cover": "BARRICADE", "turret": "SENTRY", "pad": "LAUNCH PAD", "smoke": "SMOKE"}
 
 func _process(dt: float) -> void:
 	# Clients do not run entities_tick: count a snapshot's respawn timer down locally so the minimap countdown is smooth.
@@ -95,8 +92,6 @@ func _process(dt: float) -> void:
 # Compound stand-ins for the old single boxes. The box mesh stays only to size the collider.
 # An authored model at assets/models/deployables/<kind>.glb replaces these.
 func build_model() -> void:
-	if kind == "double":
-		return
 	var model := Node3D.new()
 	model.name = "Model"
 	add_child(model)
@@ -209,12 +204,10 @@ func update_visual() -> void:
 		return
 	display.visible = true
 	display.modulate = game.team_color(team)
-	display.text = kind.to_upper()
+	display.text = DISPLAY_NAMES.get(kind, kind.to_upper())
 	if owner_id == game.local_id:
 		display.text += " · %d/%d" % [int(hp), int(max_hp)]
 		display.no_depth_test = kind in ["turret", "pad"]
-	if kind == "double":
-		display.text = "ALLY DOUBLE" if team == game.local_team() else "Mirage Agent"
 
 func pack() -> Dictionary:
 	return {"id": entity_id, "owner": owner_id, "team": team, "kind": kind, "hp": hp, "max_hp": max_hp, "life": lifetime, "pos": global_position, "yaw": rotation.y, "used": used, "t": timer if used and Items.KINDS.has(kind) else 0.0}

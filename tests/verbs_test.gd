@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Map verbs (bounce, climb, cable, mover, event) with the fastest (Skyrunner) and heaviest (Enforcer) heroes.
+# Map verbs (bounce, climb, cable, mover, event) with the slowest (Shotgun) and fastest (SMG) primaries.
 #   godot --headless --path . --script res://tests/verbs_test.gd
 # Fixtures sit in the proving ground (z = 300), far from the real map.
 
@@ -57,12 +57,12 @@ func run() -> void:
 	root.add_child(driver)
 	await physics_frame
 	await physics_frame
-	for class_id in [0, 2]:
-		await test_bounce(class_id)
-		await test_climb(class_id)
-		await test_zip(class_id)
-		await test_grind(class_id)
-		await test_lift(class_id)
+	for primary_id in [0, 2]:
+		await test_bounce(primary_id)
+		await test_climb(primary_id)
+		await test_zip(primary_id)
+		await test_grind(primary_id)
+		await test_lift(primary_id)
 	test_tram_and_events()
 	test_mirror()
 	print("VERBS: %d checks, %d failures" % [checks, failures])
@@ -81,9 +81,9 @@ func _offset(f: Dictionary) -> Dictionary:
 			k[1] = [k[1][0] + O.x, k[1][1] + O.y, k[1][2] + O.z]
 	return g
 
-func fighter(class_id: int) -> Fighter:
+func fighter(primary_id: int) -> Fighter:
 	var p: Fighter = game.local_player()
-	p.change_class(class_id)
+	p.apply_loadout(Loadout.encode(primary_id, 0, 0, 0))
 	p.velocity = Vector3.ZERO
 	p.zip_id = -1
 	p.zip_cd = 0.0
@@ -92,16 +92,16 @@ func fighter(class_id: int) -> Fighter:
 	p.bounce_cd = 0.0
 	p.movement = Vector2.ZERO
 	p.held = 0
-	p.hp = p.spec.health
+	p.hp = Fighter.MAX_HEALTH
 	return p
 
 func step(p: Fighter, ticks: int, edges: int = 0) -> void:
 	for i in range(ticks):
 		p.simulate_movement(1.0 / 60, edges if i == 0 else 0)
 
-func test_bounce(class_id: int) -> void:
-	var p := fighter(class_id)
-	var title: String = p.spec.title
+func test_bounce(primary_id: int) -> void:
+	var p := fighter(primary_id)
+	var title: String = p.weapon.title
 	p.global_position = O + Vector3(24, 6, 0)
 	var peak := 0.0
 	for i in range(120):
@@ -111,9 +111,9 @@ func test_bounce(class_id: int) -> void:
 	check(peak > 3.0 + 3.5, "%s: landing on the bounce slab launches well above it (peak %.1f)" % [title, peak])
 	check(p.air_dash or p.bounce_cd > 0.0 or true, "bounce restores the air action")
 
-func test_climb(class_id: int) -> void:
-	var p := fighter(class_id)
-	var title: String = p.spec.title
+func test_climb(primary_id: int) -> void:
+	var p := fighter(primary_id)
+	var title: String = p.weapon.title
 	p.global_position = O + Vector3(39.3, 0.05, 0)
 	p.yaw = -PI / 2
 	p.movement = Vector2(0, -1)
@@ -139,9 +139,9 @@ func test_climb(class_id: int) -> void:
 	p.simulate_movement(1.0 / 60, 1)
 	check(p.velocity.x < -3.0 and p.velocity.y > 6.0, "%s: jump kicks off the climb lane away from the wall (%s)" % [title, p.velocity])
 
-func test_zip(class_id: int) -> void:
-	var p := fighter(class_id)
-	var title: String = p.spec.title
+func test_zip(primary_id: int) -> void:
+	var p := fighter(primary_id)
+	var title: String = p.weapon.title
 	var start := O + Vector3(-8, 6 - MapVerbs.ZIP_HANG + 0.2, 0)
 	p.global_position = start
 	p.yaw = -PI / 2
@@ -168,9 +168,9 @@ func test_zip(class_id: int) -> void:
 	p.simulate_movement(1.0 / 60, 1)
 	check(p.zip_id < 0 and p.velocity.y > 5.0 and p.zip_cd > 0.0, "%s: jump releases the zipline with a hop" % title)
 
-func test_grind(class_id: int) -> void:
-	var p := fighter(class_id)
-	var title: String = p.spec.title
+func test_grind(primary_id: int) -> void:
+	var p := fighter(primary_id)
+	var title: String = p.weapon.title
 	p.global_position = O + Vector3(-8, 1.6, -12)
 	p.velocity = Vector3(0, -1, 0)
 	p.yaw = -PI / 2
@@ -182,9 +182,9 @@ func test_grind(class_id: int) -> void:
 		await physics_frame
 	check(p.zip_id < 0 or p.global_position.x > O.x + 5, "%s: grind carries along the rail" % title)
 
-func test_lift(class_id: int) -> void:
-	var p := fighter(class_id)
-	var title: String = p.spec.title
+func test_lift(primary_id: int) -> void:
+	var p := fighter(primary_id)
+	var title: String = p.weapon.title
 	driver.t = 0.0
 	await physics_frame
 	await physics_frame

@@ -1,6 +1,6 @@
 extends Node3D
 
-const CLASS_SCENES = [preload("res://scenes/skyrunner.tscn"), preload("res://scenes/field_engineer.tscn"), preload("res://scenes/enforcer.tscn"), preload("res://scenes/mirage_agent.tscn"), preload("res://scenes/reave.tscn")]
+const FIGHTER_SCENE = preload("res://scenes/fighter.tscn")
 const PORT = 27847
 # Health packs (blockout "pickup" features): an instant heal, then a regen that enemy hero damage cancels.
 const PACK_HEAL := 60.0
@@ -29,8 +29,18 @@ const BOT_POWER_RANGE := 60.0  # the power-up is worth a longer trip (it can sit
 const BOT_POWER_PATH := 110.0  # but only if the graph route to it is no longer than this
 const BOT_POWER_TIME := 35.0  # time allowed for a detour to the power-up (ladders are slow)
 const BOT_JUMP_DISTANCE := 3.3  # a bot jumps a graph "jmp" link once this close to its far end
+const BOT_SIDEARM_RANGE := 15.0  # an empty primary swaps to the sidearm when the target is this close
 const BOT_ITEM_VALUE := {"bubble": 1.0, "armor1": 2.0, "armor2": 3.0, "power": 6.0}
 const ASSIST_WINDOW := 6.0  # seconds a recent attacker still counts for an assist
+# Input edges: one-shot presses, OR-ed together until the server's next tick consumes them.
+const EDGE_JUMP := 1
+const EDGE_DASH := 2
+const EDGE_RELOAD := 4
+const EDGE_UTILITY := 8  # Q
+const EDGE_MELEE := 16  # F
+const EDGE_SWAP := 32  # 2 or the mouse wheel: primary <-> sidearm
+const EDGE_ALL := 63
+const HELD_BITS := 27  # held buttons: 1 fire, 2 aim down sights (RMB), 8 slide, 16 jump
 var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
@@ -38,8 +48,7 @@ var local_id := 1
 # Test cheats (F6 cooldowns, F8 damage, F9 full heal); host/offline only.
 var cheat_no_cooldowns := false
 var cheat_invulnerable := false
-var selected_class := 0
-var selected_weapon := 0
+var selected_loadout := Loadout.encode(1, 0, Loadout.Utility.FRAG_GRENADE, Loadout.Melee.KNIFE)
 var fighters: Dictionary = {}
 var entities: Dictionary = {}
 var entity_next := 1
@@ -127,7 +136,7 @@ func _ready() -> void:
 		start_game("join")
 
 func setup_inputs() -> void:
-	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "ability1": KEY_Q, "ability2": KEY_E, "ability3": KEY_F, "ultimate": KEY_X, "shoulder": KEY_V, "scoreboard": KEY_TAB}
+	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "utility": KEY_Q, "melee": KEY_F, "swap": KEY_2, "shoulder": KEY_V, "scoreboard": KEY_TAB}
 	for action in bindings:
 		InputMap.add_action(action)
 		var key := InputEventKey.new()
@@ -138,6 +147,10 @@ func setup_inputs() -> void:
 		var mouse := InputEventMouseButton.new()
 		mouse.button_index = pair[1]
 		InputMap.action_add_event(pair[0], mouse)
+	for wheel in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var scroll := InputEventMouseButton.new()
+		scroll.button_index = wheel
+		InputMap.action_add_event("swap", scroll)
 
 func team_color(side: int) -> Color:
 	return Visuals.team_color(side)
@@ -178,7 +191,7 @@ func start_game(mode: String) -> void:
 		spawn_pickups()
 		for p in fighters.values():
 			respawn(p)
-		apply_class(local_id, selected_class, selected_weapon)
+		apply_loadout(local_id, selected_loadout)
 		menu.hide()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		announce("NEW CONTRACT · Center point unlocked.")
@@ -186,12 +199,12 @@ func start_game(mode: String) -> void:
 	if mode == "resume":
 		if not running:
 			return
-		request_class(selected_class, selected_weapon)
+		request_loadout(selected_loadout)
 		menu.hide()
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		return
 	if running:
-		menu_status.text = "Match already running. Apply class / Resume, or restart the app."
+		menu_status.text = "Match already running. Apply loadout / Resume, or restart the app."
 		return
 	if mode == "join":
 		var client := ENetMultiplayerPeer.new()
@@ -214,10 +227,10 @@ func start_game(mode: String) -> void:
 	local_id = 1
 	explore = mode == "explore"
 	hud.explore = explore
-	spawn_fighter(1, 0, selected_class, false, selected_weapon)
+	spawn_fighter(1, 0, selected_loadout, false)
 	if not explore:
 		for i in range(CivicDividend.TEAM_SIZE * 2 - 1):
-			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, i % Fighter.SPECS.size(), true, bot_weapon(i))
+			spawn_fighter(100 + i, 0 if i < CivicDividend.TEAM_SIZE - 1 else 1, bot_loadout(i), true)
 	spawn_pickups()
 	running = true
 	menu.hide()
@@ -235,7 +248,7 @@ func connected() -> void:
 	menu.hide()
 	hud.show()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	join_request.rpc_id(1, selected_class, selected_weapon)
+	join_request.rpc_id(1, selected_loadout)
 
 func connection_failed() -> void:
 	menu_status.text = "Connection failed. Check server IP and UDP port 27847."
@@ -263,10 +276,10 @@ func peer_disconnected(id: int) -> void:
 	var replacement := 100
 	while fighters.has(replacement):
 		replacement += 1
-	spawn_fighter(replacement, side, replacement % Fighter.SPECS.size(), true, bot_weapon(replacement))
+	spawn_fighter(replacement, side, bot_loadout(replacement), true)
 
 @rpc("any_peer", "call_remote", "reliable")
-func join_request(class_choice: int, weapon_choice: int = 0) -> void:
+func join_request(loadout_code: int) -> void:
 	if not authoritative:
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -283,7 +296,7 @@ func join_request(class_choice: int, weapon_choice: int = 0) -> void:
 			fighters.erase(p.fighter_id)
 			p.queue_free()
 			break
-	spawn_fighter(id, side, clampi(class_choice, 0, Fighter.SPECS.size() - 1), false, clampi(weapon_choice, 0, Fighter.WEAPONS.size() - 1))
+	spawn_fighter(id, side, loadout_code, false)  # Fighter.equip clamps every slot
 	initial_sync.rpc_id(id, encode_world())
 
 # Lowest depot slot on the team that no teammate holds, so a full team never shares a spawn (peer ids are arbitrary).
@@ -300,13 +313,13 @@ func free_spawn_slot(side: int) -> int:
 func spawn_position(p: Fighter) -> Vector3:
 	return CivicDividend.spawn_slot_position(p.team, p.spawn_slot)
 
-# Bots rotate through every weapon so a mixed-loadout match exercises them all.
-func bot_weapon(index: int) -> int:
-	return (index >> 2) % Fighter.WEAPONS.size()
+# Bots cycle through the primaries so a match exercises them all; the other slots are rolled.
+func bot_loadout(index: int) -> int:
+	return Loadout.encode(index % Loadout.PRIMARIES.size(), rng.randi_range(0, Loadout.SIDEARMS.size() - 1), rng.randi_range(0, Loadout.UTILITIES.size() - 1), rng.randi_range(0, Loadout.MELEES.size() - 1))
 
-func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool, weapon_choice: int = 0) -> Fighter:
-	var p: Fighter = CLASS_SCENES[archetype].instantiate()
-	p.configure(self, id, side, archetype, is_bot, weapon_choice)
+func spawn_fighter(id: int, side: int, loadout_code: int, is_bot: bool) -> Fighter:
+	var p: Fighter = FIGHTER_SCENE.instantiate()
+	p.configure(self, id, side, loadout_code, is_bot)
 	p.bot_think = rng.randf_range(0.0, 0.5)
 	add_child(p)
 	p.spawn_slot = free_spawn_slot(side)
@@ -315,30 +328,29 @@ func spawn_fighter(id: int, side: int, archetype: int, is_bot: bool, weapon_choi
 	fighters[id] = p
 	return p
 
-func request_class(index: int, weapon_choice: int = 0) -> void:
+func request_loadout(loadout_code: int) -> void:
 	if authoritative:
-		apply_class(local_id, index, weapon_choice)
+		apply_loadout(local_id, loadout_code)
 	else:
-		class_request.rpc_id(1, index, weapon_choice)
+		loadout_request.rpc_id(1, loadout_code)
 
 @rpc("any_peer", "call_remote", "reliable")
-func class_request(index: int, weapon_choice: int = 0) -> void:
+func loadout_request(loadout_code: int) -> void:
 	if authoritative:
-		apply_class(multiplayer.get_remote_sender_id(), index, weapon_choice)
+		apply_loadout(multiplayer.get_remote_sender_id(), loadout_code)
 
-func apply_class(id: int, index: int, weapon_choice: int = 0) -> void:
+func apply_loadout(id: int, loadout_code: int) -> void:
 	if not fighters.has(id):
 		return
 	var p: Fighter = fighters[id]
 	if p.hp > 0 and absf(p.global_position.x) < 80:
 		if id == local_id:
-			announce("Class changes are available at spawn or while awaiting respawn.")
+			announce("Loadout changes are available at spawn or while awaiting respawn.")
 		else:
-			remote_notice.rpc_id(id, "Return to spawn to change class.")
+			remote_notice.rpc_id(id, "Return to spawn to change loadout.")
 		return
 	remove_owned(id)
-	p.double_id = -1
-	p.change_class(index, weapon_choice)
+	p.apply_loadout(loadout_code)
 	p.dead_time = 0
 	p.global_position = spawn_position(p)
 	p.velocity = Vector3.ZERO
@@ -372,16 +384,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		var look := 0.0025 * DisplayPrefs.sensitivity
 		p.yaw -= event.relative.x * look
 		p.pitch = clampf(p.pitch - event.relative.y * look, -1.25, 1.2)
-	for pair in [["jump", 1], ["dash", 2], ["reload", 4], ["ability1", 8], ["ability2", 16], ["ability3", 32], ["ultimate", 64]]:
+	for pair in [["jump", EDGE_JUMP], ["dash", EDGE_DASH], ["reload", EDGE_RELOAD], ["utility", EDGE_UTILITY], ["melee", EDGE_MELEE], ["swap", EDGE_SWAP]]:
 		if event.is_action_pressed(pair[0]) and not event.is_echo():
 			input_edges |= pair[1]
-	if p.class_id == Fighter.REAVE_ID:
-		# Reave: Q is the held guard (a button, not an edge), E is Breach, F is the ultimate.
-		input_edges &= ~(8 | 32)
-		if event.is_action_pressed("ability3") and not event.is_echo():
-			input_edges |= 64
-		if event.is_action_pressed("ultimate"):
-			input_edges &= ~64
 	if event.is_action_pressed("shoulder"):
 		p.shoulder *= -1
 
@@ -396,10 +401,9 @@ func _physics_process(dt: float) -> void:
 		var motion := Input.get_vector("left", "right", "forward", "back") if not menu.visible else Vector2.ZERO
 		var buttons := 0
 		if not menu.visible:
-			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (4 if Input.is_action_pressed("ability3") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0) | (Fighter.GUARD_BIT if Input.is_action_pressed("ability1") else 0)
+			buttons = (1 if Input.is_action_pressed("fire") else 0) | (2 if Input.is_action_pressed("alt") else 0) | (8 if Input.is_action_pressed("slide") else 0) | (16 if Input.is_action_pressed("jump") else 0)
 		p.movement = motion
 		p.held = buttons
-		limit_guard_turn(p, dt)
 		if authoritative:
 			p.edges |= input_edges
 		else:
@@ -441,8 +445,8 @@ func _physics_process(dt: float) -> void:
 				if player.heal_left > 0:
 					var step := minf(player.heal_left, PACK_REGEN / PACK_REGEN_TIME * dt)
 					player.heal_left -= step
-					player.hp = minf(player.spec.health, player.hp + step)
-					if player.hp >= player.spec.health:
+					player.hp = minf(Fighter.MAX_HEALTH, player.hp + step)
+					if player.hp >= Fighter.MAX_HEALTH:
 						player.heal_left = 0
 			player.edges = 0
 		if match_state.winner == -2:
@@ -467,16 +471,6 @@ func out_of_bounds(pos: Vector3) -> bool:
 	var b := CivicDividend.bounds
 	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling
 
-# Guarding slows Reave's turn rate. The owner clamps the yaw it submits and the server clamps what it accepts, so
-# prediction and authority agree; both sides allow the same rate.
-var guard_yaw := 0.0
-
-func limit_guard_turn(p: Fighter, dt: float) -> void:
-	if p.is_guarding():
-		var step := clampf(wrapf(p.yaw - guard_yaw, -PI, PI), -Fighter.GUARD_TURN_RATE * dt, Fighter.GUARD_TURN_RATE * dt)
-		p.yaw = wrapf(guard_yaw + step, -PI, PI)
-	guard_yaw = p.yaw
-
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
 		submit_input.rpc_id(1, motion, aim_yaw, aim_pitch, buttons, shoulder_value)
@@ -498,15 +492,9 @@ func submit_input(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: in
 		return
 	var p: Fighter = fighters[id]
 	p.movement = motion.limit_length(1.0)
-	var now := Time.get_ticks_msec()
-	var wanted_yaw := wrapf(aim_yaw, -PI, PI)
-	if p.is_guarding():
-		var elapsed := clampf((now - request_times.get(id, now)) / 1000.0, 0.0, 0.1)
-		var allowed := Fighter.GUARD_TURN_RATE * 1.6 * elapsed
-		wanted_yaw = wrapf(p.yaw + clampf(wrapf(wanted_yaw - p.yaw, -PI, PI), -allowed, allowed), -PI, PI)
-	p.yaw = wanted_yaw
+	p.yaw = wrapf(aim_yaw, -PI, PI)
 	p.pitch = clampf(aim_pitch, -1.25, 1.2)
-	p.held = buttons & 31
+	p.held = buttons & HELD_BITS
 	p.shoulder = 1.0 if shoulder_value >= 0 else -1.0
 	request_times[id] = Time.get_ticks_msec()
 
@@ -516,7 +504,7 @@ func submit_actions(pressed: int) -> void:
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if fighters.has(id):
-		fighters[id].edges |= pressed & 127
+		fighters[id].edges |= pressed & EDGE_ALL
 
 func packed_world() -> Dictionary:
 	var players: Array = []
@@ -564,7 +552,7 @@ func apply_world(data: Dictionary) -> void:
 	for state in data.players:
 		seen.append(state.id)
 		if not fighters.has(state.id):
-			spawn_fighter(state.id, state.team, state["class"], state.bot, state.get("w", 0))
+			spawn_fighter(state.id, state.team, state["lo"], state.bot)
 		fighters[state.id].unpack(state, state.id == local_id)
 		if state.id == local_id:
 			fighters[state.id].camera.current = true
@@ -597,7 +585,6 @@ func ray(from: Vector3, to: Vector3, exclude: Array = [], mask: int = 15) -> Dic
 
 func respawn(p: Fighter) -> void:
 	remove_owned(p.fighter_id)
-	p.double_id = -1
 	p.bot_path.clear()
 	p.bot_bias.clear()
 	p.bot_role_until = 0.0
@@ -605,7 +592,7 @@ func respawn(p: Fighter) -> void:
 	p.bot_roam_node = -1
 	p.bot_item = -1
 	p.bot_think = rng.randf_range(0.0, 0.5)
-	p.change_class(p.class_id)
+	p.apply_loadout(p.loadout)
 	p.global_position = spawn_position(p)
 	p.velocity = Vector3.ZERO
 	p.idle_weapon = 2
@@ -629,20 +616,19 @@ func _toggle_cheat(keycode: int) -> void:
 		KEY_F9:
 			var p := local_player()
 			if p != null and p.hp > 0:
-				p.hp = p.spec.health
+				p.hp = Fighter.MAX_HEALTH
 				announce("Test: full heal.")
 
 func combat_tick(p: Fighter, dt: float) -> void:
-	if p.fighter_id == local_id:
-		if cheat_no_cooldowns:
-			p.cooldowns.assign([0.0, 0.0, 0.0])
-			p.dash_cd = 0.0
-			p.air_dash = true
-			p.slide_cd = 0.0
-			p.ult_cd = 0.0
-	for i in range(3):
-		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
-	p.ult_cd = maxf(0.0, p.ult_cd - dt)
+	if p.fighter_id == local_id and cheat_no_cooldowns:
+		p.utility_cd = 0.0
+		p.melee_cd = 0.0
+		p.dash_cd = 0.0
+		p.air_dash = true
+		p.slide_cd = 0.0
+	p.utility_cd = maxf(0.0, p.utility_cd - dt)
+	p.melee_cd = maxf(0.0, p.melee_cd - dt)
+	p.swap_timer = maxf(0.0, p.swap_timer - dt)
 	if p.power != 0:
 		p.power_time = maxf(0.0, p.power_time - dt)
 		if p.power_time <= 0.0:
@@ -653,95 +639,55 @@ func combat_tick(p: Fighter, dt: float) -> void:
 		p.damagers[attacker] += dt
 		if p.damagers[attacker] > ASSIST_WINDOW:
 			p.damagers.erase(attacker)
-	if p.burn > 0.0:
-		p.burn = maxf(0.0, p.burn - dt)
-		damage_fighter(p, Fighter.BURN_DPS * dt, p.burn_source, Vector3.INF, false)
-		if p.hp <= 0:
-			return
-	if p.stun > 0.0:
-		p.stun = maxf(0.0, p.stun - dt)
-		p.held = 0
-		p.edges = 0
-	if p.class_id == Fighter.REAVE_ID:
-		reave_tick(p, dt)
 	p.shot_timer = maxf(0, p.shot_timer - dt)
-	p.alt_timer = maxf(0, p.alt_timer - dt)
 	p.conceal = maxf(0, p.conceal - dt)
 	p.reveal = maxf(0, p.reveal - dt)
-	p.melee_buff = maxf(0, p.melee_buff - dt)
-	p.gun_buff = maxf(0, p.gun_buff - dt)
+	if p.edges & EDGE_SWAP:
+		p.swap_weapon()
+		play_sfx(p.global_position, Sfx.Kind.SWAP)
 	var w := p.weapon
-	if p.edges & 4 and p.ammo < w.magazine and p.reload_timer <= 0:
-		p.reload_timer = w.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+	if p.edges & EDGE_RELOAD and p.ammo < w.magazine and p.reload_timer <= 0 and p.swap_timer <= 0:
+		p.reload_timer = w.reload_time
 	if p.reload_timer > 0:
 		p.reload_timer -= dt
 		if p.reload_timer <= 0:
 			p.ammo = w.magazine
-	if p.class_id == Fighter.REAVE_ID:
-		if p.edges & 16:
-			activate(p, 0)  # Breach lives on E; Q is the held guard
-	else:
-		for i in range(3):
-			if p.edges & (8 << i):
-				activate(p, i)
-	if p.edges & 64:
-		activate_ultimate(p)
-	if p.class_id == 2:
-		p.spin = move_toward(p.spin, 1.0 if p.held & 1 else 0.0, dt / (0.25 if p.melee_buff > 0 else 0.6))
-	if p.held & 2:
-		p.conceal = 0
-		if p.class_id == 0:
-			p.charge += dt
-			if p.charge >= 0.9 and p.shot_timer <= 0.00001 and p.ammo >= 3 and p.reload_timer <= 0:
-				p.ammo -= 3
-				p.shot_timer = 0.9
-				p.charge = 0
-				fire_ray(p, 60, false, true)
-		elif p.class_id == 1 and p.alt_timer <= 0:
-			p.alt_timer = 0.35
-			var hit := ray(p.muzzle(), p.aim_point(), [p.get_rid()])
-			if not hit.is_empty() and hit.collider is Deployable and hit.collider.team == p.team:
-				hit.collider.hp = minf(hit.collider.max_hp, hit.collider.hp + 30)
-			show_trace(p.muzzle(), hit.position if not hit.is_empty() else p.aim_point(), team_color(p.team), Vfx.Style.REPAIR)
-		elif p.class_id == 2 and p.alt_timer <= 0:
-			p.alt_timer = 0.65 if p.gun_buff > 0 else 0.9
-			if cone_attack(p, 3.0, 75, 0.35, 3.0) > 0:
-				p.melee_buff = 2.0
-			show_trace(p.muzzle(), p.muzzle() + p.horizontal_direction() * 3, Color.WHITE, Vfx.Style.SWOOSH)
-	else:
-		p.charge = 0
-	# Bursts finish their committed three-shot sequence even if fire is released.
+	if p.edges & EDGE_UTILITY:
+		use_utility(p)
+	if p.edges & EDGE_MELEE:
+		use_melee(p)
+	# The gun in hand fires once a swap has finished, no melee is recovering and no reload is running.
+	var ready := p.swap_timer <= 0.0 and p.melee_cd <= 0.0 and p.reload_timer <= 0
+	# Bursts finish their committed sequence even if fire is released.
 	if p.burst_left > 0:
 		p.burst_timer -= dt
-		if p.burst_timer <= 0.00001 and p.ammo > 0 and p.reload_timer <= 0:
+		if p.burst_timer <= 0.00001 and p.ammo > 0 and ready:
 			p.burst_left -= 1
 			p.burst_timer += w.burst_gap
 			p.ammo -= 1
 			p.conceal = 0
 			p.idle_weapon = 0
-			fire_ray(p, w.damage, false)
-	elif p.held & 1 and not (p.held & 2 and p.class_id != Fighter.REAVE_ID) and not p.is_guarding() and p.shot_timer <= 0.00001 and p.reload_timer <= 0 and (p.class_id != 2 or p.weapon_id != 0 or p.spin >= 0.99):
+			fire_ray(p, w.damage)
+	elif p.held & 1 and ready and p.shot_timer <= 0.00001:
 		if p.ammo <= 0:
-			p.reload_timer = w.reload_time * (0.8 if p.hot_lap > 0 else 1.0)
+			p.reload_timer = w.reload_time
 		else:
 			p.conceal = 0
 			p.ammo -= 1
 			p.shot_timer = w.interval
 			p.burst_left = w.burst - 1
 			p.burst_timer = w.burst_gap
-			fire_ray(p, w.damage, p.class_id == 3 and p.weapon_id == 0)
-	if p.rush_time > 0:
-		for target in fighters.values():
-			if target.team != p.team and target.hp > 0 and not p.rush_hit.has(target.fighter_id) and target.global_position.distance_to(p.global_position) < 1.8:
-				p.rush_hit.append(target.fighter_id)
-				damage_fighter(target, 35, p.fighter_id)
+			fire_ray(p, w.damage)
 	p.update_visual()
 
-# Shared-weapon effects, keyed by weapon id (0 = Signature, which uses the class's own cue and tracer).
+# Shot sound and tracer per gun, keyed by WeaponSpec.title.
 const WEAPON_FX := {
-	1: [Sfx.Kind.SHOT_BREACHER, Vfx.Style.PELLET],
-	2: [Sfx.Kind.SHOT_LONGSHOT, Vfx.Style.RIFLE],
-	3: [Sfx.Kind.SHOT_CHATTERBOX, Vfx.Style.SMG],
+	"Shotgun": [Sfx.Kind.SHOT_SHOTGUN, Vfx.Style.PELLET],
+	"Rifle": [Sfx.Kind.SHOT_RIFLE, Vfx.Style.RIFLE],
+	"SMG": [Sfx.Kind.SHOT_SMG, Vfx.Style.SMG],
+	"Pistol": [Sfx.Kind.SHOT_PISTOL, Vfx.Style.PISTOL],
+	"Burst Pistol": [Sfx.Kind.SHOT_BURST_PISTOL, Vfx.Style.PISTOL],
+	"Revolver": [Sfx.Kind.SHOT_REVOLVER, Vfx.Style.REVOLVER],
 }
 const MAX_PELLET_TRACES := 4  # a shotgun blast draws a few tracers, not nine
 
@@ -756,64 +702,31 @@ func spread_direction(toward: Vector3, deg: float) -> Vector3:
 	var radius := tan(deg_to_rad(deg)) * sqrt(rng.randf())
 	return (toward + (side * cos(angle) + up * sin(angle)) * radius).normalized()
 
-# `alt` marks the Skyrunner's charged shot: class-owned, so it ignores the equipped weapon.
-func fire_ray(p: Fighter, amount: float, ricochet: bool, alt: bool = false) -> void:
+func fire_ray(p: Fighter, amount: float) -> void:
 	var w := p.weapon
-	var signature := alt or p.weapon_id == 0
-	var cue: int
-	var style: int
-	if signature:
-		cue = [Sfx.Kind.SHOT_SKYRUNNER, Sfx.Kind.SHOT_ENGINEER, Sfx.Kind.SHOT_ENFORCER, Sfx.Kind.SHOT_MIRAGE, Sfx.Kind.SHOT_BREACHER][p.class_id]
-		style = [Vfx.Style.SKYRUNNER, Vfx.Style.ARC, Vfx.Style.ENFORCER, Vfx.Style.MIRAGE, Vfx.Style.PELLET][p.class_id]
-		if alt:
-			cue = Sfx.Kind.SHOT_CHARGED
-			style = Vfx.Style.CHARGED
-	else:
-		cue = WEAPON_FX[p.weapon_id][0]
-		style = WEAPON_FX[p.weapon_id][1]
-	play_sfx(p.global_position, cue)
-	var reach: float = p.spec.reach if alt else w.reach
-	var pellets := 1 if alt else w.pellets
-	var spread := 0.0 if alt else w.spread_deg
+	var fx: Array = WEAPON_FX.get(w.title, [Sfx.Kind.SHOT_PISTOL, Vfx.Style.LINE])
+	play_sfx(p.global_position, fx[0])
 	var from := p.muzzle()
 	var toward := (p.aim_point() - from).normalized()
-	if p.class_id == 1 and signature:
-		var best: Fighter = null
-		var best_dot := cos(deg_to_rad(10.0))
-		for target in fighters.values():
-			if target.team == p.team or target.hp <= 0:
-				continue
-			var diff: Vector3 = target.global_position + Vector3.UP - from
-			if diff.length() <= reach and toward.dot(diff.normalized()) > best_dot:
-				var sight := ray(from, target.global_position + Vector3.UP, [p.get_rid()])
-				if not sight.is_empty() and sight.collider == target:
-					best = target
-					best_dot = toward.dot(diff.normalized())
-		if best != null:
-			toward = (best.global_position + Vector3.UP - from).normalized()
 	var landed := {}  # enemy Fighter -> [damage, headshot], applied once per shot so a blast is one hit
-	var any_hit := false
-	for i in range(pellets):
-		var dir := toward if i == 0 and pellets > 1 else spread_direction(toward, spread)
-		var hit := ray(from, from + dir * reach, [p.get_rid()])
-		var end: Vector3 = from + dir * reach if hit.is_empty() else hit.position
+	for i in range(w.pellets):
+		var dir := toward if i == 0 and w.pellets > 1 else spread_direction(toward, w.spread_deg)
+		var hit := ray(from, from + dir * w.reach, [p.get_rid()])
+		var end: Vector3 = from + dir * w.reach if hit.is_empty() else hit.position
 		if i < MAX_PELLET_TRACES:
-			show_trace(from, end, team_color(p.team), style, not hit.is_empty())
+			show_trace(from, end, team_color(p.team), fx[1], not hit.is_empty())
 		if hit.is_empty():
 			continue
-		any_hit = true
-		var dmg := amount * (1.0 if alt else w.falloff_at(from.distance_to(hit.position)))
+		var dmg := amount * w.falloff_at(from.distance_to(hit.position))
 		var object = hit.collider
 		if object is Fighter and object.team != p.team:
-			var headshot: bool = hit.position.y - object.global_position.y > 1.55
-			var mult: float = 1.35 if alt else w.headshot_mult
-			headshot = headshot and mult > 1.0
+			var headshot: bool = hit.position.y - object.global_position.y > 1.55 and w.headshot_mult > 1.0
 			var entry: Array = landed.get(object, [0.0, false])
-			landed[object] = [entry[0] + dmg * (mult if headshot else 1.0), entry[1] or headshot]
+			landed[object] = [entry[0] + dmg * (w.headshot_mult if headshot else 1.0), entry[1] or headshot]
 		elif object is Fighter or object is Deployable:
 			apply_hit(p, hit, dmg)
-		elif ricochet:
-			var remaining := reach - from.distance_to(hit.position)
+		elif w.ricochet:
+			var remaining := w.reach - from.distance_to(hit.position)
 			var bounce := dir.bounce(hit.normal)
 			var start: Vector3 = hit.position + hit.normal * 0.04
 			var second := ray(start, start + bounce * remaining, [p.get_rid()])
@@ -822,20 +735,9 @@ func fire_ray(p: Fighter, amount: float, ricochet: bool, alt: bool = false) -> v
 				apply_hit(p, second, dmg)
 	for target in landed:
 		hit_fighter(p, target, landed[target][0], landed[target][1])
-	if not any_hit:
-		p.consecutive_hits = 0
-		return
-	# Double echoes are visual only, never a second damage ray.
-	if entities.has(p.double_id):
-		var e: Deployable = entities[p.double_id]
-		show_trace(e.global_position + Vector3.UP * 1.3, e.global_position + Vector3.UP * 1.3 + toward * 8, team_color(p.team).darkened(0.3))
-		play_sfx(e.global_position, cue)
 
-func hit_fighter(p: Fighter, target: Fighter, amount: float, headshot: bool) -> void:
-	damage_fighter(target, amount, p.fighter_id)
-	p.consecutive_hits += 1
-	if p.class_id == 2 and p.consecutive_hits >= 5:
-		p.gun_buff = 2.0
+func hit_fighter(p: Fighter, target: Fighter, amount: float, headshot: bool, cause: String = "") -> void:
+	damage_fighter(target, amount, p.fighter_id, Vector3.INF, cause)
 	hit_feedback(p.fighter_id, 2 if target.hp <= 0 else (1 if headshot else 0))
 
 func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
@@ -847,12 +749,10 @@ func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 		object.hp -= amount
 		object.last_damage = object.age
 		hit_feedback(p.fighter_id)
-	else:
-		p.consecutive_hits = 0
 
-# Returns true when the damage reached the target's health; an enemy Reave's guard can absorb it instead.
-# `origin` is where the hit struck from (defaults to the attacker), which decides whether a guard covers it.
-func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, blockable: bool = true) -> bool:
+# Returns true when the damage reached the target. `cause` names what dealt it in the kill feed (a utility or melee);
+# empty means the attacker's gun in hand.
+func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, cause: String = "") -> bool:
 	if target.hp <= 0 or not authoritative:
 		return false
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
@@ -863,13 +763,6 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 	var source: Fighter = fighters.get(attacker)
 	if source != null and source != target and source.power == Items.POWER_QUAD:
 		amount *= Items.QUAD_MULTIPLIER
-	if blockable and attacker >= 0:
-		var struck_from := origin
-		if struck_from == Vector3.INF and source != null:
-			struck_from = source.global_position + Vector3.UP * 1.2
-		if struck_from != Vector3.INF and target.guard_blocks(struck_from):
-			absorb_hit(target, amount, source)
-			return false
 	if cheat_invulnerable and target.fighter_id == local_id:
 		return false
 	var soaked := minf(target.armor, amount)
@@ -880,23 +773,21 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.heal_left = 0
 		target.damagers[attacker] = 0.0
 	if source != null and not target.bot:
+		var from_pos := source.global_position if origin == Vector3.INF else origin
 		if target.fighter_id == local_id:
-			hud.damaged(source.global_position)
+			hud.damaged(from_pos)
 		else:
-			damage_taken.rpc_id(target.fighter_id, source.global_position)
+			damage_taken.rpc_id(target.fighter_id, from_pos)
 	if target.hp <= 0:
 		target.deaths += 1
 		target.dead_time = 5.0
 		target.velocity = Vector3.ZERO
 		target.grapple_time = 0
 		target.conceal = 0
-		target.burn = 0
-		target.stun = 0
 		target.armor = 0.0
 		target.power = 0
 		target.power_time = 0.0
 		remove_owned(target.fighter_id)
-		target.double_id = -1
 		target.update_visual()
 		if source != null:
 			source.kills += 1
@@ -907,10 +798,11 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 					notice_all("%s %s · %d kills on %s" % [HELIX_MONARCH[source.team], streak, source.power_kills, Items.POWER_NAMES[source.power]])
 			if source.team != target.team:
 				drop_armor(target.global_position, source.team)
-			kill_feed(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
+			var killer_label := "%s · %s" % [source.callsign(), cause if cause != "" else source.weapon.title]
+			kill_feed(killer_label, source.team, target.callsign(), target.team)
 			if multiplayer.get_peers().size() > 0:
-				kill_feed.rpc(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
-			var line: String = source.spec.quips[rng.randi_range(0, source.spec.quips.size() - 1)]
+				kill_feed.rpc(killer_label, source.team, target.callsign(), target.team)
+			var line: String = Loadout.QUIPS[rng.randi_range(0, Loadout.QUIPS.size() - 1)]
 			if attacker == local_id:
 				character_quip(line)
 			elif not source.bot:
@@ -918,29 +810,9 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.damagers.clear()
 	return true
 
-# A guarded hit becomes Charge on the blade and costs stamina; an emptied stamina bar breaks the guard.
-func absorb_hit(target: Fighter, amount: float, source: Fighter) -> void:
-	var weight := 1.5 if amount >= 40.0 else (0.5 if amount < 10.0 else 1.0)  # big hits charge faster, chip barely counts
-	target.blade_charge = minf(Fighter.CHARGE_MAX, target.blade_charge + amount * weight)
-	target.guard_stamina = maxf(0.0, target.guard_stamina - amount * Fighter.GUARD_ABSORB_COST)
-	play_sfx(target.global_position, Sfx.Kind.IMPACT)
-	show_ring(target.global_position + target.horizontal_direction() * 0.8 + Vector3.UP * 1.1, 0.6, Color("ffb070"))
-	if source != null:
-		hit_feedback(source.fighter_id)
-	if target.guard_stamina <= 0.0:
-		break_guard(target)
-
-func break_guard(target: Fighter) -> void:
-	target.guard_stamina = 0.0
-	target.blade_charge = 0.0
-	target.stun = Fighter.GUARD_BREAK_STUN
-	target.guard_regen_wait = Fighter.GUARD_BREAK_STUN + Fighter.GUARD_REGEN_DELAY
-	target.guarding = false
-	target.guard_hold = 0.0
-	show_ring(target.global_position + Vector3.UP, 1.6, Color("ff4a2a"))
-	play_sfx(target.global_position, Sfx.Kind.BREACH)
-
-func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push: float) -> int:
+# Melee and close blasts: every visible enemy within `reach` whose direction is inside the `dot_limit` arc ahead.
+# `backstab` multiplies damage on a target facing away (Loadout.BACKSTAB_DOT). Returns the number of fighters hit.
+func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push: float, backstab: float = 1.0, cause: String = "") -> int:
 	var hits := 0
 	for target in fighters.values():
 		var diff: Vector3 = target.global_position - p.global_position
@@ -949,196 +821,84 @@ func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push
 		var sight := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
 		if sight.is_empty() or sight.collider != target:
 			continue
-		damage_fighter(target, amount, p.fighter_id)
-		var reduction := 0.5 if target.class_id == 2 and target.spin > 0.8 and target.horizontal_direction().dot(-diff.normalized()) > 0.5 else 1.0
-		target.velocity += diff.normalized() * push * reduction
+		var flat := Vector3(diff.x, 0.0, diff.z)
+		var behind: bool = flat.length() > 0.05 and target.horizontal_direction().dot(flat.normalized()) > Loadout.BACKSTAB_DOT
+		hit_fighter(p, target, amount * (backstab if behind else 1.0), behind and backstab > 1.0, cause)
+		target.velocity += diff.normalized() * push
 		hits += 1
 	return hits
 
-func activate(p: Fighter, slot: int) -> void:
-	if p.hp <= 0 or p.stun > 0.0 or slot >= p.spec.abilities.size():
+# Q: the loadout's utility. A failed use (nothing to grapple, no ground to place on) costs no cooldown.
+func use_utility(p: Fighter) -> void:
+	if p.hp <= 0:
 		return
-	if p.class_id == 0 and slot == 0 and p.grapple_time > 0:
+	var kind := p.utility()
+	if kind == Loadout.Utility.GRAPPLE and p.grapple_time > 0:
 		p.grapple_time = 0
 		p.hot_lap = 2
 		return
-	if p.class_id == 3 and slot == 0 and entities.has(p.double_id):
-		var double: Deployable = entities[p.double_id]
-		if not double.used and double.hp > 0 and p.global_position.distance_to(double.global_position) <= 25 and clear_body(p, double.global_position) and clear_double(double, p.global_position):
-			var old := p.global_position
-			show_trace(old + Vector3.UP, double.global_position + Vector3.UP, Color("d9b8ff"))
-			p.global_position = double.global_position
-			double.global_position = old
-			double.used = true
-			p.ammo = mini(p.weapon.magazine, p.ammo + 1)
-			p.idle_weapon = 1.25
-			play_sfx(old, Sfx.Kind.SWAP)
-			play_sfx(p.global_position, Sfx.Kind.SWAP)
-		return
-	if p.cooldowns[slot] > 0:
+	if p.utility_cd > 0:
 		return
 	var success := true
-	match p.class_id:
-		0:
-			match slot:
-				0:
-					if p.grapple_time > 0:
-						p.grapple_time = 0
-						p.hot_lap = 2
-					else:
-						var hit := ray(p.muzzle(), p.muzzle() + p.direction() * 28, [p.get_rid()], 1 | 4)
-						if hit.is_empty():
-							success = false
-						else:
-							p.grapple = hit.position
-							play_sfx(p.global_position, Sfx.Kind.GRAPPLE)
-							p.grapple_time = 2.5
-							p.hot_lap = 2
-				1:
-					p.velocity += Vector3.UP * 12.5 + p.horizontal_direction() * 3
-					show_ring(p.global_position, 1.6, team_color(p.team))
-					play_sfx(p.global_position, Sfx.Kind.KICKOFF)
-				2:
-					p.brake_time = 2
-					show_ring(p.global_position + Vector3.UP * 0.6, 1.2, Color("ffe2a3"))
-					play_sfx(p.global_position, Sfx.Kind.BRAKE)
-		1:
-			match slot:
-				0, 1:
-					var place := placement(p, 8.0)
-					if place == Vector3.INF:
-						success = false
-					else:
-						var kind := "turret" if slot == 0 else "pad"
-						for e in entities.values():
-							if e.owner_id == p.fighter_id and e.kind == kind:
-								remove_entity(e.entity_id)
-						create_entity(p, kind, place, 100 if slot == 0 else 80, 90)
-				2:
-					var nearest: Deployable = null
-					for e in entities.values():
-						if e.owner_id == p.fighter_id and e.kind in ["turret", "pad"] and (nearest == null or p.global_position.distance_to(e.global_position) < p.global_position.distance_to(nearest.global_position)):
-							nearest = e
-					if nearest == null:
-						success = false
-					else:
-						var refund_slot := 0 if nearest.kind == "turret" else 1
-						p.cooldowns[refund_slot] = maxf(0, p.cooldowns[refund_slot] - p.spec.cooldowns[refund_slot] * 0.5)
-						remove_entity(nearest.entity_id)
-		2:
-			match slot:
-				0:
-					p.rush_time = 0.5
-					show_ring(p.global_position, 1.8, Color("ff8a4c"))
-					play_sfx(p.global_position, Sfx.Kind.BREACH)
-					show_trace(p.global_position + Vector3.UP * 0.8, p.global_position + Vector3.UP * 0.8 + p.horizontal_direction() * 8, Color("ffd9a0"), Vfx.Style.SWOOSH)
-
-					p.rush_hit.clear()
-				1:
-					var place := placement(p, 4)
-					if place == Vector3.INF:
-						success = false
-					else:
-						create_entity(p, "cover", place, 180, 8)
-				2:
-					cone_attack(p, 5, 30, 0.4, 9)
-					show_ring(p.global_position, 5.0, team_color(p.team))
-					show_trace(p.global_position + Vector3.UP * 0.6, p.global_position + Vector3.UP * 0.6 + p.horizontal_direction() * 5, Color("ffd9a0"), Vfx.Style.SWOOSH)
-					play_sfx(p.global_position, Sfx.Kind.EVICT)
-		4:
-			match slot:
-				0:
-					reave_breach(p)
-		3:
-			match slot:
-				0:
-					var place := placement(p, 15)
-					if place == Vector3.INF or not clear_body(p, place):
-						success = false
-					else:
-						if entities.has(p.double_id):
-							remove_entity(p.double_id)
-						p.double_id = create_entity(p, "double", place, p.spec.health * 0.25, 8)
-				1:
-					p.conceal = 0
-					throw_capsule(p)
-				2:
-					create_entity(p, "smoke", p.global_position, 1, 3)
-					show_ring(p.global_position, 2.5, Color("c7a8f1"))
-					play_sfx(p.global_position, Sfx.Kind.SMOKE)
-					p.conceal = 2.5
+	match kind:
+		Loadout.Utility.GRAPPLE:
+			var hit := ray(p.muzzle(), p.muzzle() + p.direction() * 28, [p.get_rid()], 1 | 4)
+			if hit.is_empty():
+				success = false
+			else:
+				p.grapple = hit.position
+				play_sfx(p.global_position, Sfx.Kind.GRAPPLE)
+				p.grapple_time = 2.5
+				p.hot_lap = 2
+		Loadout.Utility.FRAG_GRENADE:
+			p.conceal = 0
+			throw_grenade(p)
+		Loadout.Utility.SMOKE_GRENADE:
+			create_entity(p, "smoke", p.global_position, 1, 3)
+			show_ring(p.global_position, 2.5, Color("c7a8f1"))
+			play_sfx(p.global_position, Sfx.Kind.SMOKE)
+			p.conceal = 2.5
+		Loadout.Utility.LAUNCH_PAD, Loadout.Utility.SENTRY_TURRET:
+			var place := placement(p, 8.0)
+			if place == Vector3.INF:
+				success = false
+			else:
+				var entity_kind := "turret" if kind == Loadout.Utility.SENTRY_TURRET else "pad"
+				for e in entities.values():
+					if e.owner_id == p.fighter_id and e.kind == entity_kind:
+						remove_entity(e.entity_id)
+				create_entity(p, entity_kind, place, 100 if entity_kind == "turret" else 80, 90)
+		Loadout.Utility.BARRICADE:
+			var place := placement(p, 4)
+			if place == Vector3.INF:
+				success = false
+			else:
+				create_entity(p, "cover", place, 180, 8)
+		Loadout.Utility.BREACH_CHARGE:
+			breach_charge(p)
 	if success:
-		p.cooldowns[slot] = p.spec.cooldowns[slot]
+		p.utility_cd = Loadout.UTILITIES[kind].cooldown
 		if p.fighter_id == local_id:
-			announce(p.spec.abilities[slot])
+			announce(Loadout.UTILITIES[kind].name)
 
-# Ultimates run on a per-hero cooldown (ClassSpec.ultimate_cooldown).
-func activate_ultimate(p: Fighter) -> void:
-	if p.hp <= 0 or p.stun > 0.0 or p.spec.ultimate == "":
+# F: the loadout's melee. Recovery also holds the gun, and a swing cancels a burst in progress.
+func use_melee(p: Fighter) -> void:
+	if p.hp <= 0 or p.melee_cd > 0.0:
 		return
-	if p.ult_cd > 0.0:
-		if p.fighter_id == local_id:
-			announce("%s ready in %d s." % [p.spec.ultimate, int(ceil(p.ult_cd))])
-		return
-	match p.class_id:
-		Fighter.REAVE_ID:
-			var blade := preload("res://scripts/pyre_edge.gd").new()
-			blade.configure(self, p)
-			add_child(blade)
-			blade.global_position = p.muzzle()
-			show_ring(p.global_position + Vector3.UP, 2.2, Color("ff7a3a"))
-			play_sfx(p.global_position, Sfx.Kind.EVICT)
-		_:
-			return
-	p.ult_cd = p.spec.ultimate_cooldown
+	var m: Dictionary = Loadout.MELEES[p.melee()]
+	p.melee_cd = m.recovery
+	p.burst_left = 0
+	p.conceal = 0
 	p.idle_weapon = 0.0
-	if p.fighter_id == local_id:
-		announce(p.spec.ultimate)
-
-# Reave's per-tick state: guard stamina, the guard hold timer, and Slash on release.
-func reave_tick(p: Fighter, dt: float) -> void:
-	p.guarding = p.is_guarding()
-	if p.guarding:
-		p.guard_hold += dt
-		p.guard_regen_wait = Fighter.GUARD_REGEN_DELAY
-		p.guard_stamina = maxf(0.0, p.guard_stamina - Fighter.GUARD_DRAIN * dt)
-		p.conceal = 0
-		if p.guard_stamina <= 0.0:
-			break_guard(p)
-	else:
-		p.guard_regen_wait = maxf(0.0, p.guard_regen_wait - dt)
-		if p.guard_regen_wait <= 0.0 and not p.held & Fighter.GUARD_BIT:
-			p.guard_stamina = minf(Fighter.GUARD_STAMINA_MAX, p.guard_stamina + Fighter.GUARD_REGEN * dt)
-	var released: bool = (p.prev_held & Fighter.GUARD_BIT) != 0 and (p.held & Fighter.GUARD_BIT) == 0
-	if released and p.stun <= 0.0 and p.alt_timer <= 0.0 and p.hp > 0:
-		reave_slash(p, p.guard_hold >= REAVE_CASH_IN_HOLD and p.blade_charge > 0.0)
-	if not p.held & Fighter.GUARD_BIT:
-		p.guard_hold = 0.0
-	p.prev_held = p.held
-
-const REAVE_CASH_IN_HOLD := 0.3  # a guard held this long, with Charge stored, releases as the big Slash
-
-# Slash: a half-circle arc. Tap swings small and keeps the Charge; a held guard cashes every point in at once.
-func reave_slash(p: Fighter, big: bool) -> void:
-	var damage := 25.0 + 0.9 * p.blade_charge if big else 25.0
-	var reach := 4.5 if big else 3.0
-	var hits := cone_attack(p, reach, damage, 0.0, 9.0 if big else 4.0)
-	show_ring(p.global_position + p.horizontal_direction() * 1.2, reach * 0.6, Color("ff7a3a") if big else Color.WHITE)
-	show_trace(p.global_position + Vector3.UP * 1.1, p.global_position + Vector3.UP * 1.1 + p.horizontal_direction() * reach, Color("ffb070"), Vfx.Style.SWOOSH)
-	play_sfx(p.global_position, Sfx.Kind.EVICT)
-	p.alt_timer = 0.9 if big else 0.6
-	p.shot_timer = maxf(p.shot_timer, p.alt_timer)
-	p.idle_weapon = 0.0
-	if big or hits > 0:
+	var hits := cone_attack(p, m.reach, m.damage, m.arc, m.push, m.backstab, m.name)
+	show_trace(p.global_position + Vector3.UP * 1.1, p.global_position + Vector3.UP * 1.1 + p.horizontal_direction() * m.reach, Color("ffd9a0"), Vfx.Style.SWOOSH)
+	play_sfx(p.global_position, Sfx.Kind.MELEE)
+	if hits > 0 and p.melee() == Loadout.Melee.SWORD:
 		p.ammo = p.weapon.magazine
 		p.reload_timer = 0.0
-		p.burst_left = 0
-	if big:
-		p.blade_charge = 0.0
-	p.guard_hold = 0.0
 
-# Breach: a close blast that launches enemies, breaks guards and spin-ups, and wrecks deployables.
-func reave_breach(p: Fighter) -> void:
+# Breach Charge: a close blast that launches enemies and wrecks deployables.
+func breach_charge(p: Fighter) -> void:
 	var forward := p.horizontal_direction()
 	for target in fighters.values():
 		var diff: Vector3 = target.global_position - p.global_position
@@ -1147,14 +907,11 @@ func reave_breach(p: Fighter) -> void:
 		var sight := ray(p.muzzle(), target.global_position + Vector3.UP, [p.get_rid()])
 		if sight.is_empty() or sight.collider != target:
 			continue
-		if target.is_guarding():
-			break_guard(target)
-		target.spin = 0.0
-		damage_fighter(target, 20.0, p.fighter_id)
+		hit_fighter(p, target, 20.0, false, "Breach Charge")
 		target.velocity += diff.normalized() * 14.0 + Vector3.UP * 4.0
 	for e in entities.values():
 		var diff: Vector3 = e.global_position - p.global_position
-		if e.team != p.team and e.kind in ["cover", "turret", "pad", "double"] and diff.length() <= 5.0 and forward.dot(diff.normalized()) >= 0.5:
+		if e.team != p.team and e.kind in ["cover", "turret", "pad"] and diff.length() <= 5.0 and forward.dot(diff.normalized()) >= 0.5:
 			e.hp -= 60.0
 			e.last_damage = e.age
 	show_ring(p.global_position + forward * 1.5, 3.0, Color("ff7a3a"))
@@ -1181,19 +938,7 @@ func clear_body(p: Fighter, pos: Vector3) -> bool:
 	query.transform = Transform3D(Basis.IDENTITY, pos + Vector3.UP * 0.97)
 	query.collision_mask = 1 | 2 | 4 | 8
 	var exclusions: Array[RID] = [p.get_rid()]
-	if entities.has(p.double_id):
-		exclusions.append(entities[p.double_id].get_rid())
 	query.exclude = exclusions
-	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
-
-func clear_double(e: Deployable, pos: Vector3) -> bool:
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(0.7, 1.7, 0.55)
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = shape
-	query.transform = Transform3D(Basis(Vector3.UP, e.rotation.y), pos + Vector3.UP * 0.9)
-	query.collision_mask = 1 | 2 | 4
-	query.exclude = [e.get_rid(), fighters[e.owner_id].get_rid()]
 	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 func create_entity(p: Fighter, kind: String, pos: Vector3, hp_value: float, life: float) -> int:
@@ -1237,8 +982,6 @@ func spawn_pickups() -> void:
 func remove_entity(id: int) -> void:
 	if entities.has(id):
 		var e: Deployable = entities[id]
-		if e.kind == "double" and fighters.has(e.owner_id) and fighters[e.owner_id].double_id == id:
-			fighters[e.owner_id].double_id = -1
 		e.collision_layer = 0
 		e.queue_free()
 		entities.erase(id)
@@ -1264,16 +1007,14 @@ func entities_tick(dt: float) -> void:
 		var owner: Fighter = fighters.get(e.owner_id)
 		if e.kind in ["turret", "pad"] and owner != null and owner.hp > 0 and owner.global_position.distance_to(e.global_position) < 12 and e.age - e.last_damage > 4:
 			e.hp = minf(e.max_hp, e.hp + 8 * dt)
-		if e.kind == "double" and owner != null:
-			e.rotation.y = owner.yaw
 		if e.kind == "healpack":
 			if e.used and e.timer <= 0:
 				e.used = false
 				e.update_visual()
 			elif not e.used:
 				for p in fighters.values():
-					if p.hp > 0 and p.hp < p.spec.health and p.global_position.distance_to(e.global_position) < PACK_RADIUS:
-						p.hp = minf(p.spec.health, p.hp + PACK_HEAL)
+					if p.hp > 0 and p.hp < Fighter.MAX_HEALTH and p.global_position.distance_to(e.global_position) < PACK_RADIUS:
+						p.hp = minf(Fighter.MAX_HEALTH, p.hp + PACK_HEAL)
 						p.heal_left = PACK_REGEN
 						e.used = true
 						e.timer = PACK_RESPAWN
@@ -1291,7 +1032,7 @@ func entities_tick(dt: float) -> void:
 				e.update_visual()
 			elif not e.used:
 				for p in fighters.values():
-					if p.hp > 0 and Items.can_use(e.kind, p.hp, p.spec.health, p.armor) and (e.kind != "power" or p.power == 0) and p.global_position.distance_to(e.global_position) < Items.RADIUS:
+					if p.hp > 0 and Items.can_use(e.kind, p.hp, Fighter.MAX_HEALTH, p.armor) and (e.kind != "power" or p.power == 0) and p.global_position.distance_to(e.global_position) < Items.RADIUS:
 						Items.apply(e.kind, p)
 						if e.kind == "power":
 							p.power = int(e.hp)
@@ -1332,23 +1073,20 @@ func entities_tick(dt: float) -> void:
 					continue
 				var hit := ray(from, target.global_position + Vector3.UP, [e.get_rid()])
 				if not hit.is_empty() and hit.collider == target:
-					damage_fighter(target, 6, e.owner_id, from)
+					damage_fighter(target, 6, e.owner_id, from, "Sentry Turret")
 					e.timer = 0.3
-					show_trace(from, hit.position, team_color(e.team), Vfx.Style.SKYRUNNER, true)
+					show_trace(from, hit.position, team_color(e.team), Vfx.Style.PISTOL, true)
 					play_sfx(from, Sfx.Kind.TURRET)
 					break
 		e.update_visual()
 	for cue in tick_cues:
 		global_cue(cue)
 
-func throw_capsule(p: Fighter) -> void:
-	var capsule := preload("res://scripts/dead_drop.gd").new()
-	capsule.configure(self, p)
-	add_child(capsule)
-	capsule.global_position = p.muzzle()
-	if entities.has(p.double_id):
-		var e: Deployable = entities[p.double_id]
-		show_trace(e.global_position + Vector3.UP, e.global_position + Vector3.UP + p.direction() * 5, team_color(p.team))
+func throw_grenade(p: Fighter) -> void:
+	var grenade := preload("res://scripts/grenade.gd").new()
+	grenade.configure(self, p)
+	add_child(grenade)
+	grenade.global_position = p.muzzle()
 
 func objectives_tick(dt: float) -> void:
 	var occupancy: Array = []
@@ -1453,7 +1191,7 @@ func update_bot_item(p: Fighter, now: float) -> void:
 	if p.bot_item < 0:
 		return
 	var e: Deployable = entities.get(p.bot_item)
-	if e != null and not e.used and now < p.bot_item_until and Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
+	if e != null and not e.used and now < p.bot_item_until and Items.can_use(e.kind, p.hp, Fighter.MAX_HEALTH, p.armor):
 		return
 	p.bot_item = -1
 	p.bot_path.clear()
@@ -1472,12 +1210,12 @@ func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
 			continue
 		if e.kind != "power" and absf(e.global_position.y - p.global_position.y) > 3.0:
 			continue
-		if not Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
+		if not Items.can_use(e.kind, p.hp, Fighter.MAX_HEALTH, p.armor):
 			continue
 		# Bubbles are only worth a detour once hurt; armor once it is meaningfully missing.
 		if e.kind == "power" and p.power != 0:
 			continue
-		if e.kind == "bubble" and p.hp > p.spec.health * 0.75:
+		if e.kind == "bubble" and p.hp > Fighter.MAX_HEALTH * 0.75:
 			continue
 		if e.kind == "armor1" and p.armor >= 50.0 or e.kind == "armor2" and p.armor >= 60.0:
 			continue
@@ -1557,21 +1295,12 @@ func bot_input(p: Fighter, dt: float) -> void:
 	if target != null and target.hp > 0:
 		var target_diff := target.global_position + Vector3.UP * 1.1 - p.muzzle()
 		aim = target_diff.normalized()
-		if target_diff.length() <= p.weapon.reach:
+		var gap := target_diff.length()
+		if gap <= p.weapon.reach:
 			p.held = 1
-		if p.class_id == 2 and target_diff.length() < 3:
-			p.held = 2
-		if p.class_id == Fighter.REAVE_ID:
-			# Guard while under fire at range (feeding the blade), then let go to Slash once an enemy is close.
-			var gap := target_diff.length()
-			if gap > 4.5 and not p.damagers.is_empty() and p.guard_stamina > 25.0 and p.stun <= 0.0:
-				p.held = Fighter.GUARD_BIT
-			if gap < 4.5 and rng.randf() < dt * 1.5:
-				p.edges |= 16
-			if p.ult_cd <= 0.0 and gap > 6.0 and gap < 26.0 and rng.randf() < dt * 0.6:
-				p.edges |= 64
-		if p.class_id != Fighter.REAVE_ID and rng.randf() < dt * 0.25:
-			p.edges |= 16
+		bot_kit(p, gap, dt)
+	elif p.slot == 1 and p.swap_timer <= 0.0 and rng.randf() < dt * 2.0:
+		p.edges |= EDGE_SWAP  # nobody in sight: back to the primary
 	# Graph link tags that need more than walking: climb a ladder ("lad", head up it facing the wall) or jump a gap ("jmp").
 	var link := ""
 	if p.bot_path_i > 0 and p.bot_path_i < p.bot_path.size():
@@ -1594,25 +1323,47 @@ func bot_input(p: Fighter, dt: float) -> void:
 		p.edges |= 1
 	elif (p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1) and not p.climbing:
 		p.edges |= 1
-	if p.class_id == 1 and absf(p.global_position.x) < 75 and rng.randf() < dt * 0.25:
-		p.edges |= 8
-	elif p.class_id == 3 and rng.randf() < dt * 0.2:
-		p.edges |= 8 if p.double_id < 0 else 32
-	elif p.class_id == 0 and target != null and rng.randf() < dt * 0.1:
-		p.edges |= 16
+	var kind := p.utility()
+	if (kind == Loadout.Utility.SENTRY_TURRET or kind == Loadout.Utility.LAUNCH_PAD) and p.utility_cd <= 0.0 and absf(p.global_position.x) < 75 and rng.randf() < dt * 0.25:
+		p.edges |= EDGE_UTILITY
+
+# A bot in a fight: swap to the sidearm instead of reloading up close, melee at arm's length, and use its utility
+# when the moment suits it (the Grapple is left alone; bots would only fling themselves off the route).
+func bot_kit(p: Fighter, gap: float, dt: float) -> void:
+	if p.slot == 0 and p.ammo <= 0 and p.stowed_ammo > 0 and gap < BOT_SIDEARM_RANGE and p.swap_timer <= 0.0:
+		p.edges |= EDGE_SWAP
+	elif p.slot == 1 and p.ammo <= 0 and p.swap_timer <= 0.0:
+		p.edges |= EDGE_SWAP
+	var m: Dictionary = Loadout.MELEES[p.melee()]
+	if gap < m.reach * 0.9 and p.melee_cd <= 0.0 and rng.randf() < dt * 3.0:
+		p.edges |= EDGE_MELEE
+	if p.utility_cd > 0.0:
+		return
+	var want := false
+	match p.utility():
+		Loadout.Utility.FRAG_GRENADE:
+			want = gap > 8.0 and gap < 25.0 and rng.randf() < dt * 0.5
+		Loadout.Utility.SMOKE_GRENADE:
+			want = p.hp < Fighter.MAX_HEALTH * 0.4 and rng.randf() < dt
+		Loadout.Utility.BREACH_CHARGE:
+			want = gap < 4.5 and rng.randf() < dt * 1.5
+		Loadout.Utility.BARRICADE:
+			want = gap > 12.0 and not p.damagers.is_empty() and rng.randf() < dt * 0.3
+	if want:
+		p.edges |= EDGE_UTILITY
 
 # Each bot commits to a route family (class-weighted odds) so a squad spreads over the flanks;
 # the chosen family is cheap to path through, the others expensive but still usable as connectors.
 func bot_weights(p: Fighter) -> Dictionary:
 	if p.bot_bias.is_empty():
 		var odds := {"blv": 0.25, "roof": 0.25, "trn": 0.25, "aln": 0.25}
-		match p.class_id:
-			0:
-				odds = {"blv": 0.2, "roof": 0.4, "trn": 0.2, "aln": 0.2}
-			1:
-				odds = {"blv": 0.25, "roof": 0.1, "trn": 0.35, "aln": 0.3}
-			2:
-				odds = {"blv": 0.45, "roof": 0.1, "trn": 0.3, "aln": 0.15}
+		match Loadout.decode(p.loadout)[0]:
+			0:  # Shotgun: close quarters
+				odds = {"blv": 0.2, "roof": 0.1, "trn": 0.4, "aln": 0.3}
+			1:  # Rifle: long sightlines
+				odds = {"blv": 0.25, "roof": 0.45, "trn": 0.1, "aln": 0.2}
+			2:  # SMG
+				odds = {"blv": 0.4, "roof": 0.15, "trn": 0.25, "aln": 0.2}
 		var roll := rng.randf()
 		var chosen := "blv"
 		for tag in odds:
@@ -1759,14 +1510,14 @@ func update_hud(dt: float) -> void:
 	var p := local_player()
 	if p == null:
 		return
-	# Ricochet preview is local presentation only and never deals damage.
-	if p.class_id == 3 and p.held & 2 and simulation_tick % 4 == 0:
+	# Aiming down sights with a ricochet gun previews the bounce; local presentation only, it never deals damage.
+	if p.weapon.ricochet and p.held & 2 and p.hp > 0 and simulation_tick % 4 == 0:
 		var start := p.muzzle()
 		var direction := (p.aim_point() - start).normalized()
-		var hit := ray(start, start + direction * p.spec.reach, [p.get_rid()])
-		trace_visual(start, start + direction * p.spec.reach if hit.is_empty() else hit.position, Color("bc9ee8"))
+		var hit := ray(start, start + direction * p.weapon.reach, [p.get_rid()])
+		trace_visual(start, start + direction * p.weapon.reach if hit.is_empty() else hit.position, Color("bc9ee8"))
 		if not hit.is_empty() and not hit.collider is Fighter and not hit.collider is Deployable:
 			var next: Vector3 = hit.position + hit.normal * 0.05
-			var end: Vector3 = next + direction.bounce(hit.normal) * (p.spec.reach - start.distance_to(hit.position))
+			var end: Vector3 = next + direction.bounce(hit.normal) * (p.weapon.reach - start.distance_to(hit.position))
 			var second := ray(next, end, [p.get_rid()])
 			trace_visual(next, end if second.is_empty() else second.position, Color("e1c7ff"))
