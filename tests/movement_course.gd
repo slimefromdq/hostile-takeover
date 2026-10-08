@@ -10,6 +10,7 @@ const OFF := 300.0
 var checks := 0
 var failures := 0
 var game: Node3D
+var rescued := false  # set by gap_attempt: the landing needed an in-air ledge grab or vault
 
 func check(condition: bool, message: String) -> void:
 	checks += 1
@@ -95,6 +96,7 @@ func test_slide_hill() -> void:
 	p.held = 0
 
 # Run-jump from a platform edge and report whether the fighter ever stands on a platform whose top is past `target_x`.
+# `rescued` records whether it got there through the forgiving in-air ledge grab or vault rather than landing outright.
 # slide: hold slide on the way to the edge and jump out of it (a slide-jump).
 func gap_attempt(start_x: float, edge_x: float, target_x: float, slide: bool) -> bool:
 	var p := fighter()
@@ -105,6 +107,7 @@ func gap_attempt(start_x: float, edge_x: float, target_x: float, slide: bool) ->
 	p.slide_cd = 0.0
 	var phase := 0
 	var landed := false
+	rescued = false
 	for i in range(200):
 		var edges := 0
 		if phase == 0 and p.global_position.x >= edge_x - (0.6 if not slide else 0.4):
@@ -118,6 +121,8 @@ func gap_attempt(start_x: float, edge_x: float, target_x: float, slide: bool) ->
 			edges = 1
 			phase = 2
 		await tick(p, edges)
+		if phase >= 2 and (p.hang_time > 0.0 or p.vault_time > 0.0):
+			rescued = true
 		if phase == 2 and not p.is_on_floor():
 			phase = 3
 		if phase == 3 and p.is_on_floor() and p.global_position.y > 0.9 and p.global_position.x > target_x:
@@ -126,14 +131,15 @@ func gap_attempt(start_x: float, edge_x: float, target_x: float, slide: bool) ->
 	p.held = 0
 	return landed
 
-# Gaps between the 1 m platforms (5, 7, 9 m): a run-jump clears 5 m, only a slide-jump clears 7 m.
+# Gaps between the 1 m platforms (5, 7, 9 m): a run-jump lands across 5 m; across 7 m it falls short and only the
+# forgiving ledge grab saves it, while a slide-jump lands outright.
 func test_gaps() -> void:
 	var plain5 := await gap_attempt(-44.0, -36.0, -31.0, false)
-	check(plain5, "gap 5 m: a run-jump lands on the next platform")
+	check(plain5 and not rescued, "gap 5 m: a run-jump lands on the next platform")
 	var plain7 := await gap_attempt(-30.5, -25.0, -18.0, false)
-	check(not plain7, "gap 7 m: a plain run-jump falls short")
+	check(plain7 and rescued, "gap 7 m: a plain run-jump falls short and is saved by the ledge grab")
 	var slide7 := await gap_attempt(-30.5, -25.0, -18.0, true)
-	check(slide7, "gap 7 m: a slide-jump reaches the far platform")
+	check(slide7 and not rescued, "gap 7 m: a slide-jump lands on the far platform outright")
 
 # Run at the 1.1 m hurdles along x = 10..43: each should be vaulted at speed, not stopped by.
 func test_hurdles() -> void:

@@ -8,6 +8,15 @@ const GameScript := preload("res://scripts/game.gd")
 # The reference body for movement and pickup tests: a Rifle loadout holding its Pistol (move speed multiplier 1.0).
 const REFERENCE := 1  # Loadout.encode(1, 0, 0, 0)
 
+# A teleport keeps is_on_floor() and the coyote/jump-buffer windows from the last position; clear them so the
+# next simulated tick judges the fighter where it now is.
+func place(p: Fighter, at: Vector3, velocity := Vector3.ZERO) -> void:
+	p.global_position = at
+	p.velocity = velocity
+	p.coyote_time = 0.0
+	p.jump_buffer = 0.0
+	p.slide_grace = 0.0
+
 func neutral(p: Fighter, loadout_code: int = REFERENCE) -> void:
 	p.apply_loadout(loadout_code)
 	p.swap_weapon()
@@ -193,19 +202,21 @@ func test_movement() -> void:
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.air_dash, "dash recharges after its 2.5 s cooldown")
 	for primary_id in range(Loadout.PRIMARIES.size()):
+		await physics_frame  # move_and_slide uses the physics delta only inside a physics frame
 		p.apply_loadout(Loadout.encode(primary_id, 0, 0, 0))
-		p.global_position = O + Vector3(88.8, 3, 20)
+		place(p, O + Vector3(88.8, 3, 20))
 		p.wall_repeats = 0
 		p.wall_normal = Vector3.ZERO
 		p.velocity = Vector3.ZERO
 		p.yaw = -PI / 2
 		p.movement = Vector2.ZERO
 		p.simulate_movement(1.0 / 60, 0)
+		p.coyote_time = 0.0  # the tick above still saw the floor contact from before the teleport
 		p.simulate_movement(1.0 / 60, 1)
-		check(p.velocity.x < -6 and p.velocity.y >= 10.4, "universal wall kick: " + p.weapon.title)
+		check(p.velocity.x < -6 and p.velocity.y >= 10.4, "universal wall kick: %s (v %s)" % [p.weapon.title, p.velocity])
 	neutral(p)
-	p.global_position = O + Vector3(-10, 0, -21)
-	p.velocity = Vector3.ZERO
+	await physics_frame
+	place(p, O + Vector3(-10, 0, -21))
 	p.movement = Vector2.ZERO
 	p.held = 0
 	for i in range(20):
@@ -227,8 +238,8 @@ func test_movement() -> void:
 	p.simulate_movement(1.0 / 60, 0)
 	check(not p.sliding and p.slide_cd > 0.0, "slide cooldown stops back-to-back boosts")
 	p.held = 0
-	p.global_position = O + Vector3(-10, 0, -21)
-	p.velocity = Vector3.ZERO
+	await physics_frame
+	place(p, O + Vector3(-10, 0, -21))
 	p.slide_cd = 0.0
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
@@ -242,14 +253,17 @@ func test_movement() -> void:
 	p.velocity = Vector3.ZERO
 	p.simulate_movement(1.0 / 60, 0)
 	check(not p.sliding, "releasing slide ends it")
-	p.global_position = O + Vector3(-5.2, 0.3, 5)
-	p.velocity = Vector3.ZERO
+	await physics_frame
+	place(p, O + Vector3(-5.2, 0.3, 5))
+	p.yaw = -PI / 2  # facing the crate (x -4.5..-1.5); the slide checks left the view facing -z
+	p.movement = Vector2.ZERO
 	p.held = 0
 	p.simulate_movement(1.0 / 60, 0)
 	p.held = 16
 	p.velocity.y = 0
 	p.simulate_movement(1.0 / 60, 0)
-	check(p.velocity.y >= 8.4, "held jump mantles a low ledge")
+	var rise := p.velocity.y * p.velocity.y / (2.0 * Fighter.GRAVITY)
+	check(p.vault_time > 0.0 and rise > 1.2 - (p.global_position.y - O.y), "held jump vaults the low crate with lift to clear it (rise %.2f m)" % rise)
 	p.held = 0
 	await physics_frame
 	await process_frame
@@ -614,9 +628,8 @@ func test_armor_rules() -> void:
 func test_armor_and_snapshot() -> void:
 	var p: Fighter = game.local_player()
 	var foe: Fighter = game.fighters[105]
-	var helper: Fighter = game.fighters[106]
-	foe.team = 1 - p.team
-	helper.team = p.team
+	var helper: Fighter = game.fighters[102]  # a teammate: with 5v5, bots 100-103 share the player's team
+	check(foe.team != p.team and helper.team == p.team, "armor test fighters are on the expected teams")
 	neutral(foe)
 	neutral(helper)
 	neutral(p)
@@ -1024,9 +1037,17 @@ func test_hud() -> void:
 	var pack_data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": "healpack", "hp": 1.0, "life": 1e9, "pos": O + Vector3(0, 12, 0), "yaw": 0.0, "used": false}
 	game.entity_next += 1
 	game.create_entity_from(pack_data)
-	mini._draw_health_packs(game.local_player())
-	mini._draw_health_packs(null)
-	check(true, "minimap draws health packs above, below and without a local player")
+	game.hud.refresh(game, 0.016)  # physics is off in tests, so nothing has handed the HUD its game yet
+	check(mini.game == game, "the HUD wires the minimap to the game")
+	# Drawing only works inside a draw notification: let the minimap redraw itself with the pack above the player.
+	var drawn := [false]
+	var on_draw := func(): drawn[0] = true
+	mini.draw.connect(on_draw)
+	mini.queue_redraw()
+	await process_frame
+	await process_frame
+	mini.draw.disconnect(on_draw)
+	check(drawn[0], "minimap redraws with a health pack on another tier")
 	game.remove_entity(pack_data.id)
 	check(not CivicDividend.footprints.is_empty(), "map records building footprints for the minimap")
 	var row_sizes: Array = game.menu.item_buttons.map(func(row): return row.size())
@@ -1164,10 +1185,10 @@ func test_wall_run() -> void:
 	p.movement = Vector2(0, -1)
 	p.wall_normal = Vector3.ZERO
 	p.wall_repeats = 0
-	p.global_position = start
-	p.velocity = Vector3(0, 0, -9)
+	place(p, start, Vector3(0, 0, -9))
 	p.air_jump = false
 	p.air_dash = false
+	p.dash_cd = Fighter.DASH_COOLDOWN  # a spent dash: it would otherwise recharge on its (finished) timer
 	for i in range(3):
 		p.simulate_movement(1.0 / 60, 0)
 	check(p.wall_running, "running along a wall at speed attaches a wall run")
@@ -1239,7 +1260,10 @@ func test_ledges() -> void:
 	await physics_frame
 	# Ledge grab: reaching a 2.4 m ledge (x from 20) in the air hangs briefly, then pulls up.
 	var ledge_start := O + Vector3(19.5, 0.9, 6.0)
-	p.global_position = ledge_start
+	p.yaw = -PI / 2
+	p.movement = Vector2.ZERO
+	place(p, ledge_start)
+	p.simulate_movement(1.0 / 60, 0)  # let the floor contact from the vault run clear
 	p.velocity = Vector3(2, 0, 0)
 	p.movement = Vector2(0, -1)
 	p.hang_cd = 0.0
@@ -1250,7 +1274,7 @@ func test_ledges() -> void:
 	for i in range(30):
 		p.simulate_movement(1.0 / 60, 0)
 		peak = maxf(peak, p.velocity.y)
-	check(peak > 8.0 and p.hang_time == 0.0, "the hang ends in a pull-up (peak vy %.1f)" % peak)
+	check(peak > 8.0 and p.hang_time <= 0.0, "the hang ends in a pull-up (peak vy %.1f)" % peak)
 	await physics_frame
 	# Jump during a hang kicks off the ledge face.
 	p.global_position = ledge_start
@@ -1289,7 +1313,7 @@ func test_air_movement() -> void:
 	p.movement = Vector2.ZERO
 	for i in range(10):
 		p.simulate_movement(1.0 / 60, 0)
-		p.simulate_movement(1.0 / 60, 1)
+	p.simulate_movement(1.0 / 60, 1)
 	var apex := 0.0
 	for i in range(80):
 		p.simulate_movement(1.0 / 60, 0)
@@ -1297,9 +1321,9 @@ func test_air_movement() -> void:
 	check(apex > 1.55 and apex < 2.3, "jump apex is 1.6-2.2 m, up from about 1.4 (%.2f)" % apex)
 	await physics_frame
 	# Double jump spends the shared air charge and gives a second lift; a dash cannot follow it.
-	p.global_position = O + Vector3(-30, 6.0, -20)
-	p.velocity = Vector3(0, -2, 0)
+	place(p, O + Vector3(-30, 6.0, -20), Vector3(0, -2, 0))
 	p.simulate_movement(1.0 / 60, 0)
+	p.coyote_time = 0.0  # the tick above still saw the old floor contact
 	p.air_jump = true
 	p.air_dash = true
 	p.simulate_movement(1.0 / 60, 1)

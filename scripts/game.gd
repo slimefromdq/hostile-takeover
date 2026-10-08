@@ -137,6 +137,8 @@ func _ready() -> void:
 
 func setup_inputs() -> void:
 	var bindings := {"left": KEY_A, "right": KEY_D, "forward": KEY_W, "back": KEY_S, "jump": KEY_SPACE, "slide": KEY_SHIFT, "dash": KEY_1, "reload": KEY_R, "utility": KEY_Q, "melee": KEY_F, "swap": KEY_2, "shoulder": KEY_V, "scoreboard": KEY_TAB}
+	if InputMap.has_action("fire"):
+		return  # another Game instance (a restart from the editor, a test) already registered them
 	for action in bindings:
 		InputMap.add_action(action)
 		var key := InputEventKey.new()

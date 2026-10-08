@@ -199,7 +199,9 @@ func _draw_waypoint(p: Fighter) -> void:
 		return
 	var world: Vector3 = game.points[best] + Vector3.UP * 4.0
 	var behind := camera.is_position_behind(world)
-	var screen := camera.unproject_position(world)
+	# A point exactly on the camera plane has no projection; treat it as off to the side.
+	var depth := (world - camera.global_position).dot(-camera.global_transform.basis.z)
+	var screen := camera.unproject_position(world) if absf(depth) > 0.001 else size / 2.0 + Vector2.RIGHT
 	var margin := 56.0
 	var inside := not behind and screen.x > margin and screen.x < size.x - margin and screen.y > margin + 60.0 and screen.y < size.y - margin
 	if not inside:

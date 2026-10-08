@@ -636,7 +636,9 @@ func _ledge_step(desired: Vector3, grounded: bool, dt: float) -> void:
 		var speed := clampf(maxf(velocity.dot(heading), VAULT_MIN_SPEED), VAULT_MIN_SPEED, VAULT_SPEED_CAP)
 		vault_velocity = heading * speed
 		vault_time = VAULT_TIME
-		velocity.y = maxf(MANTLE_SPEED, sqrt(2.0 * GRAVITY * (height + VAULT_CLEARANCE)))
+		# Just enough lift to clear the ledge by VAULT_CLEARANCE: a fixed MANTLE_SPEED floor threw low steps
+		# (0.6 m) 1.4 m into the air, carrying a running fighter clean over a 4 m deep block.
+		velocity.y = sqrt(2.0 * GRAVITY * (height + VAULT_CLEARANCE))
 	elif not grounded and hang_cd <= 0.0:
 		hang_time = LEDGE_HANG_TIME
 		velocity = Vector3.ZERO
