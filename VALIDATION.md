@@ -23,6 +23,24 @@ below is automated; nothing here replaces human playtesting or measurement on re
 | In-engine renders | `xvfb-run` with software Vulkan (`mesa-vulkan-drivers`), `tests/render_canopy.gd` | 16 views of Concrete Canopy including the three events (`docs/previews/canopy_*.png`) |
 | Startup | `--headless --quit-after 120`, `--check-only` per script | no errors or warnings |
 
+## Character redesign — 2026-10-08
+
+Verified on Windows with Godot 4.7.2 and an NVIDIA RTX 3080:
+
+- Behavioral suite: **346 checks, 0 failures**. New checks cover finite, clockwise, nondegenerate character geometry,
+  the mesh/triangle budget, seated slide and standing recovery, aimed weapons, melee poses and material fading.
+- Every existing appearance option builds the required bones. Maximum measured across those option tests:
+  **13 mesh instances, 4,100 baked triangles** per rig.
+- Offline match smoke: **PASS**, 10 fighters, 6 advancing, objective pressure, finite positions/velocities.
+- Two-minute soak: **PASS**, node samples 837 / 848 / 838 / 842, **zero orphan nodes**.
+- Forward+ lineup, face detail, run/slide/melee poses and menu portrait rendered and visually inspected. The character
+  render script also ran successfully with the Compatibility renderer. Editor import completed without errors.
+- Short 180-frame Forward+ render probe: peak **618 draw calls**, **145,557 primitives**, zero orphan nodes.
+  This is a render-count sample, not a sustained frame-rate benchmark or a comparison to the Linux measurements above.
+
+The geometry adds sculpted profiles and flat face patches while retaining the existing mesh baker, bone paths,
+appearance packing, collider and gameplay tuning. See [character design notes](docs/CHARACTERS.md).
+
 ## What changed on the way (for context)
 Two defects were found by looking at real renders and fixed with regression tests: the opaque map shader wrote ALPHA, which
 forced every map mesh into the transparent pipeline so walls drew over each other, and character meshes used default

@@ -1,12 +1,12 @@
 class_name CharacterRig
 extends RefCounted
 
-# Procedural character rig: a squat, chunky low-poly person (big blocky head and eyes, short limbs, oversized shoes)
+# Procedural character rig: a cute low-poly person (sculpted face, pointed hair locks, tapered limbs and chunky shoes)
 # dressed from an Appearance code (scripts/appearance.gd), holding the loadout's primary and sidearm (only the gun in
 # hand shows) and its melee weapon in the free hand. Team identity is trim in the team colour: the top's collar or
 # stripe, a band on each upper arm and a stripe on each shoe.
 #
-# Parts are authored as boxes and prisms per bone, then baked into one vertex-coloured mesh per bone (two surfaces:
+# Parts are authored as faceted profiles, boxes and prisms, then baked into one vertex-coloured mesh per bone (two surfaces:
 # outlined body parts and un-outlined face/trim details), so a fighter costs about a dozen draw calls. Bones and the
 # node names animate() and the tests rely on: ClassEquipment/Legs/{LegL,LegR}, Body/{Head, ArmL/Melee,
 # Weapon/{Primary,Sidearm}}.
@@ -17,8 +17,8 @@ extends RefCounted
 const SLUG := "operative"
 const DARK := Color("28323f")
 const CREAM := Color("e7e9df")
-const HIP_Y := 0.72  # hip height; legs plus shoes fill it exactly
-const OUTLINE_WIDTH := 0.022
+const HIP_Y := 0.88  # longer legs, with the same overall height and gameplay capsule
+const OUTLINE_WIDTH := 0.012
 
 const NAMEPLATE_SHADER := """
 shader_type spatial;
@@ -58,6 +58,15 @@ const LIT := 0     # body parts: outlined, cast the bone's shadow
 const DETAIL := 1  # face features and trim: never outlined
 const BOX := 0
 const PRISM := 1
+const FACET := 2
+const PATCH := 3
+const OVAL := [Vector2(-0.35, -0.5), Vector2(0.35, -0.5), Vector2(0.5, -0.28), Vector2(0.5, 0.28), Vector2(0.35, 0.5), Vector2(-0.35, 0.5), Vector2(-0.5, 0.28), Vector2(-0.5, -0.28)]
+const EYE_SHAPE := [Vector2(-0.5, -0.22), Vector2(-0.28, -0.47), Vector2(0.25, -0.5), Vector2(0.48, -0.23), Vector2(0.5, 0.22), Vector2(0.25, 0.5), Vector2(-0.25, 0.5), Vector2(-0.5, 0.24)]
+# Each ring is (height fraction, width fraction, depth fraction); corners are chamfered in XZ.
+const SOFT_PROFILE := [Vector3(-0.5, 0.82, 0.82), Vector3(-0.35, 1, 1), Vector3(0.35, 1, 1), Vector3(0.5, 0.82, 0.82)]
+const TAPER_PROFILE := [Vector3(-0.5, 0.72, 0.8), Vector3(-0.35, 0.85, 0.9), Vector3(0.35, 1, 1), Vector3(0.5, 0.85, 0.85)]
+const LOCK_PROFILE := [Vector3(-0.5, 0.08, 0.18), Vector3(-0.12, 0.8, 0.85), Vector3(0.32, 1, 1), Vector3(0.5, 0.72, 0.72)]
+const FACE_PROFILE := [Vector3(-0.5, 0.48, 0.65), Vector3(-0.3, 0.84, 0.92), Vector3(0.08, 1, 1), Vector3(0.34, 0.96, 0.98), Vector3(0.5, 0.72, 0.8)]
 
 static var _nameplate_shader: Shader
 static var _outline_shader: Shader
@@ -73,13 +82,21 @@ class Ctx:
 	var lit_mat: StandardMaterial3D
 	var detail_mat: StandardMaterial3D
 
-	func add(bone: Node3D, pos: Vector3, size: Vector3, color: Color, layer: int = LIT, rot: Vector3 = Vector3.ZERO, shape: int = BOX) -> void:
+	func add(bone: Node3D, pos: Vector3, size: Vector3, color: Color, layer: int = LIT, rot: Vector3 = Vector3.ZERO, shape: int = FACET) -> void:
 		if not parts.has(bone):
 			parts[bone] = []
 		parts[bone].append({"xf": Transform3D(Basis.from_euler(rot), pos), "size": size, "color": color, "layer": layer, "shape": shape})
 
 	func detail(bone: Node3D, pos: Vector3, size: Vector3, color: Color, rot: Vector3 = Vector3.ZERO) -> void:
-		add(bone, pos, size, color, DETAIL, rot)
+		add(bone, pos, size, color, DETAIL, rot, BOX)
+
+	func form(bone: Node3D, pos: Vector3, size: Vector3, color: Color, profile: Array, rot: Vector3 = Vector3.ZERO, layer: int = LIT) -> void:
+		add(bone, pos, size, color, layer, rot, FACET)
+		parts[bone][-1]["profile"] = profile
+
+	func patch(bone: Node3D, pos: Vector3, size: Vector2, color: Color, polygon: Array = OVAL) -> void:
+		add(bone, pos, Vector3(size.x, size.y, 0), color, DETAIL, Vector3.ZERO, PATCH)
+		parts[bone][-1]["polygon"] = polygon
 
 	func lit(color: Color, outline_width: float = 0.0) -> StandardMaterial3D:
 		var mat := Visuals.solid(color)
@@ -199,7 +216,7 @@ static func _person(ctx: Ctx, legs: Node3D, body: Node3D, primary_id: int, sidea
 	var bottom_color: Color = Appearance.CLOTH_COLORS[look.bottom_color]
 	var shoe_color: Color = Appearance.CLOTH_COLORS[look.shoe_color]
 	for side in [-1, 1]:
-		var leg := pivot(legs, "Leg%s" % ("L" if side < 0 else "R"), Vector3(side * 0.11 * w, 0, 0))
+		var leg := pivot(legs, "Leg%s" % ("L" if side < 0 else "R"), Vector3(side * 0.115 * w, 0, 0))
 		_leg(ctx, leg, side, t, skin, bottom_color, look.bottom)
 		_shoe(ctx, leg, side, shoe_color, look.shoes)
 	_bottoms_body(ctx, body, w, bottom_color, look.bottom)
@@ -212,7 +229,7 @@ static func _person(ctx: Ctx, legs: Node3D, body: Node3D, primary_id: int, sidea
 	_hair(ctx, head, look.hair, Appearance.HAIR_COLORS[look.hair_color], covered)
 	_headgear(ctx, head, look.headgear, top_color)
 	# Arms: the free left arm hangs from its shoulder; the right arm holds the gun forward along -Z.
-	var shoulder_x := 0.22 * w + 0.07 * t
+	var shoulder_x := 0.195 * w + 0.06 * t
 	var arm := pivot(body, "ArmL", Vector3(-shoulder_x, 0.45, 0))
 	_free_arm(ctx, arm, t, skin, sleeve)
 	_melee_model(ctx, arm, melee_id)
@@ -223,162 +240,167 @@ static func _person(ctx: Ctx, legs: Node3D, body: Node3D, primary_id: int, sidea
 
 static func _head(ctx: Ctx, head: Node3D, skin: Color) -> void:
 	var eye_color: Color = Appearance.EYE_COLORS[ctx.look.eyes]
-	# A chunky block with bevelled vertical edges (two overlapping boxes read as a chamfer under flat shading).
-	ctx.add(head, Vector3(0, 0.3, 0), Vector3(0.56, 0.5, 0.46), skin)
-	ctx.add(head, Vector3(0, 0.3, 0), Vector3(0.5, 0.48, 0.5), skin)
-	ctx.add(head, Vector3(0, 0.07, 0.02), Vector3(0.44, 0.06, 0.4), skin)  # rounder jaw
+	# A single watertight face: full cheeks taper to a small chin under a rounded crown.
+	ctx.form(head, Vector3(0, 0.265, 0), Vector3(0.51, 0.49, 0.45), skin, FACE_PROFILE)
 	for side in [-1, 1]:
-		ctx.add(head, Vector3(side * 0.29, 0.27, 0.03), Vector3(0.05, 0.1, 0.08), skin.darkened(0.04))  # ears
-	# Face on the -Z side: big eyes low on the face, brows, nose, mouth, blush.
-	var z := -0.25
+		ctx.add(head, Vector3(side * 0.255, 0.25, 0.015), Vector3(0.06, 0.1, 0.085), skin)
+		ctx.detail(head, Vector3(side * 0.277, 0.25, -0.027), Vector3(0.022, 0.05, 0.014), skin.darkened(0.12))
+	# Thin polygon layers keep the eyes crisp without a texture or extra draw calls.
+	var z := -0.226
 	var white := Color("fbfbf6")
-	var lash := Color("1f1a22")
+	var lash := Color("332637")
 	for side in [-1, 1]:
-		var x: float = side * 0.11
-		ctx.detail(head, Vector3(x, 0.25, z - 0.005), Vector3(0.12, 0.15, 0.02), white)
-		ctx.detail(head, Vector3(x - side * 0.008, 0.24, z - 0.012), Vector3(0.085, 0.12, 0.02), eye_color)
-		ctx.detail(head, Vector3(x - side * 0.008, 0.235, z - 0.018), Vector3(0.042, 0.065, 0.02), eye_color.darkened(0.65))
-		ctx.detail(head, Vector3(x + side * 0.012, 0.275, z - 0.024), Vector3(0.03, 0.03, 0.02), white)
-		ctx.detail(head, Vector3(x - side * 0.022, 0.215, z - 0.024), Vector3(0.016, 0.016, 0.02), white.darkened(0.08))
-		ctx.detail(head, Vector3(x, 0.327, z - 0.016), Vector3(0.13, 0.02, 0.02), lash)  # upper lash line
-		ctx.detail(head, Vector3(x + side * 0.068, 0.318, z - 0.016), Vector3(0.022, 0.03, 0.02), lash)  # outer lash tick
-		ctx.detail(head, Vector3(x + side * 0.01, 0.398, z - 0.01), Vector3(0.085, 0.018, 0.02), Appearance.HAIR_COLORS[ctx.look.hair_color].darkened(0.35))
-		ctx.detail(head, Vector3(side * 0.185, 0.155, z - 0.004), Vector3(0.075, 0.032, 0.02), skin.lerp(Color("ff6f8a"), 0.42))
-	ctx.detail(head, Vector3(0, 0.165, z - 0.012), Vector3(0.03, 0.03, 0.03), skin.darkened(0.12))
-	ctx.detail(head, Vector3(0, 0.105, z - 0.006), Vector3(0.075, 0.024, 0.02), Color("8e3446"))
-	ctx.detail(head, Vector3(0, 0.094, z - 0.008), Vector3(0.04, 0.012, 0.02), Color("d86a7c"))
+		var x: float = side * 0.103
+		ctx.patch(head, Vector3(x, 0.26, z - 0.003), Vector2(0.137, 0.147), lash, EYE_SHAPE)
+		ctx.patch(head, Vector3(x, 0.254, z - 0.005), Vector2(0.125, 0.13), white, EYE_SHAPE)
+		ctx.patch(head, Vector3(x - side * 0.009, 0.253, z - 0.007), Vector2(0.075, 0.119), eye_color.darkened(0.28))
+		ctx.patch(head, Vector3(x - side * 0.009, 0.235, z - 0.009), Vector2(0.065, 0.077), eye_color)
+		ctx.patch(head, Vector3(x - side * 0.009, 0.217, z - 0.011), Vector2(0.046, 0.034), eye_color.lightened(0.30))
+		ctx.patch(head, Vector3(x - side * 0.009, 0.26, z - 0.013), Vector2(0.029, 0.078), lash)
+		ctx.patch(head, Vector3(x - 0.015, 0.286, z - 0.015), Vector2(0.027, 0.03), white)
+		ctx.patch(head, Vector3(x + 0.018, 0.222, z - 0.015), Vector2(0.013, 0.013), white)
+		ctx.detail(head, Vector3(x + side * 0.06, 0.328, z - 0.011), Vector3(0.035, 0.012, 0.008), lash, Vector3(0, 0, side * 0.35))
+		ctx.detail(head, Vector3(x, 0.368, z + 0.008), Vector3(0.084, 0.013, 0.01), Appearance.HAIR_COLORS[ctx.look.hair_color].darkened(0.25), Vector3(0, 0, -side * 0.08))
+		ctx.patch(head, Vector3(side * 0.155, 0.16, -0.217), Vector2(0.053, 0.022), skin.lerp(Color("ed849a"), 0.22))
+	ctx.form(head, Vector3(0, 0.177, -0.222), Vector3(0.022, 0.029, 0.018), skin, TAPER_PROFILE, Vector3.ZERO, DETAIL)
+	# Two upturned strokes and a soft lower lip read as a small smile.
+	for side in [-1, 1]:
+		ctx.detail(head, Vector3(side * 0.018, 0.113, -0.207), Vector3(0.038, 0.009, 0.008), skin.lerp(Color("693346"), 0.7), Vector3(0, 0, side * 0.18))
+	ctx.detail(head, Vector3(0, 0.103, -0.209), Vector3(0.032, 0.008, 0.008), skin.lerp(Color("dc8290"), 0.45))
 
-# Hair is built around the head block (x +-0.28, y 0.05..0.55, z +-0.25). `covered` drops what a hat would hide.
+# Crown, back and pointed locks form a faceted silhouette; hats suppress the crown volume.
 static func _hair(ctx: Ctx, head: Node3D, style: int, color: Color, covered: bool) -> void:
-	var dark := color.darkened(0.18)
+	var dark := color.darkened(0.12)
 	if style == 3:  # Buzz: a thin cap and a hairline
 		if not covered:
-			ctx.add(head, Vector3(0, 0.565, 0.0), Vector3(0.54, 0.05, 0.52), color)
-		ctx.add(head, Vector3(0, 0.4, 0.258), Vector3(0.52, 0.32, 0.03), color)
+			ctx.form(head, Vector3(0, 0.465, 0.01), Vector3(0.52, 0.13, 0.46), color, [Vector3(-0.5, 1, 1), Vector3(0.1, 0.92, 0.95), Vector3(0.5, 0.65, 0.72)])
+		ctx.add(head, Vector3(0, 0.36, 0.216), Vector3(0.47, 0.25, 0.055), color)
 		for side in [-1, 1]:
-			ctx.add(head, Vector3(side * 0.288, 0.44, 0.02), Vector3(0.03, 0.22, 0.44), color)
-		ctx.detail(head, Vector3(0, 0.53, -0.258), Vector3(0.46, 0.05, 0.02), color)
+			ctx.add(head, Vector3(side * 0.242, 0.397, 0.015), Vector3(0.04, 0.13, 0.33), color)
 		return
 	if not covered:
-		ctx.add(head, Vector3(0, 0.56, 0.02), Vector3(0.62, 0.12, 0.56), color)
-	var back_drop := 0.38  # how far the back hangs below the crown
-	var side_drop := 0.26
+		ctx.form(head, Vector3(0, 0.485, 0.01), Vector3(0.59, 0.22, 0.53), color, [Vector3(-0.5, 0.96, 0.95), Vector3(-0.05, 1, 1), Vector3(0.28, 0.85, 0.86), Vector3(0.5, 0.5, 0.55)])
+	var back_drop := 0.32
+	var side_drop := 0.25
 	match style:
 		0:  # Bob
-			back_drop = 0.5
-			side_drop = 0.48
+			back_drop = 0.47
+			side_drop = 0.45
 		4:  # Long
-			back_drop = 0.95
-			side_drop = 0.62
-	ctx.add(head, Vector3(0, 0.6 - back_drop / 2.0, 0.28), Vector3(0.62, back_drop, 0.09), color)
+			back_drop = 0.86
+			side_drop = 0.60
+	ctx.form(head, Vector3(0, 0.51 - back_drop / 2.0, 0.22), Vector3(0.56, back_drop, 0.17), dark, TAPER_PROFILE)
 	for side in [-1, 1]:
-		ctx.add(head, Vector3(side * 0.305, 0.58 - side_drop / 2.0, 0.03), Vector3(0.07, side_drop, 0.5), color)
-	# Jagged bangs across the forehead (brows show under the side chunks).
+		ctx.form(head, Vector3(side * 0.26, 0.51 - side_drop / 2.0, 0.04), Vector3(0.13, side_drop, 0.4), color, LOCK_PROFILE, Vector3(0, 0, -side * 0.06))
+	# Asymmetric bangs have a tapered tip, leaving both eyes visible.
 	if style == 2:  # Ponytail: swept to one side
-		ctx.add(head, Vector3(-0.1, 0.47, -0.27), Vector3(0.36, 0.16, 0.06), color, LIT, Vector3(0, 0, -0.12))
-		ctx.add(head, Vector3(0.18, 0.5, -0.27), Vector3(0.2, 0.1, 0.06), dark)
+		ctx.form(head, Vector3(-0.07, 0.445, -0.237), Vector3(0.34, 0.20, 0.1), color, LOCK_PROFILE, Vector3(0, 0, -0.32))
+		ctx.form(head, Vector3(0.19, 0.46, -0.22), Vector3(0.14, 0.16, 0.09), dark, LOCK_PROFILE)
 	else:
-		ctx.add(head, Vector3(-0.17, 0.48, -0.27), Vector3(0.2, 0.14, 0.06), color)
-		ctx.add(head, Vector3(0.0, 0.45, -0.275), Vector3(0.17, 0.2, 0.06), color)
-		ctx.add(head, Vector3(0.17, 0.485, -0.27), Vector3(0.2, 0.13, 0.06), dark)
+		ctx.form(head, Vector3(-0.155, 0.447, -0.229), Vector3(0.19, 0.19, 0.11), color, LOCK_PROFILE, Vector3(0, 0, -0.18))
+		ctx.form(head, Vector3(0.006, 0.442, -0.245), Vector3(0.18, 0.245, 0.095), color, LOCK_PROFILE, Vector3(0, 0, 0.16))
+		ctx.form(head, Vector3(0.167, 0.46, -0.225), Vector3(0.19, 0.175, 0.105), color.lightened(0.06), LOCK_PROFILE, Vector3(0, 0, 0.23))
 		if style in [0, 4]:  # face-framing locks
 			for side in [-1, 1]:
-				ctx.add(head, Vector3(side * 0.255, 0.33, -0.235), Vector3(0.07, 0.34, 0.07), color)
+				ctx.form(head, Vector3(side * 0.245, 0.245, -0.16), Vector3(0.09, 0.36, 0.14), color, LOCK_PROFILE, Vector3(0, 0, -side * 0.12))
 	match style:
 		1:  # Twin Tails: tied high on each side, falling to the shoulders
 			for side in [-1, 1]:
-				ctx.detail(head, Vector3(side * 0.34, 0.5, 0.1), Vector3(0.08, 0.08, 0.08), ctx.team_color)
-				ctx.add(head, Vector3(side * 0.42, 0.32, 0.12), Vector3(0.15, 0.36, 0.15), color, LIT, Vector3(0, 0, side * 0.22))
-				ctx.add(head, Vector3(side * 0.47, 0.04, 0.15), Vector3(0.12, 0.3, 0.12), dark, LIT, Vector3(0, 0, side * 0.08))
+				ctx.add(head, Vector3(side * 0.31, 0.45, 0.1), Vector3(0.08, 0.07, 0.09), ctx.team_color, DETAIL)
+				ctx.form(head, Vector3(side * 0.40, 0.27, 0.12), Vector3(0.19, 0.39, 0.20), color, TAPER_PROFILE, Vector3(0, 0, side * 0.22))
+				ctx.form(head, Vector3(side * 0.46, -0.01, 0.15), Vector3(0.15, 0.30, 0.17), dark, LOCK_PROFILE, Vector3(0, 0, -side * 0.12))
 		2:  # Ponytail
 			ctx.detail(head, Vector3(0, 0.48, 0.34), Vector3(0.1, 0.08, 0.06), ctx.team_color)
-			ctx.add(head, Vector3(0, 0.27, 0.4), Vector3(0.15, 0.44, 0.13), color, LIT, Vector3(0.35, 0, 0))
+			ctx.form(head, Vector3(0, 0.22, 0.38), Vector3(0.19, 0.50, 0.19), color, LOCK_PROFILE, Vector3(0.35, 0, 0))
 		5:  # Spiky
 			if not covered:
-				for spike in [[Vector3(-0.17, 0.66, -0.08), Vector3(-0.45, 0, 0.55)], [Vector3(0, 0.7, -0.1), Vector3(-0.55, 0, 0)],
-						[Vector3(0.17, 0.66, -0.08), Vector3(-0.45, 0, -0.55)], [Vector3(-0.12, 0.65, 0.14), Vector3(0.45, 0, 0.35)],
-						[Vector3(0.12, 0.65, 0.14), Vector3(0.45, 0, -0.35)]]:
-					ctx.add(head, spike[0], Vector3(0.13, 0.22, 0.13), color, LIT, spike[1])
+				for spike in [[Vector3(-0.17, 0.54, -0.07), Vector3(-0.45, 0, 0.55)], [Vector3(0, 0.58, -0.09), Vector3(-0.55, 0, 0)],
+						[Vector3(0.17, 0.54, -0.07), Vector3(-0.45, 0, -0.55)], [Vector3(-0.12, 0.53, 0.14), Vector3(0.45, 0, 0.35)],
+						[Vector3(0.12, 0.53, 0.14), Vector3(0.45, 0, -0.35)]]:
+					ctx.form(head, spike[0], Vector3(0.14, 0.25, 0.14), color, LOCK_PROFILE, spike[1] + Vector3(0, 0, PI))
 
 static func _headgear(ctx: Ctx, head: Node3D, kind: int, cloth: Color) -> void:
 	var team := ctx.team_color
 	match kind:
 		1:  # Cap
-			ctx.add(head, Vector3(0, 0.6, 0.02), Vector3(0.64, 0.15, 0.58), cloth)
-			ctx.add(head, Vector3(0, 0.535, -0.37), Vector3(0.5, 0.035, 0.22), cloth.darkened(0.2))
-			ctx.detail(head, Vector3(0, 0.6, -0.272), Vector3(0.16, 0.08, 0.02), team)
-			ctx.detail(head, Vector3(0, 0.685, 0.02), Vector3(0.06, 0.03, 0.06), team)
+			ctx.form(head, Vector3(0, 0.52, 0.02), Vector3(0.60, 0.18, 0.54), cloth, [Vector3(-0.5, 1, 1), Vector3(0.1, 0.96, 0.94), Vector3(0.5, 0.58, 0.64)])
+			ctx.add(head, Vector3(0, 0.452, -0.30), Vector3(0.45, 0.025, 0.23), cloth.darkened(0.15))
+			ctx.detail(head, Vector3(0, 0.52, -0.245), Vector3(0.09, 0.05, 0.014), team)
+			ctx.add(head, Vector3(0, 0.615, 0.02), Vector3(0.045, 0.022, 0.045), team, DETAIL)
 		2:  # Goggle Helmet: grey shell, ear guards, tinted goggles pushed up on the brow
 			var shell := Color("6a6f7a")
-			ctx.add(head, Vector3(0, 0.6, 0.02), Vector3(0.66, 0.18, 0.62), shell)
-			ctx.add(head, Vector3(0, 0.52, -0.33), Vector3(0.62, 0.05, 0.1), shell.darkened(0.25))
-			ctx.add(head, Vector3(0, 0.66, -0.3), Vector3(0.52, 0.14, 0.09), Color("3a3d46"))
-			box(head, Vector3(0, 0.665, -0.35), Vector3(0.44, 0.09, 0.02), ctx.glow(Color("e05cff"), 1.4))
+			ctx.form(head, Vector3(0, 0.51, 0.02), Vector3(0.61, 0.23, 0.56), shell, [Vector3(-0.5, 1, 1), Vector3(0, 0.96, 0.95), Vector3(0.5, 0.55, 0.62)])
+			ctx.add(head, Vector3(0, 0.445, -0.28), Vector3(0.50, 0.035, 0.08), shell.darkened(0.25))
 			for side in [-1, 1]:
-				ctx.add(head, Vector3(side * 0.335, 0.32, 0.02), Vector3(0.07, 0.18, 0.18), shell)
-				ctx.detail(head, Vector3(side * 0.372, 0.32, 0.02), Vector3(0.01, 0.06, 0.12), team)
+				ctx.add(head, Vector3(side * 0.11, 0.555, -0.254), Vector3(0.19, 0.1, 0.07), DARK)
+				box(head, Vector3(side * 0.11, 0.558, -0.291), Vector3(0.14, 0.055, 0.015), ctx.glow(Color("8ab6df"), 0.5))
+				ctx.add(head, Vector3(side * 0.292, 0.28, 0.02), Vector3(0.07, 0.15, 0.16), shell)
+				ctx.detail(head, Vector3(side * 0.331, 0.28, 0.02), Vector3(0.01, 0.05, 0.10), team)
 		3:  # Headset: band over the hair, ear cups, mic boom on the left
-			ctx.add(head, Vector3(0, 0.63, 0.02), Vector3(0.66, 0.05, 0.08), DARK)
+			ctx.add(head, Vector3(0, 0.585, 0.02), Vector3(0.53, 0.035, 0.065), DARK)
 			for side in [-1, 1]:
-				ctx.add(head, Vector3(side * 0.335, 0.6, 0.02), Vector3(0.05, 0.1, 0.07), DARK)
-				ctx.add(head, Vector3(side * 0.34, 0.3, 0.02), Vector3(0.08, 0.18, 0.18), Color("c9ccd2"))
-				ctx.detail(head, Vector3(side * 0.382, 0.3, 0.02), Vector3(0.01, 0.12, 0.12), team)
+				ctx.add(head, Vector3(side * 0.285, 0.47, 0.02), Vector3(0.035, 0.21, 0.06), DARK)
+				ctx.add(head, Vector3(side * 0.30, 0.28, 0.02), Vector3(0.075, 0.15, 0.15), Color("c9ccd2"))
+				ctx.detail(head, Vector3(side * 0.34, 0.28, 0.02), Vector3(0.01, 0.09, 0.095), team)
 			ctx.add(head, Vector3(-0.29, 0.2, -0.16), Vector3(0.03, 0.03, 0.26), DARK, LIT, Vector3(0, 0.35, 0))
 			box(head, Vector3(-0.22, 0.18, -0.29), Vector3(0.05, 0.04, 0.04), ctx.glow(team, 1.6))
 		4:  # Beanie with a pompom in the team colour
-			ctx.add(head, Vector3(0, 0.6, 0.02), Vector3(0.64, 0.22, 0.58), cloth)
-			ctx.add(head, Vector3(0, 0.5, 0.02), Vector3(0.66, 0.08, 0.6), cloth.darkened(0.2))
-			ctx.add(head, Vector3(0, 0.75, 0.02), Vector3(0.13, 0.1, 0.13), team)
+			ctx.form(head, Vector3(0, 0.53, 0.02), Vector3(0.59, 0.25, 0.54), cloth, [Vector3(-0.5, 1, 1), Vector3(0, 0.95, 0.95), Vector3(0.5, 0.4, 0.45)])
+			ctx.add(head, Vector3(0, 0.446, 0.02), Vector3(0.60, 0.06, 0.55), cloth.darkened(0.16))
+			ctx.add(head, Vector3(0, 0.679, 0.02), Vector3(0.105, 0.095, 0.105), team)
 		5:  # Sunglasses pushed up on the head
 			var frame := Color("f2c12e")
-			ctx.add(head, Vector3(0, 0.615, -0.22), Vector3(0.52, 0.03, 0.04), frame, LIT, Vector3(-0.35, 0, 0))
+			ctx.add(head, Vector3(0, 0.54, -0.22), Vector3(0.46, 0.025, 0.04), frame, LIT, Vector3(-0.35, 0, 0))
 			for side in [-1, 1]:
-				ctx.add(head, Vector3(side * 0.13, 0.6, -0.25), Vector3(0.22, 0.14, 0.04), frame, LIT, Vector3(-0.35, 0, 0))
-				ctx.detail(head, Vector3(side * 0.13, 0.598, -0.272), Vector3(0.17, 0.095, 0.02), Color("5fe0f0"), Vector3(-0.35, 0, 0))
-				ctx.detail(head, Vector3(side * 0.13 - 0.04, 0.615, -0.276), Vector3(0.04, 0.025, 0.02), Color("e9fdff"), Vector3(-0.35, 0, 0))
+				ctx.add(head, Vector3(side * 0.12, 0.526, -0.25), Vector3(0.195, 0.115, 0.035), frame, LIT, Vector3(-0.35, 0, 0))
+				ctx.add(head, Vector3(side * 0.12, 0.524, -0.272), Vector3(0.155, 0.08, 0.012), Color("5fe0f0"), DETAIL, Vector3(-0.35, 0, 0))
+				ctx.detail(head, Vector3(side * 0.12 - 0.04, 0.54, -0.276), Vector3(0.035, 0.02, 0.012), Color("e9fdff"), Vector3(-0.35, 0, 0))
 
 # Torso (Body pivot at the hips; torso y 0.04..0.54). Returns the sleeve colour (Color(0, 0, 0, 0): short sleeves).
 static func _top(ctx: Ctx, body: Node3D, w: float, skin: Color, cloth: Color, kind: int) -> Color:
 	var team := ctx.team_color
-	var tw := 0.44 * w
-	var trim_z := -0.15
-	box(body, Vector3(-0.1 * w, 0.42, -0.152), Vector3(0.07, 0.04, 0.02), ctx.glow(team, 1.3))  # chest badge
+	var tw := 0.39 * w
+	var trim_z := -0.141
+	var fitted := [Vector3(-0.5, 0.82, 0.85), Vector3(-0.2, 0.86, 0.9), Vector3(0.28, 1, 1), Vector3(0.5, 0.90, 0.92)]
+	box(body, Vector3(-0.09 * w, 0.41, -0.145), Vector3(0.053, 0.027, 0.014), ctx.glow(team, 1.3))
 	match kind:
 		0:  # Tee
-			ctx.add(body, Vector3(0, 0.29, 0), Vector3(tw, 0.5, 0.27), cloth)
+			ctx.form(body, Vector3(0, 0.29, 0), Vector3(tw, 0.5, 0.27), cloth, fitted)
 			ctx.detail(body, Vector3(0, 0.52, trim_z + 0.01), Vector3(0.2, 0.04, 0.02), team)
-			ctx.detail(body, Vector3(0, 0.08, trim_z), Vector3(tw + 0.005, 0.03, 0.02), cloth.darkened(0.15))
+			ctx.add(body, Vector3(0, 0.075, 0), Vector3(tw * 0.85, 0.035, 0.24), cloth.darkened(0.12), DETAIL)
+			for side in [-1, 1]:
+				ctx.detail(body, Vector3(side * 0.055, 0.49, -0.131), Vector3(0.11, 0.022, 0.012), team, Vector3(0, 0, side * 0.35))
 			return Color(0, 0, 0, 0)
 		1:  # Hoodie: bulkier, pocket, hood behind the neck, team drawstrings
-			ctx.add(body, Vector3(0, 0.29, 0), Vector3(tw + 0.04, 0.52, 0.3), cloth)
+			ctx.form(body, Vector3(0, 0.29, 0), Vector3(tw + 0.04, 0.52, 0.3), cloth, fitted)
 			ctx.add(body, Vector3(0, 0.53, 0.13), Vector3(0.36, 0.14, 0.14), cloth.darkened(0.12))
-			ctx.detail(body, Vector3(0, 0.14, -0.155), Vector3(0.28, 0.12, 0.02), cloth.darkened(0.12))
+			ctx.add(body, Vector3(0, 0.16, -0.139), Vector3(0.24, 0.105, 0.02), cloth.darkened(0.10), DETAIL)
 			for side in [-1, 1]:
 				ctx.detail(body, Vector3(side * 0.05, 0.43, -0.158), Vector3(0.022, 0.13, 0.02), team)
-			ctx.detail(body, Vector3(0, 0.06, -0.152), Vector3(tw + 0.045, 0.04, 0.02), cloth.darkened(0.2))
+			ctx.add(body, Vector3(0, 0.06, 0), Vector3((tw + 0.04) * 0.86, 0.04, 0.27), cloth.darkened(0.15), DETAIL)
 			return cloth
-		2:  # Crop Jacket over a white tee, midriff showing, team zip lines
-			ctx.add(body, Vector3(0, 0.1, 0), Vector3(tw - 0.04, 0.12, 0.24), skin)
-			ctx.add(body, Vector3(0, 0.355, 0), Vector3(tw + 0.02, 0.37, 0.29), cloth)
-			ctx.add(body, Vector3(0, 0.53, 0.0), Vector3(tw + 0.03, 0.06, 0.31), cloth.darkened(0.18))
-			ctx.detail(body, Vector3(0, 0.33, -0.148), Vector3(0.13, 0.32, 0.02), Color("f4f1e8"))
+		2:  # Short jacket, open front, angled lapels over a cream tee.
+			ctx.form(body, Vector3(0, 0.1, 0), Vector3(tw * 0.78, 0.13, 0.22), skin, TAPER_PROFILE)
+			ctx.form(body, Vector3(0, 0.355, 0), Vector3(tw + 0.02, 0.37, 0.29), cloth, fitted)
+			ctx.add(body, Vector3(0, 0.33, -0.145), Vector3(0.14, 0.31, 0.015), CREAM, DETAIL)
 			for side in [-1, 1]:
-				ctx.detail(body, Vector3(side * 0.08, 0.34, -0.152), Vector3(0.025, 0.34, 0.02), team)
-			ctx.detail(body, Vector3(0, 0.03, -0.12), Vector3(0.12, 0.04, 0.02), Color("3a3a3a"))  # belt buckle peeks under
+				ctx.detail(body, Vector3(side * 0.078, 0.34, -0.159), Vector3(0.014, 0.31, 0.012), team)
+				ctx.form(body, Vector3(side * 0.085, 0.474, -0.161), Vector3(0.072, 0.13, 0.023), cloth.lightened(0.18), LOCK_PROFILE, Vector3(0, 0, -side * 0.4), DETAIL)
+				ctx.detail(body, Vector3(side * 0.105, 0.255, -0.153), Vector3(0.05, 0.012, 0.012), cloth.darkened(0.2), Vector3(0, 0, side * 0.12))
 			return cloth
 		3:  # Tactical Vest over a darker shirt, front pouches
 			var shirt := cloth.darkened(0.4)
-			ctx.add(body, Vector3(0, 0.29, 0), Vector3(tw - 0.02, 0.5, 0.25), shirt)
-			ctx.add(body, Vector3(0, 0.31, 0), Vector3(tw + 0.03, 0.36, 0.31), cloth)
+			ctx.form(body, Vector3(0, 0.29, 0), Vector3(tw - 0.02, 0.5, 0.25), shirt, fitted)
+			ctx.form(body, Vector3(0, 0.31, 0), Vector3(tw + 0.03, 0.36, 0.31), cloth, fitted)
 			for i in range(3):
-				ctx.add(body, Vector3((i - 1) * 0.12 * w, 0.2, -0.17), Vector3(0.1, 0.11, 0.05), cloth.darkened(0.2))
+				ctx.add(body, Vector3((i - 1) * 0.10 * w, 0.2, -0.155), Vector3(0.085, 0.10, 0.045), cloth.darkened(0.15))
 			for side in [-1, 1]:
 				ctx.add(body, Vector3(side * 0.13 * w, 0.52, 0), Vector3(0.08, 0.04, 0.31), cloth.darkened(0.2))
 			ctx.detail(body, Vector3(0.1 * w, 0.42, -0.158), Vector3(0.1, 0.06, 0.02), team)
 			return shirt
 		_:  # Jersey: team stripe across the chest and a number patch
-			ctx.add(body, Vector3(0, 0.29, 0), Vector3(tw, 0.5, 0.27), cloth)
-			ctx.detail(body, Vector3(0, 0.33, 0), Vector3(tw + 0.008, 0.06, 0.278), team)
+			ctx.form(body, Vector3(0, 0.29, 0), Vector3(tw, 0.5, 0.27), cloth, fitted)
+			ctx.add(body, Vector3(0, 0.37, 0), Vector3(tw + 0.006, 0.055, 0.275), team, DETAIL)
 			ctx.detail(body, Vector3(0, 0.51, trim_z), Vector3(0.16, 0.06, 0.02), Color("f4f1e8"), Vector3(0, 0, 0))
 			ctx.detail(body, Vector3(0.1 * w, 0.2, trim_z), Vector3(0.1, 0.11, 0.02), Color("f4f1e8"))
 			ctx.detail(body, Vector3(0.1 * w, 0.2, trim_z - 0.008), Vector3(0.03, 0.08, 0.02), cloth.darkened(0.3))
@@ -387,71 +409,82 @@ static func _top(ctx: Ctx, body: Node3D, w: float, skin: Color, cloth: Color, ki
 # The pelvis rides with the Body; skirts hang from it.
 static func _bottoms_body(ctx: Ctx, body: Node3D, w: float, cloth: Color, kind: int) -> void:
 	if kind == 2:  # Skirt: flared, with pleat lines
-		ctx.add(body, Vector3(0, 0.0, 0), Vector3(0.5 * w, 0.24, 0.34), cloth)
-		for i in range(4):
-			ctx.detail(body, Vector3((i - 1.5) * 0.11 * w, -0.02, -0.172), Vector3(0.018, 0.2, 0.02), cloth.darkened(0.2))
+		ctx.form(body, Vector3(0, -0.055, 0), Vector3(0.57 * w, 0.32, 0.39), cloth,
+			[Vector3(-0.5, 1, 1), Vector3(-0.4, 1, 1), Vector3(0.5, 0.58, 0.64)])
+		for side in [-1, 1]:
+			ctx.detail(body, Vector3(side * 0.082 * w, -0.062, -0.173), Vector3(0.014, 0.25, 0.014), cloth.darkened(0.13), Vector3(-0.21, 0, -side * 0.16))
+		ctx.add(body, Vector3(0, 0.092, 0), Vector3(0.34 * w, 0.045, 0.25), cloth.darkened(0.18), DETAIL)
 		return
-	ctx.add(body, Vector3(0, 0.05, 0), Vector3(0.42 * w, 0.16, 0.26), cloth)
-	ctx.detail(body, Vector3(0, 0.115, 0), Vector3(0.425 * w, 0.03, 0.265), cloth.darkened(0.3))  # waistband
+	ctx.form(body, Vector3(0, 0.035, 0), Vector3(0.39 * w, 0.17, 0.27), cloth, TAPER_PROFILE)
+	ctx.add(body, Vector3(0, 0.108, 0), Vector3(0.35 * w, 0.035, 0.25), cloth.darkened(0.2), DETAIL)
+	ctx.detail(body, Vector3(0, 0.108, -0.134), Vector3(0.055, 0.028, 0.015), CREAM)
 
-# Leg pivot at the hip, y down: thigh 0..-0.3, shin -0.3..-0.58, shoes below.
+# Leg pivot at the hip: tapered thigh, narrow knee and calf, with shoes filling the last 0.16 m.
 static func _leg(ctx: Ctx, leg: Node3D, side: int, t: float, skin: Color, cloth: Color, kind: int) -> void:
 	var sock := Color("f4f1e8")
 	match kind:
 		1:  # Cargo Pants
-			ctx.add(leg, Vector3(0, -0.16, 0), Vector3(0.19 * t, 0.34, 0.21 * t), cloth)
-			ctx.add(leg, Vector3(0, -0.45, 0), Vector3(0.18 * t, 0.26, 0.2 * t), cloth)
-			ctx.add(leg, Vector3(side * 0.1 * t, -0.22, 0), Vector3(0.04, 0.12, 0.12), cloth.darkened(0.18))
+			ctx.form(leg, Vector3(0, -0.205, 0), Vector3(0.18 * t, 0.43, 0.20 * t), cloth, TAPER_PROFILE)
+			ctx.form(leg, Vector3(0, -0.57, 0), Vector3(0.15 * t, 0.34, 0.17 * t), cloth, TAPER_PROFILE)
+			ctx.add(leg, Vector3(side * 0.092 * t, -0.245, 0), Vector3(0.04, 0.12, 0.12), cloth.darkened(0.12))
 		2:  # Skirt: bare legs, knee socks
-			ctx.add(leg, Vector3(0, -0.16, 0), Vector3(0.16 * t, 0.32, 0.18 * t), skin)
-			ctx.add(leg, Vector3(0, -0.4, 0), Vector3(0.15 * t, 0.16, 0.17 * t), skin)
-			ctx.add(leg, Vector3(0, -0.52, 0), Vector3(0.16 * t, 0.16, 0.18 * t), sock)
+			ctx.form(leg, Vector3(0, -0.21, 0), Vector3(0.155 * t, 0.44, 0.17 * t), skin, TAPER_PROFILE)
+			ctx.form(leg, Vector3(0, -0.48, 0), Vector3(0.125 * t, 0.17, 0.14 * t), skin, TAPER_PROFILE)
+			ctx.form(leg, Vector3(0, -0.645, 0), Vector3(0.135 * t, 0.21, 0.15 * t), sock, TAPER_PROFILE)
 		3:  # Cutoffs: short frayed denim
-			ctx.add(leg, Vector3(0, -0.07, 0), Vector3(0.19 * t, 0.16, 0.21 * t), cloth)
-			ctx.detail(leg, Vector3(0, -0.16, 0), Vector3(0.195 * t, 0.03, 0.215 * t), cloth.lightened(0.35))
-			ctx.add(leg, Vector3(0, -0.33, 0), Vector3(0.16 * t, 0.36, 0.18 * t), skin)
-			ctx.add(leg, Vector3(0, -0.53, 0), Vector3(0.165 * t, 0.1, 0.185 * t), sock)
+			ctx.form(leg, Vector3(0, -0.08, 0), Vector3(0.18 * t, 0.19, 0.2 * t), cloth, TAPER_PROFILE)
+			ctx.add(leg, Vector3(0, -0.166, 0), Vector3(0.15 * t, 0.03, 0.18 * t), cloth.lightened(0.25), DETAIL)
+			ctx.form(leg, Vector3(0, -0.31, 0), Vector3(0.148 * t, 0.30, 0.164 * t), skin, TAPER_PROFILE)
+			ctx.form(leg, Vector3(0, -0.59, 0), Vector3(0.126 * t, 0.30, 0.14 * t), skin, TAPER_PROFILE)
+			ctx.add(leg, Vector3(0, -0.72, 0), Vector3(0.13 * t, 0.085, 0.15 * t), sock)
 		_:  # Shorts
-			ctx.add(leg, Vector3(0, -0.1, 0), Vector3(0.2 * t, 0.22, 0.22 * t), cloth)
-			ctx.add(leg, Vector3(0, -0.36, 0), Vector3(0.16 * t, 0.32, 0.18 * t), skin)
-			ctx.add(leg, Vector3(0, -0.53, 0), Vector3(0.165 * t, 0.1, 0.185 * t), sock)
+			ctx.form(leg, Vector3(0, -0.11, 0), Vector3(0.19 * t, 0.25, 0.21 * t), cloth, TAPER_PROFILE)
+			ctx.add(leg, Vector3(0, -0.223, 0), Vector3(0.16 * t, 0.032, 0.18 * t), cloth.lightened(0.12), DETAIL)
+			ctx.form(leg, Vector3(0, -0.345, 0), Vector3(0.148 * t, 0.26, 0.164 * t), skin, TAPER_PROFILE)
+			ctx.form(leg, Vector3(0, -0.60, 0), Vector3(0.126 * t, 0.29, 0.14 * t), skin, TAPER_PROFILE)
+			ctx.add(leg, Vector3(0, -0.72, 0), Vector3(0.13 * t, 0.085, 0.15 * t), sock)
 
 static func _shoe(ctx: Ctx, leg: Node3D, side: int, cloth: Color, kind: int) -> void:
 	var team := ctx.team_color
+	var w: float = Appearance.BODIES[ctx.look.body].width
 	var sole := Color("f1efe8") if cloth.get_luminance() < 0.8 else Color("b9bcc2")
 	var y := -HIP_Y
 	match kind:
 		1:  # Boots: tall shaft, dark lug sole, team laces
-			ctx.add(leg, Vector3(0, y + 0.22, 0), Vector3(0.2, 0.2, 0.21), cloth)
-			ctx.add(leg, Vector3(0, y + 0.09, -0.04), Vector3(0.21, 0.12, 0.33), cloth)
-			ctx.add(leg, Vector3(0, y + 0.025, -0.04), Vector3(0.23, 0.05, 0.35), Color("2a2622"))
-			ctx.detail(leg, Vector3(0, y + 0.2, -0.108), Vector3(0.06, 0.2, 0.02), team)
+			ctx.form(leg, Vector3(0, y + 0.22, 0), Vector3(0.18 * w, 0.22, 0.20), cloth, TAPER_PROFILE)
+			ctx.add(leg, Vector3(0, y + 0.10, -0.04), Vector3(0.20 * w, 0.14, 0.31), cloth)
+			ctx.add(leg, Vector3(0, y + 0.025, -0.04), Vector3(0.22 * w, 0.05, 0.33), Color("2a2622"))
+			ctx.add(leg, Vector3(0, y + 0.31, 0), Vector3(0.19 * w, 0.045, 0.21), CREAM, DETAIL)
+			for i in range(3):
+				ctx.detail(leg, Vector3(0, y + 0.16 + i * 0.036, -0.105), Vector3(0.055, 0.012, 0.012), team, Vector3(0, 0, 0.15 if i % 2 == 0 else -0.15))
 		2:  # High-tops: chunky, thick white sole and toe cap, team ankle band
-			ctx.add(leg, Vector3(0, y + 0.14, -0.03), Vector3(0.23, 0.2, 0.34), cloth)
-			ctx.add(leg, Vector3(0, y + 0.035, -0.035), Vector3(0.245, 0.07, 0.37), sole)
-			ctx.add(leg, Vector3(0, y + 0.09, -0.175), Vector3(0.225, 0.08, 0.08), sole)
-			ctx.detail(leg, Vector3(0, y + 0.22, -0.01), Vector3(0.235, 0.045, 0.22), team)
+			ctx.add(leg, Vector3(0, y + 0.14, -0.03), Vector3(0.205 * w, 0.2, 0.32), cloth)
+			ctx.add(leg, Vector3(0, y + 0.035, -0.035), Vector3(0.22 * w, 0.07, 0.35), sole)
+			ctx.add(leg, Vector3(0, y + 0.09, -0.16), Vector3(0.20 * w, 0.08, 0.08), sole)
+			ctx.add(leg, Vector3(0, y + 0.22, -0.01), Vector3(0.19 * w, 0.035, 0.20), team, DETAIL)
 		_:  # Sneakers
-			ctx.add(leg, Vector3(0, y + 0.1, -0.04), Vector3(0.21, 0.13, 0.33), cloth)
-			ctx.add(leg, Vector3(0, y + 0.025, -0.045), Vector3(0.23, 0.05, 0.35), sole)
-			ctx.detail(leg, Vector3(side * 0.106, y + 0.09, -0.03), Vector3(0.02, 0.035, 0.18), team)
+			ctx.add(leg, Vector3(0, y + 0.1, -0.04), Vector3(0.20 * w, 0.13, 0.31), cloth)
+			ctx.add(leg, Vector3(0, y + 0.025, -0.045), Vector3(0.22 * w, 0.05, 0.33), sole)
+			ctx.detail(leg, Vector3(side * 0.1 * w, y + 0.09, -0.03), Vector3(0.012, 0.028, 0.15), team)
 			ctx.detail(leg, Vector3(0, y + 0.15, -0.13), Vector3(0.1, 0.02, 0.1), sole)
 
 # Free arm: shoulder pivot, hanging down. Sleeve colour alpha 0 means short sleeves (bare forearm).
 static func _free_arm(ctx: Ctx, arm: Node3D, t: float, skin: Color, sleeve: Color) -> void:
 	var top_color: Color = Appearance.CLOTH_COLORS[ctx.look.top_color] if sleeve.a == 0.0 else sleeve
-	ctx.add(arm, Vector3(0, -0.1, 0), Vector3(0.14 * t, 0.24, 0.14 * t), top_color)
-	ctx.detail(arm, Vector3(0, -0.06, 0), Vector3(0.145 * t, 0.04, 0.145 * t), ctx.team_color)
-	ctx.add(arm, Vector3(0, -0.3, 0), Vector3(0.12 * t, 0.18, 0.12 * t), skin if sleeve.a == 0.0 else sleeve)
-	ctx.add(arm, Vector3(0, -0.44, -0.01), Vector3(0.13, 0.12, 0.13), skin)
+	ctx.form(arm, Vector3(0, -0.095, 0), Vector3(0.145 * t, 0.23, 0.15 * t), top_color, TAPER_PROFILE)
+	ctx.add(arm, Vector3(0, -0.06, 0), Vector3(0.147 * t, 0.035, 0.152 * t), ctx.team_color, DETAIL)
+	ctx.form(arm, Vector3(0, -0.295, 0), Vector3(0.105 * t, 0.21, 0.115 * t), skin if sleeve.a == 0.0 else sleeve, TAPER_PROFILE)
+	ctx.add(arm, Vector3(0, -0.44, -0.01), Vector3(0.108, 0.12, 0.12), skin)
+	ctx.add(arm, Vector3(0, -0.395, 0), Vector3(0.116 * t, 0.035, 0.125 * t), DARK, DETAIL)
 
 # Gun arm: shoulder pivot pointing forward (-Z), hand under the gun's grip.
 static func _gun_arm(ctx: Ctx, weapon: Node3D, t: float, skin: Color, sleeve: Color) -> void:
 	var top_color: Color = Appearance.CLOTH_COLORS[ctx.look.top_color] if sleeve.a == 0.0 else sleeve
-	ctx.add(weapon, Vector3(0, 0, -0.08), Vector3(0.14 * t, 0.14 * t, 0.24), top_color)
-	ctx.detail(weapon, Vector3(0, 0, -0.03), Vector3(0.145 * t, 0.145 * t, 0.04), ctx.team_color)
-	ctx.add(weapon, Vector3(0, -0.01, -0.27), Vector3(0.12 * t, 0.12 * t, 0.17), skin if sleeve.a == 0.0 else sleeve)
-	ctx.add(weapon, Vector3(0, -0.03, -0.39), Vector3(0.13, 0.13, 0.12), skin)
+	ctx.form(weapon, Vector3(0, 0, -0.08), Vector3(0.145 * t, 0.24, 0.15 * t), top_color, TAPER_PROFILE, Vector3(PI / 2, 0, 0))
+	ctx.add(weapon, Vector3(0, 0, -0.03), Vector3(0.147 * t, 0.152 * t, 0.035), ctx.team_color, DETAIL)
+	ctx.form(weapon, Vector3(0, -0.01, -0.27), Vector3(0.105 * t, 0.20, 0.115 * t), skin if sleeve.a == 0.0 else sleeve, TAPER_PROFILE, Vector3(PI / 2, 0, 0))
+	ctx.add(weapon, Vector3(0, -0.03, -0.39), Vector3(0.108, 0.12, 0.12), skin)
+	ctx.add(weapon, Vector3(0, -0.014, -0.355), Vector3(0.116 * t, 0.125 * t, 0.035), DARK, DETAIL)
 
 # ---- weapons --------------------------------------------------------------------------------------------------
 
@@ -553,6 +586,10 @@ static func _surface(parts: Array, layer: int) -> Array:
 			continue
 		if p.shape == PRISM:
 			_emit_prism(p, verts, normals, colors, custom)
+		elif p.shape == FACET:
+			_emit_facet(p, verts, normals, colors, custom)
+		elif p.shape == PATCH:
+			_emit_patch(p, verts, normals, colors, custom)
 		else:
 			_emit_box(p, verts, normals, colors, custom)
 	if verts.is_empty():
@@ -572,6 +609,8 @@ static func _quad(xf: Transform3D, corners: Array, dirs: Array, normal: Vector3,
 	var order := [0, 1, 2, 0, 2, 3]
 	if (corners[1] - corners[0]).cross(corners[2] - corners[0]).dot(normal) > 0.0:
 		order = [0, 2, 1, 0, 3, 2]
+	if corners[0] == corners[3]:
+		order.resize(3)  # triangle fans need no degenerate second triangle
 	var n: Vector3 = (xf.basis * normal).normalized()
 	for i in order:
 		verts.append(xf * corners[i])
@@ -594,6 +633,50 @@ static func _emit_box(p: Dictionary, verts: PackedVector3Array, normals: PackedV
 				corners.append(sign_vec * h)
 				dirs.append(sign_vec)
 			_quad(p.xf, corners, dirs, axes[a] * s, p.color, verts, normals, colors, custom)
+
+# Convex face patches stay flat, so eyes and blush do not cast little box shadows.
+static func _emit_patch(p: Dictionary, verts: PackedVector3Array, normals: PackedVector3Array, colors: PackedColorArray, custom: PackedFloat32Array) -> void:
+	var polygon: Array = p.polygon
+	for i in range(polygon.size()):
+		var a: Vector2 = polygon[i]
+		var b: Vector2 = polygon[(i + 1) % polygon.size()]
+		_quad(p.xf, [Vector3.ZERO, Vector3(a.x * p.size.x, a.y * p.size.y, 0), Vector3(b.x * p.size.x, b.y * p.size.y, 0), Vector3.ZERO],
+			[Vector3.ZERO, Vector3.ZERO, Vector3.ZERO, Vector3.ZERO], Vector3.FORWARD, p.color, verts, normals, colors, custom)
+
+# Chamfered rectangular rings preserve a broad front plane for facial features and garment details.
+static func _facet_ring(size: Vector3, ring: Vector3) -> Array:
+	var x := size.x * ring.y * 0.5
+	var z := size.z * ring.z * 0.5
+	var y := size.y * ring.x
+	var bx := x * 0.28
+	var bz := z * 0.28
+	return [Vector3(-x + bx, y, -z), Vector3(x - bx, y, -z), Vector3(x, y, -z + bz),
+		Vector3(x, y, z - bz), Vector3(x - bx, y, z), Vector3(-x + bx, y, z),
+		Vector3(-x, y, z - bz), Vector3(-x, y, -z + bz)]
+
+static func _emit_facet(p: Dictionary, verts: PackedVector3Array, normals: PackedVector3Array, colors: PackedColorArray, custom: PackedFloat32Array) -> void:
+	var profile: Array = p.get("profile", SOFT_PROFILE)
+	var rings := []
+	for ring in profile:
+		rings.append(_facet_ring(p.size, ring))
+	for band in range(rings.size() - 1):
+		for i in range(8):
+			var j := (i + 1) % 8
+			var corners := [rings[band][i], rings[band][j], rings[band + 1][j], rings[band + 1][i]]
+			var normal: Vector3 = (corners[3] - corners[0]).cross(corners[1] - corners[0]).normalized()
+			var dirs := []
+			for v in corners:
+				dirs.append(Vector3(v.x / (p.size.x * 0.5), v.y / (p.size.y * 0.5), v.z / (p.size.z * 0.5)))
+			_quad(p.xf, corners, dirs, normal, p.color, verts, normals, colors, custom)
+	for cap in [0, rings.size() - 1]:
+		var normal := Vector3.DOWN if cap == 0 else Vector3.UP
+		var center := Vector3(0, rings[cap][0].y, 0)
+		for i in range(8):
+			var a: Vector3 = rings[cap][i]
+			var b: Vector3 = rings[cap][(i + 1) % 8]
+			var da := Vector3(a.x / (p.size.x * 0.5), normal.y, a.z / (p.size.z * 0.5))
+			var db := Vector3(b.x / (p.size.x * 0.5), normal.y, b.z / (p.size.z * 0.5))
+			_quad(p.xf, [center, a, b, center], [normal, da, db, normal], normal, p.color, verts, normals, colors, custom)
 
 # Eight-sided prism along local Y (size.x is the diameter, size.y the length).
 static func _emit_prism(p: Dictionary, verts: PackedVector3Array, normals: PackedVector3Array, colors: PackedColorArray, custom: PackedFloat32Array) -> void:

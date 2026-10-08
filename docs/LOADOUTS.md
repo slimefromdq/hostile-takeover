@@ -56,10 +56,11 @@ into one int (`Appearance.encode` / `decode`, every field clamped, so any int fr
 `join_request` / `loadout_request` and in snapshots as `"ap"`; `Game.apply_look` applies it anywhere (no return-to-spawn
 rule) and `Game.bot_look` gives each bot id a fixed random look. The build only scales the drawn body, never the collider.
 
-`CharacterRig` draws the look as a squat low-poly person (1.9 m, big blocky head over the 1.55 m headshot line, short
-limbs, oversized shoes) from boxes and prisms per bone, baked into one vertex-coloured mesh per bone. Team trim (collar or
-stripe, upper-arm bands, shoe stripes, chest badge) is the team colour; the outline is a crack-free inverted hull pushed
-back in depth so it only draws around the silhouette.
+`CharacterRig` draws the look as a cute low-poly person with a sculpted cheek/chin profile, polygon eyes, pointed hair
+locks, longer tapered limbs, fitted tops, flared skirts and chunky shoes. Faceted profiles, flat face patches, boxes and
+prisms are baked into one vertex-coloured mesh per bone. The shared 1.9 m capsule and 1.55 m headshot line are unchanged.
+Team trim (collar or stripe, upper-arm bands, shoe stripes, chest badge) is the team colour; the outline is a crack-free
+inverted hull pushed back in depth so it only draws around the silhouette. See [character design notes](CHARACTERS.md).
 
 - **A new option:** append to its table in `appearance.gd` (mind the field's bit width in `FIELDS`) and add a `match`
   case to the matching builder in `character_rig.gd` (`_hair`, `_headgear`, `_top`, `_bottoms_body` / `_leg`, `_shoe`).

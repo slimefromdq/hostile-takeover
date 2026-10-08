@@ -832,6 +832,8 @@ func test_appearance() -> void:
 	root.add_child(holder)
 	var complete := true
 	var max_meshes := 0
+	var valid_geometry := true
+	var max_triangles := 0
 	for f in Appearance.FIELDS:
 		for i in range(Appearance.options(f.key).size()):
 			var rig := CharacterRig.build(holder, Visuals.team_color(i % 2), [], false, i % 3, i % 3, i % 3, Appearance.with_field(Appearance.default_code(), f.key, i))
@@ -840,10 +842,44 @@ func test_appearance() -> void:
 					complete = false
 					printerr("  missing %s with %s = %d" % [path, f.key, i])
 			max_meshes = maxi(max_meshes, rig.find_children("*", "MeshInstance3D", true, false).size())
+			var triangles := 0
+			for node in rig.find_children("*", "MeshInstance3D", true, false):
+				if not node.mesh is ArrayMesh:
+					continue
+				for surface in range(node.mesh.get_surface_count()):
+					var arrays: Array = node.mesh.surface_get_arrays(surface)
+					var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+					var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+					triangles += vertices.size() / 3
+					for v in range(0, vertices.size(), 3):
+						var cross := (vertices[v + 1] - vertices[v]).cross(vertices[v + 2] - vertices[v])
+						valid_geometry = valid_geometry and vertices[v].is_finite() and normals[v].is_finite() and is_equal_approx(normals[v].length(), 1.0) and cross.dot(normals[v]) < 0.0
+			max_triangles = maxi(max_triangles, triangles)
 			rig.free()
 	holder.free()
 	check(complete, "every look option builds a complete rig")
 	check(max_meshes <= 16, "a rig is a handful of draw calls (%d mesh instances at most)" % max_meshes)
+	check(valid_geometry, "faceted profiles and face patches have finite normals and clockwise nondegenerate triangles")
+	check(max_triangles <= 5000, "faceted rigs stay low poly (%d baked triangles at most)" % max_triangles)
+	print("CHARACTER COST: %d meshes, %d baked triangles (maximum across look options)" % [max_meshes, max_triangles])
+	# New proportions must retain the poses, weapon aim and material fade used by live fighters.
+	var pose_holder := Node3D.new()
+	root.add_child(pose_holder)
+	var posed := CharacterRig.build(pose_holder, Visuals.team_color(0))
+	for frame in range(30):
+		CharacterRig.animate(posed, 1.0 / 60.0, 8.0, true, 0.25, true)
+	check(posed.get_node("Body").position.y < CharacterRig.HIP_Y * 0.6 and posed.get_node("Legs/LegL").rotation.x > 1.0, "redesigned rig eases into a seated slide")
+	for frame in range(60):
+		CharacterRig.animate(posed, 1.0 / 60.0, 0.0, true, 0.25, false, 0.3)
+	var torso: Node3D = posed.get_node("Body")
+	var gun_arm: Node3D = posed.get_node("Body/Weapon")
+	check(absf(torso.position.y - CharacterRig.HIP_Y) < 0.01 and is_equal_approx(torso.rotation.x + gun_arm.rotation.x, 0.25) and posed.get_node("Body/ArmL").rotation.x > 2.0, "rig returns upright, aims correctly and retains the melee pose")
+	CharacterRig.set_alpha(posed, 0.4)
+	var faded := true
+	for material in posed.get_meta("materials"):
+		faded = faded and is_equal_approx(material.albedo_color.a, 0.4)
+	check(faded, "all redesigned rig materials fade for concealment")
+	pose_holder.free()
 	# Snapshots carry the look and a change rebuilds the rig; respawning keeps it.
 	var p: Fighter = game.local_player()
 	var state := p.pack()

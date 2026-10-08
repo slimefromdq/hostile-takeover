@@ -13,7 +13,7 @@ numbers), `docs/LOADOUTS.md`, `MAP.md`, `docs/JUNGLE_GYM.md`, `docs/BLENDER.md` 
   Rifle, SMG), **sidearm** (Pistol, Burst Pistol, Revolver; quick swap, own magazine), **utility on Q** (Grapple, Frag,
   Smoke, Launch Pad, Sentry Turret, Barricade, Breach Charge) and **melee on F** (Knife, Sledgehammer, Sword).
 - **Character look (cosmetic).** In the start menu's LOOK tab you pick build, skin, eyes, hairstyle and hair colour,
-  headgear, top, bottoms, shoes and garment colours. The look is drawn as a squat low-poly person, and team colour shows
+  headgear, top, bottoms, shoes and garment colours. The look is drawn as a cute faceted low-poly person, and team colour shows
   as trim.
 - **Mode: Acquisition.** There are five points, A–B–C–D–E. C opens first. Capturing a point unlocks the next one toward
   the enemy, and taking the enemy's final point wins. Points are contested, decay when abandoned, and the match goes to
@@ -40,7 +40,7 @@ The project root is the Godot project (`project.godot`). The main scene is `scen
 | `scripts/fighter.gd` | One `CharacterBody3D` per fighter. Movement verbs are small helpers whose tuning constants sit at the top of the file. Also holds loadout state (`equip`, `apply_loadout`, `swap_weapon`), look (`set_look`), `pack()` / `unpack()` for snapshots, and the rig and nameplate. |
 | `scripts/loadout.gd` | Pure data: the gun tables (`resources/weapons/*.tres`, typed by `weapon_spec.gd`), the `UTILITIES` and `MELEES` dictionaries, and `encode` / `decode` of a loadout into one int (4 bits per slot). |
 | `scripts/appearance.gd` | Pure data: character-creator option tables, plus `encode` / `decode` of a look into one int (clamped, so network-safe), and save/load to `user://settings.cfg`. |
-| `scripts/character_rig.gd` | Builds the fighter model from a look and loadout. Box and prism parts are baked into one vertex-coloured mesh per bone. Procedural animation is in `animate()`. **Bone names are a contract:** `Legs/LegL`, `Legs/LegR`, `Body/Head`, `Body/ArmL/Melee`, `Body/Weapon/{Primary,Sidearm}`. |
+| `scripts/character_rig.gd` | Builds the fighter model from a look and loadout. Faceted profiles, face patches, boxes and prisms are baked into one vertex-coloured mesh per bone. Procedural animation is in `animate()`. **Bone names are a contract:** `Legs/LegL`, `Legs/LegR`, `Body/Head`, `Body/ArmL/Melee`, `Body/Weapon/{Primary,Sidearm}`. |
 | `scripts/items.gd` | Pickup kinds (`KINDS`: heal, armor, respawn, colour, sound) and power-up rules. |
 | `scripts/deployable.gd` | The entity node for turrets, pads, barricades, smoke, armor drops and pickups (`pack()` for snapshots). |
 | `scripts/acquisition.gd` | Pure objective rules (no scene dependencies). `civic_dividend.gd` ties them to the map (points, spawns, `TEAM_SIZE`). |

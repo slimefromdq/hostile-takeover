@@ -385,6 +385,7 @@ func _make_portrait() -> SubViewport:
 	light.light_energy = 1.2
 	world.add_child(light)
 	spinner = Node3D.new()
+	spinner.rotation.y = PI - 0.45  # show the face when the portrait first appears
 	world.add_child(spinner)
 	var camera := Camera3D.new()
 	camera.fov = 38

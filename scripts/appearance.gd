@@ -39,8 +39,8 @@ const FIELDS := [
 	{"key": "shoe_color", "label": "SHOES COLOUR", "kind": "color", "bits": 4},
 ]
 
-const DEFAULT_LOOK := {"body": 1, "skin": 1, "eyes": 0, "hair": 0, "hair_color": 9, "headgear": 3, "top": 2, "top_color": 3,
-	"bottom": 0, "bottom_color": 4, "shoes": 0, "shoe_color": 0}
+const DEFAULT_LOOK := {"body": 1, "skin": 1, "eyes": 1, "hair": 0, "hair_color": 8, "headgear": 0, "top": 2, "top_color": 0,
+	"bottom": 2, "bottom_color": 10, "shoes": 1, "shoe_color": 1}
 
 const SETTINGS_PATH := "user://settings.cfg"
 
