@@ -2,6 +2,8 @@
 
 A playable Godot 4.7 graybox prototype: one shared fighter body with Splatoon-style loadouts (primary, sidearm, utility, melee), shared parkour, server-authoritative combat, five-point Acquisition, offline 5v5 bots, and LAN host/join.
 
+AI agents (ChatGPT, Codex, Claude...): start with [`AGENTS.md`](AGENTS.md) for the code map and how to extend each system.
+
 ## Play
 
 Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **F5** to run the project. Pick a loadout and choose **Play offline**, or **Explore map** for a single-player free roam with no bots or objectives. No asset downloads or plugins are required.

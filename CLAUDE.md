@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. `AGENTS.md` is the agent-neutral overview (what is in the game and how to extend each system); keep the two in step.
 
 The Godot project is the repo root (`project.godot` is at the top level). All paths and commands below are relative to it.
 
