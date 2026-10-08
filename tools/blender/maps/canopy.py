@@ -495,9 +495,10 @@ SINGLE_HEALPACKS = [(-4.5, 34, -59)]
 BUBBLES = [(-73.5, 0, -2.5), (-17.5, 0, 3.5), (-46, -6, 0), (-61, -6, -3.5)]
 ARMOR1 = [(-49, 0, 9), (-13, -6, 4)]
 ARMOR2_AXIS = [(0, SUMP_Y, 0)]
-# The power-up (invincibility or triple damage, 12 s; 90 s timer) sits on the centre of each tower's 24 m top plate
-# (frame plate x -54..-44, z -54..-44), mirrored: one per side, each on its own timer. Reached by ladder_4, the hoist or the crane span.
-POWER_TOWERS = [(-49, 24, -49)]
+# The power-up (invincibility or triple damage, 12 s; 90 s timer) sits on the control booth on the gatehouse over C, the
+# map's central tower (booth top y 12, x -7..7, z -5.25..5.25). One for the whole map, on the x = 0 axis, so not mirrored.
+# Reached by span_booth_ladder on either gatehouse wall or the span_launch pads on the deck below.
+POWER_BOOTH = [(0, ROOF, 0)]
 
 
 def stage_items(b):
@@ -507,8 +508,8 @@ def stage_items(b):
         b.pickup(x, y, z, mirror=True, tag="armor1", kind="armor1")
     for x, y, z in ARMOR2_AXIS:
         b.pickup(x, y, z, mirror=False, tag="armor2", kind="armor2")
-    for x, y, z in POWER_TOWERS:
-        b.pickup(x, y, z, mirror=True, tag="power", kind="power")
+    for x, y, z in POWER_BOOTH:
+        b.pickup(x, y, z, mirror=False, tag="power", kind="power")
 
 
 def stage_healpacks(b):
@@ -528,8 +529,19 @@ def chicane_nodes(b, name, x0, before, after):
     b.waypoint(name + "b", x0 + 6.5, 0, -4, after + ":blv", mirror=True)
 
 
+def stage_booth_route(b):
+    """Bot route up the gatehouse over C to the power-up on the booth (y 12).
+    Street -> span_ladder_n -> span arm (y 6) -> deck -> span_launch pad / span_booth_ladder -> booth. The `lad` link
+    sends the bot forward over the pad: either the pad throws it onto the booth or it grabs the booth ladder behind it."""
+    b.waypoint("bl0", -13, 0, -13.5, "n3c:aln,bl1:lad", mirror=True)
+    b.waypoint("bl1", -13, MID, -7, "bl2:tow", mirror=True)
+    b.waypoint("bl2", -13, MID, 0, "bl3:tow", mirror=True)
+    b.waypoint("bl3", -11.5, MID, 0, "BT:lad", mirror=True)
+    b.waypoint("BT", 0, ROOF, 0, "")
+
+
 def stage_tower_route(b):
-    """Bot route up the construction tower to the power-up on the 24 m plate (docs: bots climb `lad` links and jump `jmp` links).
+    """Bot route up the construction tower to the healpack on the 24 m plate (docs: bots climb `lad` links and jump `jmp` links).
     Ground -> ladder_1 -> plate 6 -> gap jump -> ladder_2 -> plate 12 -> ladder_3 -> plate 18 -> gap jump -> ladder_4 -> plate 24.
     Gaps between plates are 2 m (x -44..-42); jump nodes sit 1 m in from each edge. Players take the same route by hand."""
     b.waypoint("t1b", -50, 0, -28.5, "n1a:aln,t1t:lad", mirror=True)
@@ -546,6 +558,7 @@ def stage_tower_route(b):
 
 def stage_graph(b):
     stage_tower_route(b)
+    stage_booth_route(b)
     b.waypoint("S", -90, 0, 0, "gt:blv,Sn:blv,Ss:blv", mirror=True, spawn=True)
     # Room nodes keep bots at the back of the depot from steering straight at the gate jamb.
     b.waypoint("Sn", -90, 0, -6, "", mirror=True)

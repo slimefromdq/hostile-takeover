@@ -1,7 +1,7 @@
 extends SceneTree
 
-# A bot starting in the north alley climbs the construction tower on Concrete Canopy (ladders and gap jumps) and takes the
-# power-up on the 24 m plate. Run: godot --headless --fixed-fps 60 --path . --script res://tests/bot_tower.gd
+# A bot starting north of point C climbs the gatehouse on Concrete Canopy (span ladder, then the launch pad or booth
+# ladder) and takes the power-up on the booth over C, 12 m up. Run: godot --headless --fixed-fps 60 --path . --script res://tests/bot_tower.gd
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -14,7 +14,7 @@ func run() -> void:
 	game.start_game("offline")
 	var tower: Deployable = null
 	for e in game.entities.values():
-		if e.kind == "power" and e.global_position.x < 0:
+		if e.kind == "power":
 			tower = e
 	var bot: Fighter = null
 	for p in game.fighters.values():
@@ -31,7 +31,7 @@ func run() -> void:
 		tower.used = false
 		tower.timer = 0.0
 		tower.hp = float(Items.POWER_QUAD)
-		var start: Vector3 = game.bot_graph.positions[game.bot_graph.node("n1a")]
+		var start: Vector3 = game.bot_graph.positions[game.bot_graph.node("n3b")]
 		bot.global_position = start + Vector3(0, 0.2, 0)
 		bot.velocity = Vector3.ZERO
 		bot.hp = Fighter.MAX_HEALTH

@@ -1814,11 +1814,10 @@
    "tag": "power",
    "kind": "power",
    "pos": [
-    -49,
-    24,
-    -49
-   ],
-   "mirror": true
+    0,
+    12.0,
+    0
+   ]
   }
  ],
  "objects": [
@@ -6853,6 +6852,50 @@
    "mirror": true
   },
   {
+   "name": "bl0",
+   "pos": [
+    -13,
+    0,
+    -13.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "bl1",
+   "pos": [
+    -13,
+    6.0,
+    -7
+   ],
+   "mirror": true
+  },
+  {
+   "name": "bl2",
+   "pos": [
+    -13,
+    6.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "bl3",
+   "pos": [
+    -11.5,
+    6.0,
+    0
+   ],
+   "mirror": true
+  },
+  {
+   "name": "BT",
+   "pos": [
+    0,
+    12.0,
+    0
+   ]
+  },
+  {
    "name": "S",
    "pos": [
     -90,
@@ -7781,6 +7824,31 @@
   [
    "t4b",
    "t4t",
+   "lad"
+  ],
+  [
+   "bl0",
+   "n3c",
+   "aln"
+  ],
+  [
+   "bl0",
+   "bl1",
+   "lad"
+  ],
+  [
+   "bl1",
+   "bl2",
+   "tow"
+  ],
+  [
+   "bl2",
+   "bl3",
+   "tow"
+  ],
+  [
+   "bl3",
+   "BT",
    "lad"
   ],
   [

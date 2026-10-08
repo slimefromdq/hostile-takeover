@@ -248,6 +248,8 @@ func audit_edges() -> void:
 	shape.radius = CAPSULE_RADIUS
 	shape.height = CAPSULE_HEIGHT
 	for link in graph.links:
+		if link.size() > 2 and link[2] in ["lad", "jmp"]:
+			continue  # ladders and gap jumps are verbs, not walks: tests/bot_tower.gd climbs them for real
 		var a: Vector3 = graph.nodes[link[0]]
 		var b: Vector3 = graph.nodes[link[1]]
 		var lift := Vector3.UP * (CAPSULE_HEIGHT / 2.0 + 0.12)

@@ -1321,6 +1321,8 @@ func bot_input(p: Fighter, dt: float) -> void:
 	if climbing_up:
 		p.movement = Vector2(0.0, -1.0)  # straight forward into the ladder; the climb volume carries the bot up
 		p.held = 0
+		if p.is_on_floor() and not p.climbing and p.get_real_velocity().length() < 1:
+			p.edges |= 1  # stalled on a lip before the ladder (the booth's launch pad): hop it
 	elif link == "jmp" and p.is_on_floor() and Vector2(diff.x, diff.z).length() <= BOT_JUMP_DISTANCE:
 		p.edges |= 1
 	elif (p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1) and not p.climbing:

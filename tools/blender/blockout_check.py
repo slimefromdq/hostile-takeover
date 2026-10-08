@@ -129,6 +129,8 @@ def check(doc):
         if a not in nodes or b not in nodes:
             problems.append("link %s-%s: missing waypoint" % (a, b))
             continue
+        if tag in ("lad", "jmp"):
+            continue  # ladders and gap jumps are verbs, not walks (the game's bot_tower test covers them)
         pa, pb = nodes[a], nodes[b]
         length = math.dist((pa[0], pa[2]), (pb[0], pb[2]))
         n = max(1, int(length / SAMPLE))
