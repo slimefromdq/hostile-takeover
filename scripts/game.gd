@@ -8,6 +8,9 @@ const PACK_REGEN := 150.0
 const PACK_REGEN_TIME := 5.0
 const PACK_RESPAWN := 25.0
 const PACK_RADIUS := 1.5
+const ARMOR_DROP := 15.0  # light armor dropped by a kill, for the killer's team
+const ARMOR_DROP_BEHIND := 10.0  # extra per point the killer's team is behind (up to 2)
+const ARMOR_DROP_LIFE := 20.0
 # Bot roles (see assign_bot_role). Capture speed stops growing at three capturers; a fourth covers contest fights.
 const BOT_MAX_ATTACKERS := 4
 const BOT_ROAM_CHANCE := 0.3  # chance an attacker slot rotates to a roam/defend role anyway
@@ -25,9 +28,8 @@ var authoritative := true
 var running := false
 var explore := false  # single-player free roam: no bots, no objective
 var local_id := 1
-# Test cheats (F6 cooldowns, F7 Tension, F8 damage, F9 full heal); host/offline only.
+# Test cheats (F6 cooldowns, F8 damage, F9 full heal); host/offline only.
 var cheat_no_cooldowns := false
-var cheat_full_tension := false
 var cheat_invulnerable := false
 var selected_class := 0
 var selected_weapon := 0
@@ -329,7 +331,6 @@ func apply_class(id: int, index: int, weapon_choice: int = 0) -> void:
 		return
 	remove_owned(id)
 	p.double_id = -1
-	p.meter = 0.0  # a hero swap starts the meter over; respawning as the same hero keeps it
 	p.change_class(index, weapon_choice)
 	p.dead_time = 0
 	p.global_position = spawn_position(p)
@@ -613,9 +614,6 @@ func _toggle_cheat(keycode: int) -> void:
 		KEY_F6:
 			cheat_no_cooldowns = not cheat_no_cooldowns
 			announce("Test: cooldowns %s." % ("disabled" if cheat_no_cooldowns else "normal"))
-		KEY_F7:
-			cheat_full_tension = not cheat_full_tension
-			announce("Test: Tension %s." % ("locked at 100" if cheat_full_tension else "normal"))
 		KEY_F8:
 			cheat_invulnerable = not cheat_invulnerable
 			announce("Test: damage %s." % ("off" if cheat_invulnerable else "on"))
@@ -632,11 +630,10 @@ func combat_tick(p: Fighter, dt: float) -> void:
 			p.dash_cd = 0.0
 			p.air_dash = true
 			p.slide_cd = 0.0
-		if cheat_full_tension:
-			p.meter = Tension.MAX
+			p.ult_cd = 0.0
 	for i in range(3):
 		p.cooldowns[i] = maxf(0, p.cooldowns[i] - dt)
-	p.meter = Tension.passive(p.meter, dt)
+	p.ult_cd = maxf(0.0, p.ult_cd - dt)
 	for attacker in p.damagers.keys():
 		p.damagers[attacker] += dt
 		if p.damagers[attacker] > ASSIST_WINDOW:
@@ -856,14 +853,12 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 			return false
 	if cheat_invulnerable and target.fighter_id == local_id:
 		return false
-	var before := target.hp
-	target.hp = maxf(0, target.hp - amount)
-	var dealt := before - target.hp
+	var soaked := minf(target.armor, amount)
+	target.armor -= soaked
+	target.hp = maxf(0, target.hp - (amount - soaked))
 	target.reveal = 0.65
-	target.meter = Tension.taken(target.meter, dealt)
 	if source != null and source != target and source.team != target.team:
 		target.heal_left = 0
-		source.meter = Tension.dealt(source.meter, dealt)
 		target.damagers[attacker] = 0.0
 	if source != null and not target.bot:
 		if target.fighter_id == local_id:
@@ -878,16 +873,14 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.conceal = 0
 		target.burn = 0
 		target.stun = 0
+		target.armor = 0.0
 		remove_owned(target.fighter_id)
 		target.double_id = -1
 		target.update_visual()
 		if source != null:
 			source.kills += 1
-			source.meter = Tension.kill(source.meter)
-			for helper_id in target.damagers:
-				var helper: Fighter = fighters.get(helper_id)
-				if helper != null and helper != source and helper.team != target.team:
-					helper.meter = Tension.assist(helper.meter)
+			if source.team != target.team:
+				drop_armor(target.global_position, source.team)
 			kill_feed(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
 			if multiplayer.get_peers().size() > 0:
 				kill_feed.rpc(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
@@ -904,7 +897,6 @@ func absorb_hit(target: Fighter, amount: float, source: Fighter) -> void:
 	var weight := 1.5 if amount >= 40.0 else (0.5 if amount < 10.0 else 1.0)  # big hits charge faster, chip barely counts
 	target.blade_charge = minf(Fighter.CHARGE_MAX, target.blade_charge + amount * weight)
 	target.guard_stamina = maxf(0.0, target.guard_stamina - amount * Fighter.GUARD_ABSORB_COST)
-	target.meter = Tension.taken(target.meter, amount)
 	play_sfx(target.global_position, Sfx.Kind.IMPACT)
 	show_ring(target.global_position + target.horizontal_direction() * 0.8 + Vector3.UP * 1.1, 0.6, Color("ffb070"))
 	if source != null:
@@ -1054,13 +1046,13 @@ func activate(p: Fighter, slot: int) -> void:
 		if p.fighter_id == local_id:
 			announce(p.spec.abilities[slot])
 
-# Ultimates cost Tension.ULTIMATE_COST (half the bar). Spending goes through the pure rules object.
+# Ultimates run on a per-hero cooldown (ClassSpec.ultimate_cooldown).
 func activate_ultimate(p: Fighter) -> void:
 	if p.hp <= 0 or p.stun > 0.0 or p.spec.ultimate == "":
 		return
-	if not Tension.can_spend(p.meter):
+	if p.ult_cd > 0.0:
 		if p.fighter_id == local_id:
-			announce("%s needs %d%% Tension." % [p.spec.ultimate, int(Tension.ULTIMATE_COST)])
+			announce("%s ready in %d s." % [p.spec.ultimate, int(ceil(p.ult_cd))])
 		return
 	match p.class_id:
 		Fighter.REAVE_ID:
@@ -1072,7 +1064,7 @@ func activate_ultimate(p: Fighter) -> void:
 			play_sfx(p.global_position, Sfx.Kind.EVICT)
 		_:
 			return
-	p.meter = Tension.spend(p.meter)
+	p.ult_cd = p.spec.ultimate_cooldown
 	p.idle_weapon = 0.0
 	if p.fighter_id == local_id:
 		announce(p.spec.ultimate)
@@ -1196,6 +1188,14 @@ func create_entity_from(data: Dictionary) -> void:
 	entities[data.id] = e
 	e.update_visual()
 
+# A kill drops light armor for the killer's team. A team that is behind on points gets a bigger drop.
+func drop_armor(pos: Vector3, team: int) -> void:
+	var behind := match_state.owners.count(1 - team) - match_state.owners.count(team)
+	var amount := ARMOR_DROP + ARMOR_DROP_BEHIND * clampf(behind, 0.0, 2.0)
+	var data := {"id": entity_next, "owner": -1, "team": team, "kind": "armor", "hp": amount, "life": ARMOR_DROP_LIFE, "pos": pos, "yaw": 0.0, "used": false}
+	entity_next += 1
+	create_entity_from(data)  # clients receive it in the next snapshot's entity list
+
 # Health packs belong to nobody (owner -1) so class swaps and deaths never clear them.
 func spawn_pickups() -> void:
 	for f in CivicDividend.pickups:
@@ -1245,6 +1245,14 @@ func entities_tick(dt: float) -> void:
 						show_ring(e.global_position, PACK_RADIUS, Color("3dff7a"))
 						play_sfx(e.global_position, Sfx.Kind.PAD)
 						break
+		elif e.kind == "armor":
+			for p in fighters.values():
+				if p.hp > 0 and p.team == e.team and p.armor < Fighter.ARMOR_MAX and p.global_position.distance_to(e.global_position) < PACK_RADIUS:
+					p.armor = minf(Fighter.ARMOR_MAX, p.armor + e.hp)
+					show_ring(e.global_position, PACK_RADIUS, Color("5ab8ff"))
+					play_sfx(e.global_position, Sfx.Kind.PAD)
+					remove_entity(e.entity_id)
+					break
 		elif e.kind == "pad" and e.timer <= 0:
 			for p in fighters.values():
 				if p.hp > 0 and p.global_position.distance_to(e.global_position) < 1.7:
@@ -1285,9 +1293,6 @@ func objectives_tick(dt: float) -> void:
 		for p in fighters.values():
 			if p.hp > 0 and Vector2(p.global_position.x - point.x, p.global_position.z - point.z).length() < 4.5 and absf(p.global_position.y - point.y) < 2.0:
 				counts[p.team] += 1
-				# Fighting over a point that is open and not yet yours charges Tension.
-				if match_state.unlocked[i] and match_state.owners[i] != p.team:
-					p.meter = Tension.on_point(p.meter, dt)
 		occupancy.append(counts)
 	match_state.tick(dt, occupancy)
 	for capture in match_state.captures:
@@ -1434,7 +1439,7 @@ func bot_input(p: Fighter, dt: float) -> void:
 				p.held = Fighter.GUARD_BIT
 			if gap < 4.5 and rng.randf() < dt * 1.5:
 				p.edges |= 16
-			if p.meter >= Tension.ULTIMATE_COST and gap > 6.0 and gap < 26.0 and rng.randf() < dt * 0.6:
+			if p.ult_cd <= 0.0 and gap > 6.0 and gap < 26.0 and rng.randf() < dt * 0.6:
 				p.edges |= 64
 		if p.class_id != Fighter.REAVE_ID and rng.randf() < dt * 0.25:
 			p.edges |= 16

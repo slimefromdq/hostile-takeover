@@ -5,7 +5,8 @@ extends Resource
 @export var hero_name: String = ""
 @export var epithet: String = ""
 @export var tagline: String = ""
-@export var ultimate: String = ""  # empty = no ultimate; costs Tension.ULTIMATE_COST
+@export var ultimate: String = ""  # empty = no ultimate; recharges over ultimate_cooldown
+@export var ultimate_cooldown: float = 45.0
 @export var health: float = 200.0
 @export var damage: float = 12.0
 @export var interval: float = 0.4

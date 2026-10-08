@@ -7,6 +7,7 @@ hero_name = "Reave"
 epithet = "The Gunblade"
 tagline = "The gun builds damage. The blade spends it."
 ultimate = "Pyre Edge"
+ultimate_cooldown = 45.0
 health = 300.0
 damage = 8.0
 interval = 0.7

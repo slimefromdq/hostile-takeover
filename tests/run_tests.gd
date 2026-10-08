@@ -4,6 +4,7 @@ var checks := 0
 var failures := 0
 var game: Node3D
 const O := ProvingGround.ORIGIN
+const GameScript := preload("res://scripts/game.gd")
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -26,7 +27,7 @@ func run() -> void:
 	test_objectives()
 	test_specs()
 	test_weapon_specs()
-	test_tension()
+	test_armor_rules()
 	game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.set_physics_process(false)
@@ -158,10 +159,8 @@ func test_movement() -> void:
 	p.held = 0
 	p.global_position = O + Vector3(-10, 4, -21)
 	p.air_dash = true
-	p.meter = 100
 	p.simulate_movement(1.0 / 60, 0)
 	p.simulate_movement(1.0 / 60, 2)
-	check(is_equal_approx(p.meter, 75.0), "dash costs 25 Tension")
 	check(not p.air_dash and p.velocity.x > 14, "air dash consumed and propels")
 	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
@@ -345,14 +344,8 @@ func test_mirage() -> void:
 	check(p.conceal == 0, "Dead Drop ends concealment")
 	await create_timer(0.2).timeout
 
-func test_tension() -> void:
-	check(is_equal_approx(Tension.passive(0.0, 10.0), 8.0), "tension charges passively")
-	check(is_equal_approx(Tension.dealt(0.0, 100.0), 20.0) and is_equal_approx(Tension.taken(0.0, 100.0), 10.0), "combat charges faster than idling: dealt 0.20, taken 0.10 per point")
-	check(is_equal_approx(Tension.kill(0.0), 10.0) and is_equal_approx(Tension.assist(0.0), 5.0), "kills and assists charge the meter")
-	check(Tension.dealt(95.0, 100.0) == Tension.MAX, "tension clamps at 100")
-	check(not Tension.can_spend(49.9) and Tension.can_spend(50.0), "ultimates cost half the bar")
-	check(Tension.spend(49.0) == 49.0 and is_equal_approx(Tension.spend(80.0), 30.0), "spending is all or nothing and costs 50")
-	check(Tension.on_point(0.0, 2.0) > Tension.passive(0.0, 2.0), "fighting over a point charges faster than idling")
+func test_armor_rules() -> void:
+	check(Fighter.ARMOR_MAX == 50.0 and GameScript.ARMOR_DROP == 15.0 and GameScript.ARMOR_DROP_BEHIND == 10.0, "light armor: 15 per kill, +10 per point behind, capped at 50")
 
 func test_reave() -> void:
 	var p: Fighter = game.local_player()
@@ -377,13 +370,11 @@ func test_reave() -> void:
 	await process_frame
 	# Guard: front hits become Charge and stamina cost; from behind or above they go through.
 	p.held = Fighter.GUARD_BIT
-	p.meter = 0
 	check(p.is_guarding(), "holding secondary guards")
 	var landed: bool = game.damage_fighter(p, 40.0, foe.fighter_id)
 	check(not landed and p.hp == 300.0, "guard absorbs a front hit")
 	check(is_equal_approx(p.blade_charge, 60.0), "a big hit (40+) charges 1.5x")
 	check(is_equal_approx(p.guard_stamina, Fighter.GUARD_STAMINA_MAX - 24.0), "absorbing costs 0.6 stamina per point")
-	check(is_equal_approx(p.meter, 4.0), "absorbed damage still charges Tension")
 	game.damage_fighter(p, 5.0, foe.fighter_id)
 	check(is_equal_approx(p.blade_charge, 62.5), "chip damage (<10) charges at half rate")
 	game.damage_fighter(p, 9.0, foe.fighter_id, O + Vector3(-16, 0, -21))
@@ -482,20 +473,41 @@ func test_reave() -> void:
 	p.cooldowns[0] = 0
 	game.activate(p, 0)
 	check(foe.spin == 0.0, "Breach cancels Enforcer spin-up")
-	# Tension: damage dealt, kills and assists.
+	# Armor soaks damage before health, a kill drops armor for the killer's team (more when behind), and it is lost on death.
 	foe.change_class(1)
 	foe.hp = 200
-	p.meter = 0
-	foe.meter = 0
+	foe.armor = 30.0
 	game.damage_fighter(foe, 100.0, p.fighter_id)
-	check(is_equal_approx(p.meter, 20.0) and is_equal_approx(foe.meter, 10.0), "damage charges the attacker 0.20 and the victim 0.10 per point")
-	helper.meter = 0
+	check(foe.armor == 0.0 and is_equal_approx(foe.hp, 130.0), "armor absorbs damage 1:1 before health")
+	for e in game.entities.values():
+		if e.kind == "armor":
+			game.remove_entity(e.entity_id)
 	foe.hp = 30
+	foe.armor = 20.0
 	game.damage_fighter(foe, 5.0, helper.fighter_id)
-	game.damage_fighter(foe, 30.0, p.fighter_id)
+	game.damage_fighter(foe, 50.0, p.fighter_id)
 	check(foe.hp <= 0 and p.kills >= 1, "Reave scores a kill")
-	check(helper.meter > 5.0 - 0.001, "a recent attacker is credited with an assist")
-	check(foe.meter > 0.0, "Tension is kept through death")
+	check(foe.armor == 0.0, "armor is lost on death")
+	var drop: Deployable = null
+	for e in game.entities.values():
+		if e.kind == "armor":
+			drop = e
+	check(drop != null and drop.team == p.team and is_equal_approx(drop.hp, GameScript.ARMOR_DROP), "a kill drops light armor for the killer's team")
+	game.match_state.owners.assign([1 - p.team, 1 - p.team, -1, 1 - p.team, p.team])
+	game.drop_armor(O, p.team)
+	var behind_drop: Deployable = null
+	for e in game.entities.values():
+		if e.kind == "armor" and e != drop:
+			behind_drop = e
+	check(behind_drop != null and is_equal_approx(behind_drop.hp, GameScript.ARMOR_DROP + 2.0 * GameScript.ARMOR_DROP_BEHIND), "a team two points behind gets a bigger drop")
+	game.remove_entity(behind_drop.entity_id)
+	game.match_state.reset()
+	helper.global_position = O + Vector3(40, 0, 40)
+	p.global_position = drop.global_position
+	p.hp = p.spec.health
+	p.armor = 0.0
+	game.entities_tick(0.016)
+	check(is_equal_approx(p.armor, GameScript.ARMOR_DROP) and not game.entities.has(drop.entity_id), "the killer's team picks the armor up")
 	foe.hp = 200
 	foe.dead_time = 0
 	# Pyre Edge: costs half the bar, pierces, burns, is stopped by an enemy guard.
@@ -506,13 +518,13 @@ func test_reave() -> void:
 	p.yaw = -PI / 2
 	p.pitch = 0
 	p.stun = 0
-	p.meter = 49.0
+	p.ult_cd = 10.0
 	var before := game.get_child_count()
 	game.activate_ultimate(p)
-	check(p.meter == 49.0 and game.get_child_count() == before, "Pyre Edge is refused below 50 Tension")
-	p.meter = 80.0
+	check(game.get_child_count() == before, "Pyre Edge is refused while on cooldown")
+	p.ult_cd = 0.0
 	game.activate_ultimate(p)
-	check(is_equal_approx(p.meter, 30.0) and game.get_child_count() == before + 1, "Pyre Edge spends 50 Tension and fires a blade")
+	check(is_equal_approx(p.ult_cd, p.spec.ultimate_cooldown) and game.get_child_count() == before + 1, "Pyre Edge starts its cooldown and fires a blade")
 	var blade = game.get_child(game.get_child_count() - 1)
 	for i in range(60):
 		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
@@ -527,16 +539,17 @@ func test_reave() -> void:
 	foe.yaw = PI / 2
 	foe.held = Fighter.GUARD_BIT
 	foe.guard_stamina = Fighter.GUARD_STAMINA_MAX
-	p.meter = 80.0
+	p.ult_cd = 0.0
 	game.activate_ultimate(p)
 	blade = game.get_child(game.get_child_count() - 1)
 	for i in range(60):
 		if is_instance_valid(blade) and not blade.is_queued_for_deletion():
 			blade._physics_process(1.0 / 30.0)
 	check(foe.hp == 300.0 and foe.burn == 0.0 and foe.blade_charge > 0.0, "an enemy Reave's guard swallows Pyre Edge and banks the Charge")
-	# Snapshot round trip carries the Tension meter and her guard state, and omits them when idle.
+	# Snapshot round trip carries armor, the ultimate cooldown and her guard state, and omits them when idle.
 	p.change_class(4)
-	p.meter = 61.7
+	p.armor = 31.2
+	p.ult_cd = 12.5
 	p.blade_charge = 42.0
 	p.guard_stamina = 71.0
 	p.guarding = true
@@ -545,23 +558,22 @@ func test_reave() -> void:
 	var packed: Dictionary = p.pack()
 	var mirror: Fighter = game.fighters[107]
 	mirror.unpack(packed, false)
-	check(mirror.class_id == 4 and mirror.meter == 61.0 and mirror.blade_charge == 42.0 and mirror.guard_stamina == 71.0, "snapshot carries meter, Charge and stamina (meter floored)")
+	check(mirror.class_id == 4 and mirror.armor == 32.0 and mirror.ult_cd == 12.5 and mirror.blade_charge == 42.0 and mirror.guard_stamina == 71.0, "snapshot carries armor, ultimate cooldown, Charge and stamina")
 	check(mirror.guarding and mirror.stun == 0.5 and mirror.burn == 2.0, "snapshot carries guard, stun and burn")
 	mirror.change_class(1)
 	p.change_class(0)
-	p.meter = 0.0
-	check(not p.pack().has("meter") and not p.pack().has("guard") and not p.pack().has("burn"), "idle non-Reave snapshots carry no extra fields")
-	p.meter = 33.0
-	# Switching hero clears her state but not the meter.
+	p.armor = 0.0
+	p.ult_cd = 0.0
+	check(not p.pack().has("ar") and not p.pack().has("ucd") and not p.pack().has("guard") and not p.pack().has("burn"), "idle non-Reave snapshots carry no extra fields")
+	# Switching hero clears her state.
 	foe.held = 0
 	p.blade_charge = 50.0
 	p.stun = 1.0
-	p.meter = 33.0
 	p.change_class(0)
-	check(p.blade_charge == 0.0 and p.stun == 0.0 and p.meter == 33.0, "leaving Reave clears guard state and keeps Tension")
+	check(p.blade_charge == 0.0 and p.stun == 0.0, "leaving Reave clears guard state")
 	p.hp = 0
 	game.apply_class(p.fighter_id, 4)
-	check(p.meter == 0.0 and p.class_id == 4, "a hero swap starts the meter over")
+	check(is_equal_approx(p.ult_cd, p.spec.ultimate_cooldown) and p.class_id == 4, "a hero swap restarts the ultimate cooldown")
 	p.change_class(0)
 	foe.change_class(1)
 	foe.hp = 200
@@ -1134,7 +1146,6 @@ func test_air_movement() -> void:
 	p.simulate_movement(1.0 / 60, 0)
 	p.air_jump = true
 	p.air_dash = true
-	p.meter = 100
 	p.simulate_movement(1.0 / 60, 1)
 	check(p.velocity.y > 9.0 and not p.air_jump and p.air_dash, "double jump lifts and leaves the dash charge alone")
 	p.simulate_movement(1.0 / 60, 2)
@@ -1146,7 +1157,6 @@ func test_air_movement() -> void:
 	p.yaw = -PI / 2
 	p.movement = Vector2(0, -1)
 	p.air_dash = true
-	p.meter = 100
 	var start_x := p.global_position.x
 	p.simulate_movement(1.0 / 60, 2)
 	for i in range(30):

@@ -8,12 +8,10 @@ shares a movement language and a resource, and is free to differ in everything e
 - **Movement.** The full verb set in `scripts/fighter.gd` (jump, double jump, air dash, wall kick, slide, wall run,
   vault, ledge grab, sprint) and the map verbs in `scripts/map_verbs.gd`. Heroes do not get movement kits of their own
   unless that *is* their gimmick (Skyrunner). Reave has none.
-- **The Tension meter.** 0 to 100, charges over time and faster in combat, kept through death, reset by swapping hero.
-  Ultimates cost 50% of the bar (`Tension.ULTIMATE_COST`), so they can be chained when fights run hot; they are tuned a
-  little weaker to compensate. Rules and numbers are in `scripts/tension.gd` (pure, no scene dependencies). Gains are
-  applied in `Game.damage_fighter` (dealt, taken, kills, assists), `combat_tick` (passive) and `objectives_tick`
-  (contesting a point). `Game.activate_ultimate` is the single place a hero's ultimate is paid for.
-  The meter is deliberately a general resource: only ultimates spend it so far, and other spends are open design space.
+- **Ultimate cooldowns and light armor.** There is no shared meter. An ultimate runs on its hero's own cooldown
+  (`ClassSpec.ultimate_cooldown`, restarted by a hero swap, kept through death); `Game.activate_ultimate` is the single
+  place it is paid for. Kills drop light armor for the killer's team (`Game.drop_armor`: 15, plus 10 per point the
+  killer's team is behind on points, up to +20). Armor soaks damage 1:1 before health, caps at 50 and is lost on death.
 - **The ultimate key (X)**, the three ability keys (Q / E / F), primary and alternate fire, reload.
 
 ## What a hero chooses

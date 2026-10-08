@@ -13,10 +13,10 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire (holding right also zooms in over the shoulder and fades your own body so the crosshair stays clear) |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
-| 1 | Air dash (about 4.5 m, independent of the double jump; 1 second cooldown, costs 25 Tension, holds vertical speed so you hover through it) — **not sprint** |
+| 1 | Air dash (about 4.5 m, independent of the double jump; 1 second cooldown, holds vertical speed so you hover through it) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
 | Q / E / F | Hero abilities (a hero has one to three) |
-| X | Ultimate; costs half the Tension meter |
+| X | Ultimate (per-hero cooldown) |
 | R | Reload |
 | V | Switch camera shoulder |
 | Tab | Hold for the scoreboard |
@@ -47,11 +47,13 @@ Sprint activates automatically after 1.25 seconds without weapon use. Shooting a
 - **Enforcer:** minigun with a 0.6-second spin-up; alternate fire swings a heavy melee attack. Q rushes forward; E places destructible cover; F slams a forward cone and pushes enemies. Melee hits improve spin-up; sustained gun hits improve melee recovery. Firing slows movement; frontal knockback is reduced while spun up. Health: 280.
 - **Mirage Agent:** accurate six-shot revolver that bounces once off geometry; alternate fire previews the bounce. Q places one physical double; Q again exchanges positions once, within 25 metres. The double lasts eight seconds, can be destroyed, cannot block fighters or capture points, and echoes harmless firing effects. E throws an arcing capsule (35 direct damage / 15 splash). F creates departure smoke and grants 2.5 seconds of concealment; attacks end it, damage briefly reveals the agent, and close opponents can see them. Swapping preserves velocity and facing, reloads one round, and enables sprint. Health: 180.
 
-- **Reave, the Gunblade:** a tank-leaning hero built around one idea: the gun builds damage, the blade spends it. Primary is a shotgun (8 pellets x 8 damage, 6 degree spread, gentle falloff from 8 m to 50% at 24 m, 4 shells, 0.7 s between shots). Hold **Q** to **Guard** (RMB is aim down sights for her, which zooms in hard, slides the camera out so she drifts toward the left screen edge and blurs her body, and does not stop the shotgun): she plants the blade and absorbs hits from the front 120 degrees (shots from behind, or steeply from above or below, go through), turns at about 100 degrees per second, and cannot fire. Absorbed damage becomes **Charge** on the blade, capped at 100 (hits of 40 or more count 1.5x, hits under 10 count half), and visibly lights the blade. Guarding costs stamina (100; 6 per second plus 0.6 per point absorbed); an empty bar breaks the guard, stuns her for 1.2 s and loses the Charge. Release **Q** to **Slash**, a half-circle arc: a tap deals 25 within 3 m, keeps the Charge, and refills the shotgun if it connects; releasing a guard (Q) held 0.3 s or more with Charge stored cashes it all in (25 + 0.9 x Charge within 4.5 m), refills the shotgun, and spends the Charge. E **Breach** (8 s): a 5 m blast that deals 20, launches enemies, breaks a guard, cancels an Enforcer spin-up and deals triple damage to deployables. Ultimate **Pyre Edge** on **F** (50 Tension): a blade of fire flies 30 m forward, piercing fighters for 70 damage and setting them burning (5 per second for 3 s); it stops on geometry, and an enemy Reave's guard swallows it. Reave carries only her own shotgun (the shared weapons are not offered to her). Health: 300.
+- **Reave, the Gunblade:** a tank-leaning hero built around one idea: the gun builds damage, the blade spends it. Primary is a shotgun (8 pellets x 8 damage, 6 degree spread, gentle falloff from 8 m to 50% at 24 m, 4 shells, 0.7 s between shots). Hold **Q** to **Guard** (RMB is aim down sights for her, which zooms in hard, slides the camera out so she drifts toward the left screen edge and blurs her body, and does not stop the shotgun): she plants the blade and absorbs hits from the front 120 degrees (shots from behind, or steeply from above or below, go through), turns at about 100 degrees per second, and cannot fire. Absorbed damage becomes **Charge** on the blade, capped at 100 (hits of 40 or more count 1.5x, hits under 10 count half), and visibly lights the blade. Guarding costs stamina (100; 6 per second plus 0.6 per point absorbed); an empty bar breaks the guard, stuns her for 1.2 s and loses the Charge. Release **Q** to **Slash**, a half-circle arc: a tap deals 25 within 3 m, keeps the Charge, and refills the shotgun if it connects; releasing a guard (Q) held 0.3 s or more with Charge stored cashes it all in (25 + 0.9 x Charge within 4.5 m), refills the shotgun, and spends the Charge. E **Breach** (8 s): a 5 m blast that deals 20, launches enemies, breaks a guard, cancels an Enforcer spin-up and deals triple damage to deployables. Ultimate **Pyre Edge** on **F** (45 s cooldown): a blade of fire flies 30 m forward, piercing fighters for 70 damage and setting them burning (5 per second for 3 s); it stops on geometry, and an enemy Reave's guard swallows it. Reave carries only her own shotgun (the shared weapons are not offered to her). Health: 300.
 
-## Tension and ultimates
+## Ultimates and armor
 
-Every hero shares a **Tension** meter (0 to 100, shown beside the ability slots; the tick marks 50). It charges passively at 0.8 per second and faster in combat: +0.20 per point of damage dealt, +0.10 per point taken (absorbed damage counts), +10 per kill, +5 per assist (a hit on the victim within 6 seconds), +1.5 per second while contesting an open point you do not own. It is kept through death and reset by swapping hero. **Ultimates cost 50% of the bar** (X), so they can be chained when fights are hot, and are tuned a little weaker to compensate. Ultimates and the air dash (25) spend it. Rules live in `scripts/tension.gd`; see `docs/HEROES.md` for the hero design philosophy.
+There is no shared meter. Each hero's **ultimate** (X) runs on its own cooldown (`ultimate_cooldown` in the hero's `.tres`; Reave's Pyre Edge is 45 s, restarted when you swap hero, kept through death).
+
+**Light armor:** every kill drops an armor plate where the victim died, for the killer's team to grab (walk over it; it lasts 20 s). A plate gives 15 armor, plus 10 for each objective point the killer's team is behind on (up to +20). Armor soaks damage 1:1 before health, caps at 50 and is lost on death. See `docs/HEROES.md` for the hero design philosophy.
 
 ## Weapons (experimental)
 
@@ -129,4 +131,4 @@ Automated checks establish rules and basic runtime behavior. Human balance sessi
 
 ## Test cheats (offline or host only)
 
-F6 toggles disabled cooldowns (abilities, dash, slide), F7 locks Tension at 100, F8 toggles taking damage, F9 fully heals you.
+F6 toggles disabled cooldowns (abilities, dash, slide, ultimate), F8 toggles taking damage, F9 fully heals you.

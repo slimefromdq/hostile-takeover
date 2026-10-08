@@ -14,7 +14,7 @@ const WALL_KICK_PUSH_SKYRUNNER := 9.0
 const DASH_SPEED := 23.0
 const DASH_TIME := 0.28
 const DASH_COOLDOWN := 1.0
-const DASH_TENSION_COST := 25.0
+const ARMOR_MAX := 50.0  # light armor from kill drops absorbs damage 1:1 before health; lost on death
 const DASH_MIN_VERTICAL := -3.0  # a falling dash still hovers: downward speed is capped when the dash begins
 const GROUND_ACCEL := 20.0
 const GROUND_FRICTION := 14.0
@@ -151,7 +151,8 @@ var wall_normal: Vector3 = Vector3.ZERO
 var wall_repeats: int = 0
 var double_id: int = -1
 var alt_timer: float = 0.0
-var meter: float = 0.0  # shared Tension meter (scripts/tension.gd); kept through death, reset on a hero swap
+var armor: float = 0.0  # light armor (dropped by kills): absorbs damage before health, lost on death
+var ult_cd: float = 0.0  # ultimate cooldown; kept through death, restarted by a hero swap
 var prev_held: int = 0
 var guarding: bool = false  # replicated so remote players can see the stance; the owner derives it from held
 var guard_stamina: float = GUARD_STAMINA_MAX
@@ -466,9 +467,8 @@ func simulate_movement(dt: float, movement_edges: int) -> void:
 			hang_time = 0.0
 		elif fresh_press:
 			jump_buffer = JUMP_BUFFER
-	if movement_edges & 2 and not grounded and air_dash and Tension.can_spend(meter, DASH_TENSION_COST):
+	if movement_edges & 2 and not grounded and air_dash:
 		air_dash = false
-		meter = Tension.spend(meter, DASH_TENSION_COST)
 		dash_cd = DASH_COOLDOWN
 		_end_wall_run()
 		vault_time = 0.0
@@ -764,10 +764,14 @@ func equip_weapon(value: int) -> void:
 	weapon = WeaponSpec.from_class(spec, class_id) if weapon_id == 0 else WEAPONS[weapon_id]
 
 func change_class(value: int, weapon_choice: int = -1) -> void:
+	var swapped := value != class_id
 	class_id = clampi(value, 0, SPECS.size() - 1)
 	spec = SPECS[class_id]
 	equip_weapon(weapon_id if weapon_choice < 0 else weapon_choice)
 	hp = spec.health
+	armor = 0.0
+	if swapped:
+		ult_cd = spec.ultimate_cooldown
 	heal_left = 0.0
 	ammo = weapon.magazine
 	cooldowns.assign([0.0, 0.0, 0.0])
@@ -864,8 +868,10 @@ func update_visual() -> void:
 func pack() -> Dictionary:
 	var state := {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 	# Optional state is only sent while it matters (snapshots are already past the MTU); unpack supplies defaults.
-	if meter >= 1.0:
-		state["meter"] = int(meter)  # floored so a client never shows an ultimate ready before the server does
+	if armor >= 1.0:
+		state["ar"] = int(ceil(armor))
+	if ult_cd > 0.0:
+		state["ucd"] = ult_cd
 	if class_id == REAVE_ID:
 		state["guard"] = guarding
 		state["gs"] = int(guard_stamina)
@@ -923,7 +929,8 @@ func unpack(data: Dictionary, local: bool) -> void:
 	zip_dir = data.get("zd", 1)
 	zip_speed = data.get("zs", 0.0)
 	climbing = data.get("climb", false)
-	meter = float(data.get("meter", 0))
+	armor = float(data.get("ar", 0))
+	ult_cd = data.get("ucd", 0.0)
 	guarding = data.get("guard", false)
 	guard_stamina = float(data.get("gs", GUARD_STAMINA_MAX))
 	blade_charge = float(data.get("bc", 0))
