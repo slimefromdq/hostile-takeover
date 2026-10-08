@@ -154,6 +154,7 @@ var alt_timer: float = 0.0
 var armor: float = 0.0  # light armor (dropped by kills): absorbs damage before health, lost on death
 var power: int = 0  # active power-up (Items.POWER_*), 0 = none; lost on death
 var power_time: float = 0.0
+var power_kills: int = 0  # kills scored during the current power-up (server only, drives the streak announcement)
 var ult_cd: float = 0.0  # ultimate cooldown; kept through death, restarted by a hero swap
 var prev_held: int = 0
 var guarding: bool = false  # replicated so remote players can see the stance; the owner derives it from held

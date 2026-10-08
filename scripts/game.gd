@@ -896,6 +896,11 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 		target.update_visual()
 		if source != null:
 			source.kills += 1
+			if source.power != 0 and source.team != target.team:
+				source.power_kills += 1
+				var streak := Items.streak_name(source.power_kills)
+				if streak != "":
+					notice_all("%s %s · %d kills on %s" % [HELIX_MONARCH[source.team], streak, source.power_kills, Items.POWER_NAMES[source.power]])
 			if source.team != target.team:
 				drop_armor(target.global_position, source.team)
 			kill_feed(source.spec.display_name(), source.team, target.spec.display_name(), target.team)
@@ -1281,6 +1286,7 @@ func entities_tick(dt: float) -> void:
 							p.power = int(e.hp)
 							p.power_time = Items.POWER_DURATION
 							p.power_pickups += 1
+							p.power_kills = 0
 							notice_all("%s took %s." % [HELIX_MONARCH[p.team], Items.POWER_NAMES[p.power]])
 						e.used = true
 						e.timer = Items.KINDS[e.kind].respawn

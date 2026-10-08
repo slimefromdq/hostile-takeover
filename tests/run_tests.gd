@@ -748,6 +748,23 @@ func test_power_ups() -> void:
 	p.power_time = 0.05
 	game.combat_tick(p, 0.1)
 	check(p.power == 0, "a power-up ends after its timer")
+	# Streak announcements: kills during one power-up escalate; the count restarts with the next pickup.
+	check(Items.streak_name(1) == "" and Items.streak_name(2) == "DOUBLE KILL" and Items.streak_name(3) == "TRIPLE KILL" and Items.streak_name(4) == "QUAD KILL" and Items.streak_name(7) == "RAMPAGE", "streak names escalate from the second kill")
+	p.power = Items.POWER_QUAD
+	p.power_time = 8.0
+	p.power_kills = 0
+	for i in range(2):
+		foe.hp = foe.spec.health
+		foe.dead_time = 0.0
+		game.damage_fighter(foe, 10000.0, p.fighter_id)
+	check(p.power_kills == 2, "kills while holding a power-up build a streak")
+	foe.hp = foe.spec.health
+	foe.dead_time = 0.0
+	p.power = 0
+	game.damage_fighter(foe, 10000.0, p.fighter_id)
+	check(p.power_kills == 2, "kills without a power-up do not extend it")
+	foe.hp = foe.spec.health
+	foe.dead_time = 0.0
 	# Invincibility: nothing hurts the holder except the out-of-bounds kill.
 	item.hp = float(Items.POWER_INVULNERABLE)
 	item.global_position = foe.global_position

@@ -19,6 +19,11 @@ const POWER_DURATION := 8.0
 const POWER_FIRST_SPAWN := 30.0  # the first one appears this long after the match starts
 const QUAD_MULTIPLIER := 3.0
 const POWER_WARNING := 15.0  # the minimap flags the power-up this many seconds before it spawns
+const STREAK_NAMES := {2: "DOUBLE KILL", 3: "TRIPLE KILL", 4: "QUAD KILL"}  # 5 and up: RAMPAGE
+
+static func streak_name(kills: int) -> String:
+	return "" if kills < 2 else STREAK_NAMES.get(kills, "RAMPAGE")
+
 const POWER_NAMES := {1: "INVINCIBLE", 2: "TRIPLE DAMAGE"}
 const POWER_COLORS := {1: Color("5ae6ff"), 2: Color("ff4a3a")}
 const RADIUS := 1.5
