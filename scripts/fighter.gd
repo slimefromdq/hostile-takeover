@@ -183,13 +183,13 @@ var equipment: Node3D
 var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
 
-# Right mouse held = aim down sights: the shoulder camera pulls in, zooms hard and slides out to the side, so your own
+# Right mouse held = aim down sights: the shoulder camera pulls in and zooms hard, so your own
 # body is pushed toward the left screen edge, and a near depth-of-field blur softens it. Guns with alternate attacks
 # keep the hip camera, both here and in the authority's aim reconstruction.
 # The server reconstructs the same camera from the held button (aim_point), so the crosshair stays true.
 const ADS_FOV := 42.0
 const ADS_ARM_LENGTH := 2.2
-const HIP_SIDE := 0.65
+const HIP_SIDE := 1.8  # Frame the body at the left third of a 16:9 view, clear of the crosshair.
 const ADS_SIDE := 1.1
 const ADS_BLUR_DISTANCE := 3.4
 const ADS_BLUR_TRANSITION := 1.6
@@ -273,13 +273,13 @@ func configure(owner_game: Node3D, id: int, side: int, loadout_code: int, is_bot
 	pivot.position.y = 1.55
 	add_child(pivot)
 	var arm := SpringArm3D.new()
-	arm.spring_length = 3.6
+	arm.spring_length = HIP_ARM_LENGTH
 	arm.collision_mask = 1 | 4
 	arm.margin = 0.18
-	arm.position.x = 0.65
+	arm.position.x = HIP_SIDE
 	pivot.add_child(arm)
 	camera = Camera3D.new()
-	camera.fov = 80
+	camera.fov = HIP_FOV
 	camera.near = 0.1
 	camera.far = 500.0
 	arm.add_child(camera)

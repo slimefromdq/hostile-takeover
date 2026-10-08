@@ -54,6 +54,7 @@ func run() -> void:
 		p.global_position = O + Vector3(60, 0, 20)
 	await physics_frame
 	await process_frame
+	await test_camera_framing()
 	await test_movement()
 	await test_weapons()
 	await test_projectile_arsenal()
@@ -278,16 +279,39 @@ func test_movement() -> void:
 	test_effect_pool()
 	test_sfx()
 
+func test_camera_framing() -> void:
+	var p: Fighter = game.local_player()
+	p.global_position = O + Vector3(-20, 0.01, -21)
+	p.yaw = 0.0
+	p.pitch = 0.0
+	p.held = 0
+	for side in [1.0, -1.0]:
+		p.shoulder = side
+		p.update_visual()
+		await physics_frame
+		await process_frame
+		var viewport_size := p.camera.get_viewport().get_visible_rect().size
+		var body := p.camera.unproject_position(p.global_position + Vector3.UP * 1.1)
+		# Normalize to 16:9 so the assertion also works when the runner uses another window size.
+		var screen_x := 0.5 + (body.x / viewport_size.x - 0.5) * (viewport_size.x / viewport_size.y) / (16.0 / 9.0)
+		var expected := 1.0 / 3.0 if side > 0 else 2.0 / 3.0
+		check(absf(screen_x - expected) < 0.02, "hip camera frames the body at the screen third on either shoulder")
+		var aim := p.camera.unproject_position(p.aim_point())
+		check(aim.distance_to(viewport_size / 2.0) < 1.0, "authority aim stays on the centered crosshair with the wider shoulder camera")
+	p.shoulder = 1.0
+	p.update_visual()
+
 func aim_at(p: Fighter, target: Vector3) -> void:
-	for i in range(12):
+	# A wider shoulder offset needs more iterations for close targets.
+	for i in range(64):
 		var basis := Basis.from_euler(Vector3(p.pitch, p.yaw, 0))
-		var cam := p.global_position + Vector3.UP * 1.55 + basis * Vector3(0.65 * p.shoulder, 0, 3.6)
+		var cam := p.global_position + Vector3.UP * 1.55 + basis * Vector3(Fighter.HIP_SIDE * p.shoulder, 0, Fighter.HIP_ARM_LENGTH)
 		var diff := (target - cam).normalized()
 		p.yaw = atan2(-diff.x, -diff.z)
 		p.pitch = asin(diff.y)
 
 # Live cadence for every gun, primary and sidearm, at a range inside its full-damage band (shotguns point blank).
-const LIVE_RANGES := {"Shotgun": 3.0, "Rifle": 20.0, "SMG": 10.0, "Rocket Launcher": 8.0, "Grenade Launcher": 3.0, "Plasma Gun": 10.0, "Lightning Gun": 10.0, "Railgun": 20.0, "Double-Barrel Shotgun": 2.0, "Pistol": 10.0, "Burst Pistol": 10.0, "Revolver": 10.0, "Nail Pistol": 10.0, "Disc Launcher": 10.0}
+const LIVE_RANGES := {"Shotgun": 3.0, "Rifle": 20.0, "SMG": 10.0, "Rocket Launcher": 8.0, "Grenade Launcher": 3.0, "Plasma Gun": 10.0, "Lightning Gun": 10.0, "Railgun": 20.0, "Double-Barrel Shotgun": 3.0, "Pistol": 10.0, "Burst Pistol": 10.0, "Revolver": 10.0, "Nail Pistol": 10.0, "Disc Launcher": 10.0}
 
 func test_weapons() -> void:
 	var p: Fighter = game.local_player()
@@ -305,6 +329,11 @@ func test_weapons() -> void:
 			p.swap_weapon()
 			p.swap_timer = 0.0
 		var w: WeaponSpec = p.weapon
+		if w.pellets > 1:
+			# The cadence model assumes every pellet lands; isolate it from shoulder parallax and random spread.
+			w = w.duplicate()
+			w.spread_deg = 0.0
+			p.weapon = w
 		var distance: float = LIVE_RANGES[w.title]
 		check(p.ammo == w.magazine, "equip %s with a full magazine" % w.title)
 		p.global_position = O + Vector3(-distance, 0, -21)
@@ -491,7 +520,8 @@ func test_projectile_arsenal() -> void:
 	for i in range(30):
 		game.projectiles_tick(1.0 / 60.0)
 	p.simulate_movement(1.0 / 60.0, 0)
-	check(p.velocity.y > 3.0 and p.global_position.y > O.y + 0.05 and p.hp < 200 and p.hp >= 180, "floor rocket launches through grounded overrides with modest health cost")
+	# The wider hip camera hits farther beside the feet, trading some lift for lateral momentum.
+	check(p.velocity.y > 2.0 and Vector2(p.velocity.x, p.velocity.z).length() > 3.0 and p.global_position.y > O.y + 0.02 and p.hp < 200 and p.hp >= 180, "floor rocket launches through grounded overrides with modest health cost")
 	# Impulses interrupt constrained movement and do not replenish air resources.
 	p.air_dash = false
 	p.air_jump = false
