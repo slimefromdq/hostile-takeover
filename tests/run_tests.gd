@@ -46,6 +46,7 @@ func run() -> void:
 	await test_machinery()
 	test_healpack()
 	test_items()
+	test_bot_items()
 	test_authority_and_respawn()
 	test_roster_and_roles()
 	await test_hud()
@@ -671,6 +672,45 @@ func test_items() -> void:
 	check(foe.armor == 100.0 and foe.team != p.team, "the other team can take a map armor too")
 	for id in ids.values():
 		game.remove_entity(id)
+
+func test_bot_items() -> void:
+	var bot: Fighter = null
+	for p in game.fighters.values():
+		if p.bot and p.team == 0:
+			bot = p
+	var base := O + Vector3(100, 0, 100)
+	bot.global_position = base
+	bot.bot_role = Fighter.BotRole.ROAM
+	bot.change_class(2)
+	bot.bot_item = -1
+	var ids := {}
+	for entry in [["bubble", Vector3(8, 0, 0)], ["armor1", Vector3(12, 0, 0)], ["armor2", Vector3(0, 0, 40)]]:
+		var data := {"id": game.entity_next, "owner": -1, "team": 0, "kind": entry[0], "hp": 1.0, "life": 1e9, "pos": base + entry[1], "yaw": 0.0, "used": false}
+		game.entity_next += 1
+		game.create_entity_from(data)
+		ids[entry[0]] = data.id
+	var now := 1000.0
+	bot.armor = Fighter.ARMOR_MAX
+	check(not game.choose_bot_item(bot, 2, now) and bot.bot_item == -1, "a full-health, fully armored bot ignores items")
+	bot.armor = 0.0
+	check(game.choose_bot_item(bot, 2, now) and bot.bot_item == ids.armor1, "a bot with no armor prefers armor over a closer bubble")
+	check(bot.bot_target.is_equal_approx(game.entities[ids.armor1].global_position), "the detour steers at the item")
+	game.entities[ids.armor1].used = true
+	game.update_bot_item(bot, now + 1.0)
+	check(bot.bot_item == -1 and bot.bot_path.is_empty(), "a detour ends when the item is taken")
+	bot.armor = 55.0
+	bot.hp = bot.spec.health
+	check(not game.choose_bot_item(bot, 2, now), "a healthy bot with armor above 50 and no way to use armor 2 in range ignores everything")
+	bot.hp = bot.spec.health * 0.5
+	check(game.choose_bot_item(bot, 2, now) and bot.bot_item == ids.bubble, "a hurt bot takes the bubble")
+	game.update_bot_item(bot, now + GameScript.BOT_ITEM_TIME + 1.0)
+	check(bot.bot_item == -1, "a detour times out")
+	game.entities[ids.bubble].used = true
+	check(not game.choose_bot_item(bot, 2, now), "a taken bubble is ignored")
+	for id in ids.values():
+		game.remove_entity(id)
+	bot.hp = bot.spec.health
+	bot.armor = 0.0
 
 func test_machinery() -> void:
 	var p: Fighter = game.local_player()

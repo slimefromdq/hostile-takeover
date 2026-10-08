@@ -23,6 +23,9 @@ const BOT_POINT_RING := 3.4  # attackers hold spots inside the 4.5 m capture rad
 const BOT_PAUSE_MIN := 0.8
 const BOT_PAUSE_MAX := 2.5
 const BOT_SIGHT := 30.0
+const BOT_ITEM_RANGE := 30.0  # bots only detour for a timed item this close (horizontal)
+const BOT_ITEM_TIME := 10.0  # give up on a detour after this long
+const BOT_ITEM_VALUE := {"bubble": 1.0, "armor1": 2.0, "armor2": 3.0}
 const ASSIST_WINDOW := 6.0  # seconds a recent attacker still counts for an assist
 var authoritative := true
 var running := false
@@ -595,6 +598,7 @@ func respawn(p: Fighter) -> void:
 	p.bot_role_until = 0.0
 	p.bot_pause_until = 0.0
 	p.bot_roam_node = -1
+	p.bot_item = -1
 	p.bot_think = rng.randf_range(0.0, 0.5)
 	p.change_class(p.class_id)
 	p.global_position = spawn_position(p)
@@ -1397,6 +1401,49 @@ func choose_bot_roam(p: Fighter, objective: int) -> void:
 	p.bot_target = bot_graph.positions[node]
 	plan_bot_path(p, objective, node)
 
+# Drops a detour that is finished, pointless or stuck, and hands the bot back to its role.
+func update_bot_item(p: Fighter, now: float) -> void:
+	if p.bot_item < 0:
+		return
+	var e: Deployable = entities.get(p.bot_item)
+	if e != null and not e.used and now < p.bot_item_until and Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
+		return
+	p.bot_item = -1
+	p.bot_path.clear()
+	p.bot_roam_node = -1
+	p.bot_goal_node = -1
+
+# Picks the best ready armor or bubble within reach that this bot can use, and routes to it.
+func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
+	if p.bot_role == Fighter.BotRole.ATTACK and p.global_position.distance_to(points[objective]) < 6.0:
+		return false  # capturing: stay on the point
+	var best: Deployable = null
+	var best_score := 0.0
+	for e in entities.values():
+		if not Items.KINDS.has(e.kind) or e.used or absf(e.global_position.y - p.global_position.y) > 3.0:
+			continue
+		if not Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
+			continue
+		# Bubbles are only worth a detour once hurt; armor once it is meaningfully missing.
+		if e.kind == "bubble" and p.hp > p.spec.health * 0.75:
+			continue
+		if e.kind == "armor1" and p.armor >= 50.0 or e.kind == "armor2" and p.armor >= 60.0:
+			continue
+		var distance := Vector2(e.global_position.x - p.global_position.x, e.global_position.z - p.global_position.z).length()
+		if distance > BOT_ITEM_RANGE:
+			continue
+		var score: float = BOT_ITEM_VALUE[e.kind] / (distance + 10.0)
+		if score > best_score:
+			best_score = score
+			best = e
+	if best == null:
+		return false
+	p.bot_item = best.entity_id
+	p.bot_item_until = now + BOT_ITEM_TIME
+	p.bot_target = best.global_position
+	plan_bot_path(p, objective, bot_graph.nearest(best.global_position))
+	return true
+
 func bot_input(p: Fighter, dt: float) -> void:
 	if p.hp <= 0:
 		return
@@ -1405,22 +1452,26 @@ func bot_input(p: Fighter, dt: float) -> void:
 		p.bot_think = rng.randf_range(0.25, 0.5)
 		var now := Time.get_ticks_msec() / 1000.0
 		var objective := frontier_point(p)
-		if now >= p.bot_role_until or objective != p.bot_goal and p.bot_role == Fighter.BotRole.ATTACK:
-			assign_bot_role(p, objective)
-		if p.bot_role == Fighter.BotRole.ATTACK:
-			if p.bot_goal == objective and p.global_position.distance_to(points[objective]) < 6.0 and rng.randf() < 0.15:
-				roll_bot_offset(p)
-			p.bot_target = points[objective] + p.bot_offset
-			if objective != p.bot_goal or p.bot_path.is_empty() or p.bot_goal_node >= 0:
-				plan_bot_path(p, objective)
-		else:
-			var arrived := p.bot_roam_node >= 0 and Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 3.0
-			if arrived and p.bot_pause_until <= 0.0:
-				p.bot_pause_until = now + rng.randf_range(BOT_PAUSE_MIN, BOT_PAUSE_MAX)
-			if p.bot_roam_node < 0 or p.bot_pause_until > 0.0 and now >= p.bot_pause_until:
-				p.bot_pause_until = 0.0
-				choose_bot_roam(p, objective)
-			p.bot_goal = objective
+		update_bot_item(p, now)
+		if p.bot_item < 0:
+			if now >= p.bot_role_until or objective != p.bot_goal and p.bot_role == Fighter.BotRole.ATTACK:
+				assign_bot_role(p, objective)
+			if p.bot_role == Fighter.BotRole.ATTACK:
+				if p.bot_goal == objective and p.global_position.distance_to(points[objective]) < 6.0 and rng.randf() < 0.15:
+					roll_bot_offset(p)
+				p.bot_target = points[objective] + p.bot_offset
+				if objective != p.bot_goal or p.bot_path.is_empty() or p.bot_goal_node >= 0:
+					plan_bot_path(p, objective)
+			else:
+				var arrived := p.bot_roam_node >= 0 and Vector2(p.bot_target.x - p.global_position.x, p.bot_target.z - p.global_position.z).length() < 3.0
+				if arrived and p.bot_pause_until <= 0.0:
+					p.bot_pause_until = now + rng.randf_range(BOT_PAUSE_MIN, BOT_PAUSE_MAX)
+				if p.bot_roam_node < 0 or p.bot_pause_until > 0.0 and now >= p.bot_pause_until:
+					p.bot_pause_until = 0.0
+					choose_bot_roam(p, objective)
+				p.bot_goal = objective
+		if p.bot_item < 0 and p.aim_target < 0:
+			choose_bot_item(p, objective, now)
 		p.aim_target = -1
 		var candidates: Array = []
 		for target in bot_enemies[1 - p.team]:
