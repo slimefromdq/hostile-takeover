@@ -25,6 +25,10 @@ const BOT_PAUSE_MAX := 2.5
 const BOT_SIGHT := 30.0
 const BOT_ITEM_RANGE := 30.0  # bots only detour for a timed item this close (horizontal)
 const BOT_ITEM_TIME := 10.0  # give up on a detour after this long
+const BOT_POWER_RANGE := 60.0  # the power-up is worth a longer trip (it can sit up a tower)
+const BOT_POWER_PATH := 110.0  # but only if the graph route to it is no longer than this
+const BOT_POWER_TIME := 35.0  # time allowed for a detour to the power-up (ladders are slow)
+const BOT_JUMP_DISTANCE := 3.3  # a bot jumps a graph "jmp" link once this close to its far end
 const BOT_ITEM_VALUE := {"bubble": 1.0, "armor1": 2.0, "armor2": 3.0, "power": 6.0}
 const ASSIST_WINDOW := 6.0  # seconds a recent attacker still counts for an assist
 var authoritative := true
@@ -1462,8 +1466,11 @@ func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
 		return false  # capturing: stay on the point
 	var best: Deployable = null
 	var best_score := 0.0
+	var best_route := 0.0
 	for e in entities.values():
-		if not Items.KINDS.has(e.kind) or e.used or absf(e.global_position.y - p.global_position.y) > 3.0:
+		if not Items.KINDS.has(e.kind) or e.used:
+			continue
+		if e.kind != "power" and absf(e.global_position.y - p.global_position.y) > 3.0:
 			continue
 		if not Items.can_use(e.kind, p.hp, p.spec.health, p.armor):
 			continue
@@ -1475,7 +1482,19 @@ func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
 		if e.kind == "armor1" and p.armor >= 50.0 or e.kind == "armor2" and p.armor >= 60.0:
 			continue
 		var distance := Vector2(e.global_position.x - p.global_position.x, e.global_position.z - p.global_position.z).length()
-		if distance > BOT_ITEM_RANGE:
+		if e.kind == "power":
+			# Possibly up a tower: judge it by the graph route (ladders and jumps included), not by straight-line height.
+			if distance > BOT_POWER_RANGE:
+				continue
+			var route := bot_graph.path(bot_graph.nearest(p.global_position), bot_graph.nearest(e.global_position), {})
+			if route.is_empty() or Vector2(route[-1].x - e.global_position.x, route[-1].z - e.global_position.z).length() > 4.0:
+				continue
+			distance = 0.0
+			for i in range(route.size() - 1):
+				distance += route[i].distance_to(route[i + 1])
+			if distance > BOT_POWER_PATH:
+				continue
+		elif distance > BOT_ITEM_RANGE:
 			continue
 		var score: float = BOT_ITEM_VALUE[e.kind] / (distance + 10.0)
 		if score > best_score:
@@ -1484,7 +1503,7 @@ func choose_bot_item(p: Fighter, objective: int, now: float) -> bool:
 	if best == null:
 		return false
 	p.bot_item = best.entity_id
-	p.bot_item_until = now + BOT_ITEM_TIME
+	p.bot_item_until = now + (BOT_POWER_TIME if best.kind == "power" else BOT_ITEM_TIME)
 	p.bot_target = best.global_position
 	plan_bot_path(p, objective, bot_graph.nearest(best.global_position))
 	return true
@@ -1553,6 +1572,13 @@ func bot_input(p: Fighter, dt: float) -> void:
 				p.edges |= 64
 		if p.class_id != Fighter.REAVE_ID and rng.randf() < dt * 0.25:
 			p.edges |= 16
+	# Graph link tags that need more than walking: climb a ladder ("lad", head up it facing the wall) or jump a gap ("jmp").
+	var link := ""
+	if p.bot_path_i > 0 and p.bot_path_i < p.bot_path.size():
+		link = bot_graph.link_tag(p.bot_path[p.bot_path_i - 1], p.bot_path[p.bot_path_i])
+	var climbing_up: bool = link == "lad" and destination.y - p.global_position.y > 2.0
+	if climbing_up:
+		aim = Vector3(diff.x, 0.0, diff.z).normalized()
 	if aim.length() > 0.01:
 		p.yaw = lerp_angle(p.yaw, atan2(-aim.x, -aim.z), minf(1, dt * 9))
 		p.pitch = lerpf(p.pitch, asin(clampf(aim.y, -1, 1)), minf(1, dt * 9))
@@ -1561,7 +1587,12 @@ func bot_input(p: Fighter, dt: float) -> void:
 	p.movement = Vector2(local_move.x, local_move.z) if diff.length() > stopping_distance else Vector2.ZERO
 	if p.bot_pause_until > 0.0 and target == null:
 		p.movement = Vector2.ZERO
-	if p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1:
+	if climbing_up:
+		p.movement = Vector2(0.0, -1.0)  # straight forward into the ladder; the climb volume carries the bot up
+		p.held = 0
+	elif link == "jmp" and p.is_on_floor() and Vector2(diff.x, diff.z).length() <= BOT_JUMP_DISTANCE:
+		p.edges |= 1
+	elif (p.is_on_wall() or p.is_on_floor() and p.get_real_velocity().length() < 1 and p.movement.length() > 0.1) and not p.climbing:
 		p.edges |= 1
 	if p.class_id == 1 and absf(p.global_position.x) < 75 and rng.randf() < dt * 0.25:
 		p.edges |= 8
@@ -1615,6 +1646,9 @@ func bot_waypoint(p: Fighter, dt: float) -> Vector3:
 			break
 	# Replan when wedged: little horizontal progress while trying to move.
 	p.bot_progress_time += dt
+	if p.climbing:
+		p.bot_progress_pos = p.global_position
+		p.bot_progress_time = 0.0
 	if p.bot_progress_time > 2.0:
 		var moved := Vector2(p.global_position.x - p.bot_progress_pos.x, p.global_position.z - p.bot_progress_pos.z).length()
 		if moved < 0.8 and p.bot_path_i < p.bot_path.size() - 1:

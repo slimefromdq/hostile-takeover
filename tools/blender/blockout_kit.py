@@ -125,7 +125,7 @@ class Blockout:
     # ---- bot graph and settings ----------------------------------------------
 
     def waypoint(self, name, x, y, z, links="", mirror=False, point=False, spawn=False):
-        """`links` is "B:blv,C:roof" (tags: blv, roof, trn, aln). `point` marks a capture point, `spawn` the depot node."""
+        """`links` is "B:blv,C:roof" (tags: blv, roof, trn, aln, plus tow for plain connectors, lad = a ladder the bot climbs by walking into it, jmp = a gap the bot jumps near the far end). `point` marks a capture point, `spawn` the depot node."""
         rec = {"name": name, "pos": [x, y, z]}
         if mirror:
             rec["mirror"] = True

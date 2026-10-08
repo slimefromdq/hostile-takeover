@@ -46,6 +46,17 @@ func nearest(pos: Vector3) -> int:
 				best = i
 	return best
 
+# Tag of the link between two consecutive path positions ("lad" ladder, "jmp" gap jump, ...), or "" if none.
+func link_tag(a: Vector3, b: Vector3) -> String:
+	var ia := positions.find(a)
+	var ib := positions.find(b)
+	if ia < 0 or ib < 0:
+		return ""
+	for e in adjacency[ia]:
+		if e[0] == ib:
+			return e[1]
+	return ""
+
 func node(name: String) -> int:
 	return index.get(name, -1)
 

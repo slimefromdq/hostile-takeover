@@ -528,7 +528,24 @@ def chicane_nodes(b, name, x0, before, after):
     b.waypoint(name + "b", x0 + 6.5, 0, -4, after + ":blv", mirror=True)
 
 
+def stage_tower_route(b):
+    """Bot route up the construction tower to the power-up on the 24 m plate (docs: bots climb `lad` links and jump `jmp` links).
+    Ground -> ladder_1 -> plate 6 -> gap jump -> ladder_2 -> plate 12 -> ladder_3 -> plate 18 -> gap jump -> ladder_4 -> plate 24.
+    Gaps between plates are 2 m (x -44..-42); jump nodes sit 1 m in from each edge. Players take the same route by hand."""
+    b.waypoint("t1b", -50, 0, -28.5, "n1a:aln,t1t:lad", mirror=True)
+    b.waypoint("t1t", -50, 6, -36, "t2s:tow", mirror=True)
+    b.waypoint("t2s", -45, 6, -38, "t2b:jmp", mirror=True)
+    b.waypoint("t2b", -41, 6, -38, "t2t:lad", mirror=True)
+    b.waypoint("t2t", -48, 12, -38, "t3b:tow", mirror=True)
+    b.waypoint("t3b", -50, 12, -40.5, "t3t:lad", mirror=True)
+    b.waypoint("t3t", -50, 18, -47, "t4s:tow", mirror=True)
+    b.waypoint("t4s", -45, 18, -50, "t4b:jmp", mirror=True)
+    b.waypoint("t4b", -41, 18, -50, "t4t:lad", mirror=True)
+    b.waypoint("t4t", -49, 24, -49, "", mirror=True)
+
+
 def stage_graph(b):
+    stage_tower_route(b)
     b.waypoint("S", -90, 0, 0, "gt:blv,Sn:blv,Ss:blv", mirror=True, spawn=True)
     # Room nodes keep bots at the back of the depot from steering straight at the gate jamb.
     b.waypoint("Sn", -90, 0, -6, "", mirror=True)

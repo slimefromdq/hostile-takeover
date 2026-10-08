@@ -6763,6 +6763,96 @@
  ],
  "waypoints": [
   {
+   "name": "t1b",
+   "pos": [
+    -50,
+    0,
+    -28.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t1t",
+   "pos": [
+    -50,
+    6,
+    -36
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t2s",
+   "pos": [
+    -45,
+    6,
+    -38
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t2b",
+   "pos": [
+    -41,
+    6,
+    -38
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t2t",
+   "pos": [
+    -48,
+    12,
+    -38
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t3b",
+   "pos": [
+    -50,
+    12,
+    -40.5
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t3t",
+   "pos": [
+    -50,
+    18,
+    -47
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t4s",
+   "pos": [
+    -45,
+    18,
+    -50
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t4b",
+   "pos": [
+    -41,
+    18,
+    -50
+   ],
+   "mirror": true
+  },
+  {
+   "name": "t4t",
+   "pos": [
+    -49,
+    24,
+    -49
+   ],
+   "mirror": true
+  },
+  {
    "name": "S",
    "pos": [
     -90,
@@ -7643,6 +7733,56 @@
   }
  ],
  "links": [
+  [
+   "t1b",
+   "n1a",
+   "aln"
+  ],
+  [
+   "t1b",
+   "t1t",
+   "lad"
+  ],
+  [
+   "t1t",
+   "t2s",
+   "tow"
+  ],
+  [
+   "t2s",
+   "t2b",
+   "jmp"
+  ],
+  [
+   "t2b",
+   "t2t",
+   "lad"
+  ],
+  [
+   "t2t",
+   "t3b",
+   "tow"
+  ],
+  [
+   "t3b",
+   "t3t",
+   "lad"
+  ],
+  [
+   "t3t",
+   "t4s",
+   "tow"
+  ],
+  [
+   "t4s",
+   "t4b",
+   "jmp"
+  ],
+  [
+   "t4b",
+   "t4t",
+   "lad"
+  ],
   [
    "S",
    "gt",
