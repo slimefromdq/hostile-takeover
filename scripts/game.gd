@@ -1279,6 +1279,7 @@ func entities_tick(dt: float) -> void:
 						if e.kind == "power":
 							p.power = int(e.hp)
 							p.power_time = Items.POWER_DURATION
+							p.power_pickups += 1
 							notice_all("%s took %s." % [HELIX_MONARCH[p.team], Items.POWER_NAMES[p.power]])
 						e.used = true
 						e.timer = Items.KINDS[e.kind].respawn

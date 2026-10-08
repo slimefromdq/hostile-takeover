@@ -752,6 +752,12 @@ func test_power_ups() -> void:
 	item.global_position = foe.global_position
 	game.entities_tick(0.1)
 	check(foe.power == Items.POWER_INVULNERABLE and item.used, "the other team can take it too")
+	check(foe.power_pickups == 1 and p.power_pickups >= 1, "each power-up taken counts toward the scoreboard column")
+	var row_pp := 0
+	for team_rows in Hud.scoreboard_rows(game):
+		for row in team_rows:
+			row_pp += row.pp
+	check(row_pp == p.power_pickups + foe.power_pickups, "scoreboard rows carry power-up pickups")
 	before = foe.hp
 	game.damage_fighter(foe, 50.0, p.fighter_id)
 	foe.burn = 0.0
@@ -766,6 +772,7 @@ func test_power_ups() -> void:
 	p.power_time = 5.5
 	var mirror: Fighter = game.fighters[107]
 	mirror.unpack(p.pack(), false)
+	check(mirror.power_pickups == p.power_pickups, "snapshot carries the power-up pickup count")
 	check(mirror.power == Items.POWER_INVULNERABLE and is_equal_approx(mirror.power_time, 5.5), "snapshot carries the active power-up")
 	mirror.change_class(1)
 	p.power = 0

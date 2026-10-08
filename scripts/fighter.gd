@@ -199,6 +199,7 @@ var dash_velocity := Vector3.ZERO
 var dash_vertical := 0.0  # vertical speed held for the whole dash (no gravity)
 var kills: int = 0
 var deaths: int = 0
+var power_pickups: int = 0  # power-ups taken this match (scoreboard column)
 var equipment: Node3D
 var outlines: Array[ShaderMaterial] = []
 var outline_side: int = -1
@@ -872,7 +873,7 @@ func update_visual() -> void:
 	collision_layer = 0 if hidden else 2
 
 func pack() -> Dictionary:
-	var state := {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
+	var state := {"id": fighter_id, "team": team, "class": class_id, "w": weapon_id, "bot": bot, "pos": global_position, "vel": velocity, "yaw": yaw, "pitch": pitch, "hp": hp, "ammo": ammo, "cd": cooldowns, "reload": reload_timer, "conceal": conceal, "reveal": reveal, "dead": dead_time, "double": double_id, "idle": idle_weapon, "dash": air_dash, "aj": air_jump, "dcd": dash_cd, "hot": hot_lap, "grapple": grapple, "grapple_time": grapple_time, "brake": brake_time, "rush": rush_time, "spin": spin, "gun_buff": gun_buff, "melee_buff": melee_buff, "k": kills, "d": deaths, "pp": power_pickups, "sl": sliding, "wr": wall_running, "wrt": wall_run_time, "wrn": wall_run_normal, "vt": vault_time, "vv": vault_velocity, "ht": hang_time, "zip": zip_id, "zt": zip_t, "zd": zip_dir, "zs": zip_speed, "climb": climbing}
 	# Optional state is only sent while it matters (snapshots are already past the MTU); unpack supplies defaults.
 	if armor >= 1.0:
 		state["ar"] = int(ceil(armor))
@@ -949,4 +950,5 @@ func unpack(data: Dictionary, local: bool) -> void:
 	burn = data.get("burn", 0.0)
 	kills = data.get("k", 0)
 	deaths = data.get("d", 0)
+	power_pickups = data.get("pp", 0)
 	update_visual()

@@ -441,7 +441,7 @@ static func scoreboard_rows(g: Node3D) -> Array:
 	var teams: Array = [[], []]
 	for p in g.fighters.values():
 		var shown_name := "You" if p.fighter_id == g.local_id else (("Bot %d" % p.fighter_id) if p.bot else ("Player %d" % p.fighter_id))
-		teams[p.team].append({"name": shown_name, "class": p.spec.display_name(), "k": p.kills, "d": p.deaths, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
+		teams[p.team].append({"name": shown_name, "class": p.spec.display_name(), "k": p.kills, "d": p.deaths, "pp": p.power_pickups, "alive": p.hp > 0, "you": p.fighter_id == g.local_id})
 	for team in teams:
 		team.sort_custom(func(a, b): return a.k > b.k)
 	return teams
@@ -454,9 +454,10 @@ func _draw_scoreboard(p: Fighter) -> void:
 		var x := panel.position.x + 20.0 + t * 390.0
 		var held: int = game.match_state.owners.count(t)
 		text(Vector2(x, panel.position.y + 30), "%s  ·  %d points" % [["HELIX", "MONARCH"][t], held], 20, Visuals.team_color(t))
-		text(Vector2(x + 190, panel.position.y + 56), "CLASS", 12, Color(1, 1, 1, 0.6))
-		text(Vector2(x + 290, panel.position.y + 56), "K", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
-		text(Vector2(x + 330, panel.position.y + 56), "D", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+		text(Vector2(x + 160, panel.position.y + 56), "CLASS", 12, Color(1, 1, 1, 0.6))
+		text(Vector2(x + 250, panel.position.y + 56), "K", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+		text(Vector2(x + 288, panel.position.y + 56), "D", 12, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+		text(Vector2(x + 326, panel.position.y + 56), "PWR", 12, Color(Items.POWER_COLORS[Items.POWER_QUAD], 0.8), HORIZONTAL_ALIGNMENT_RIGHT, 36.0)
 		var row_y := panel.position.y + 80.0
 		for row in teams[t]:
 			var alpha := 1.0 if row.alive else 0.45
@@ -468,9 +469,10 @@ func _draw_scoreboard(p: Fighter) -> void:
 			else:
 				diamond(Vector2(x + 6, row_y - 5), 6.0, Color(Visuals.team_color(t), alpha))
 			text(Vector2(x + 20, row_y), row.name, 16, Color(1, 1, 1, alpha))
-			text(Vector2(x + 190, row_y), row["class"], 14, Color(1, 1, 1, alpha))
-			text(Vector2(x + 290, row_y), "%d" % row.k, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
-			text(Vector2(x + 330, row_y), "%d" % row.d, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+			text(Vector2(x + 160, row_y), row["class"], 14, Color(1, 1, 1, alpha))
+			text(Vector2(x + 250, row_y), "%d" % row.k, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+			text(Vector2(x + 288, row_y), "%d" % row.d, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 30.0)
+			text(Vector2(x + 326, row_y), "%d" % row.pp, 16, Color(1, 1, 1, alpha), HORIZONTAL_ALIGNMENT_RIGHT, 36.0)
 			row_y += 24.0
 	if p != null:
 		text(Vector2(panel.position.x + 20, panel.end.y - 16), p.spec.passive, 14, Color(1, 1, 1, 0.8))
