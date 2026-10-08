@@ -161,15 +161,15 @@ func test_movement() -> void:
 	p.air_dash = true
 	p.simulate_movement(1.0 / 60, 0)
 	p.simulate_movement(1.0 / 60, 2)
-	check(not p.air_dash and p.velocity.x > 14, "air dash consumed and propels")
+	check(not p.air_dash and p.velocity.x > 12, "air dash consumed and propels")
 	p.global_position = O + Vector3(-10, 0, -21)
 	p.velocity = Vector3.ZERO
 	for i in range(20):
 		p.simulate_movement(1.0 / 60, 0)
-	check(not p.air_dash and p.dash_cd > 0.5, "landing does not restore the dash; 1 s cooldown applies")
-	for i in range(60):
+	check(not p.air_dash and p.dash_cd > 0.5, "landing does not restore the dash; 2.5 s cooldown applies")
+	for i in range(150):
 		p.simulate_movement(1.0 / 60, 0)
-	check(p.air_dash, "dash recharges after its 1 s cooldown")
+	check(p.air_dash, "dash recharges after its 2.5 s cooldown")
 	for archetype in range(Fighter.SPECS.size()):
 		p.change_class(archetype)
 		p.global_position = O + Vector3(88.8, 3, 20)
@@ -1161,7 +1161,7 @@ func test_air_movement() -> void:
 	p.simulate_movement(1.0 / 60, 2)
 	for i in range(30):
 		p.simulate_movement(1.0 / 60, 0)
-	check(p.global_position.x - start_x > 4.5, "air dash travels over 4.5 m in half a second (%.1f)" % (p.global_position.x - start_x))
+	check(p.global_position.x - start_x > 3.5, "air dash travels over 3.5 m in half a second (%.1f)" % (p.global_position.x - start_x))
 	await physics_frame
 	# Air control: forward input at speed adds nothing; strafing adds a bounded amount.
 	p.global_position = O + Vector3(-30, 8.0, -20)

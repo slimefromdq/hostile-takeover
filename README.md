@@ -13,7 +13,7 @@ For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and
 | WASD / mouse | Move / aim |
 | Left / right mouse | Primary / alternate fire (holding right also zooms in over the shoulder and fades your own body so the crosshair stays clear) |
 | Space | Jump; press again in the air to double jump (one per landing), or against a wall to wall-kick; walk into a ledge to mantle (see Movement verbs) |
-| 1 | Air dash (about 4.5 m, independent of the double jump; 1 second cooldown, holds vertical speed so you hover through it) — **not sprint** |
+| 1 | Air dash (about 3.5 m, independent of the double jump; 2.5 second cooldown, holds vertical speed so you hover through it) — **not sprint** |
 | Shift | Slide while moving on the ground (see Movement verbs) |
 | Q / E / F | Hero abilities (a hero has one to three) |
 | X | Ultimate (per-hero cooldown) |
