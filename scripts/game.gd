@@ -1298,7 +1298,10 @@ func entities_tick(dt: float) -> void:
 						e.timer = Items.KINDS[e.kind].respawn
 						e.update_visual()
 						show_ring(e.global_position, Items.RADIUS, Items.KINDS[e.kind].color)
-						play_sfx(e.global_position, Items.KINDS[e.kind].sound)
+						if e.kind == "power":
+							global_cue(Items.POWER_TAKEN_CUES[p.power])
+						else:
+							play_sfx(e.global_position, Items.KINDS[e.kind].sound)
 						break
 		elif e.kind == "armor":
 			for p in fighters.values():

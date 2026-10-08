@@ -24,6 +24,8 @@ const STREAK_NAMES := {2: "DOUBLE KILL", 3: "TRIPLE KILL", 4: "QUAD KILL"}  # 5 
 static func streak_name(kills: int) -> String:
 	return "" if kills < 2 else STREAK_NAMES.get(kills, "RAMPAGE")
 
+# Map-wide cue when a power-up is taken, distinct per type, so every team can track the next timer.
+const POWER_TAKEN_CUES := {1: Sfx.Kind.POWER_TAKEN_INVULNERABLE, 2: Sfx.Kind.POWER_TAKEN_QUAD}
 const POWER_NAMES := {1: "INVINCIBLE", 2: "TRIPLE DAMAGE"}
 const POWER_COLORS := {1: Color("5ae6ff"), 2: Color("ff4a3a")}
 const RADIUS := 1.5
