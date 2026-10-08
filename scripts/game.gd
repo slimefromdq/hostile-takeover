@@ -1247,7 +1247,12 @@ func remove_owned(id: int) -> void:
 func entities_tick(dt: float) -> void:
 	for e in entities.values():
 		e.age += dt
+		var timer_before: float = e.timer
 		e.timer = maxf(0, e.timer - dt)
+		if e.kind == "power" and e.used:
+			var cue := Items.power_cue(timer_before, e.timer)
+			if cue >= 0:
+				global_cue(cue)
 		if e.age >= e.lifetime or e.hp <= 0:
 			remove_entity(e.entity_id)
 			continue
@@ -1275,6 +1280,7 @@ func entities_tick(dt: float) -> void:
 			if e.used and e.timer <= 0:
 				e.used = false
 				if e.kind == "power":
+					global_cue(Sfx.Kind.ITEM_POWER)
 					e.hp = float(rng.randi_range(Items.POWER_INVULNERABLE, Items.POWER_QUAD))
 					notice_all("%s power-up is up." % Items.POWER_NAMES[int(e.hp)].capitalize())
 				e.update_visual()
@@ -1662,6 +1668,17 @@ func character_quip(value: String) -> void:
 @rpc("authority", "call_remote", "reliable")
 func remote_notice(value: String) -> void:
 	announce(value)
+
+# A map-wide, non-positional cue everyone hears (the power-up's countdown).
+func global_cue(kind: int) -> void:
+	Sfx.play_ui(self, kind)
+	if authoritative and multiplayer.get_peers().size() > 0:
+		cue_remote.rpc(kind)
+
+@rpc("authority", "call_remote", "unreliable")
+func cue_remote(kind: int) -> void:
+	if kind >= 0 and kind < Sfx.Kind.size():
+		Sfx.play_ui(self, kind)
 
 const HELIX_MONARCH := ["HELIX", "MONARCH"]
 

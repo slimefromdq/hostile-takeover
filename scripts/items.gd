@@ -43,6 +43,16 @@ static func can_use(kind: String, hp: float, max_hp: float, armor: float) -> boo
 static func power_spawning_soon(used: bool, timer: float) -> bool:
 	return used and timer > 0.0 and timer <= POWER_WARNING
 
+# Which map-wide cue a taken power-up's countdown earns as its timer drops from `before` to `after`:
+# a rising warning when it enters the last POWER_WARNING seconds, then a tick at 3, 2 and 1 seconds left.
+static func power_cue(before: float, after: float) -> int:
+	if before > POWER_WARNING and after <= POWER_WARNING:
+		return Sfx.Kind.POWER_WARN
+	for second in [3.0, 2.0, 1.0]:
+		if before > second and after <= second:
+			return Sfx.Kind.POWER_TICK
+	return -1
+
 static func apply(kind: String, p: Fighter) -> void:
 	var item: Dictionary = KINDS[kind]
 	p.hp = minf(p.spec.health, p.hp + item.heal)
