@@ -370,7 +370,7 @@ func apply_loadout(id: int, loadout_code: int) -> void:
 	if not fighters.has(id):
 		return
 	var p: Fighter = fighters[id]
-	if p.hp > 0 and absf(p.global_position.x) < 80:
+	if p.hp > 0 and not CivicDividend.at_spawn(p.global_position):
 		if id == local_id:
 			announce("Loadout changes are available at spawn or while awaiting respawn.")
 		else:
@@ -465,7 +465,9 @@ func _physics_process(dt: float) -> void:
 					respawn(player)
 				continue
 			if out_of_bounds(player.global_position):
-				damage_fighter(player, 10000, -1)
+				var ocean: bool = player.global_position.y < CivicDividend.kill_floor
+				var credit: int = player.knockback_attacker if ocean and player.knockback_age <= ASSIST_WINDOW else -1
+				damage_fighter(player, 10000, credit, Vector3.INF, "Ocean" if ocean else "Environment", 1.0, true)
 				continue
 			if match_state.winner == -2:
 				player.simulate_movement(dt, player.edges)
@@ -500,7 +502,7 @@ func _physics_process(dt: float) -> void:
 # Grapples and launch pads can never carry a fighter out of the arena.
 func out_of_bounds(pos: Vector3) -> bool:
 	var b := CivicDividend.bounds
-	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling
+	return pos.x < b.position.x - 1.5 or pos.x > b.end.x + 1.5 or pos.z < b.position.y - 1.5 or pos.z > b.end.y + 1.5 or pos.y > CivicDividend.ceiling or pos.y < CivicDividend.kill_floor
 
 func send_motion_packet(motion: Vector2, aim_yaw: float, aim_pitch: float, buttons: int, shoulder_value: float) -> void:
 	if running and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
@@ -689,6 +691,10 @@ func combat_tick(p: Fighter, dt: float) -> void:
 		p.damagers[attacker] += dt
 		if p.damagers[attacker] > ASSIST_WINDOW:
 			p.damagers.erase(attacker)
+	if p.knockback_attacker >= 0:
+		p.knockback_age += dt
+		if p.knockback_age > ASSIST_WINDOW:
+			p.knockback_attacker = -1
 	# Keep the last fraction of a physics tick so rapid guns do not lose cadence to rounding.
 	p.shot_timer = p.shot_timer - dt if p.shot_timer > 0.0 else 0.0
 	p.conceal = maxf(0, p.conceal - dt)
@@ -878,6 +884,8 @@ func explode_projectile(shot: WeaponProjectile, direct: Object = null) -> void:
 		if target is Fighter and target.hp > 0 and (reached or self_hit):
 			var outward := diff.normalized() if distance > 0.001 else Vector3.UP
 			target.apply_weapon_impulse(outward * fraction * (16.0 if self_hit else 6.0))
+			if not self_hit:
+				record_knockback(target, shot.owner_id)
 	show_ring(pos, w.splash_radius, Color("ffb457"))
 	play_sfx(pos, Sfx.Kind.EXPLODE)
 	remove_projectile(shot.projectile_id)
@@ -944,22 +952,22 @@ func apply_hit(p: Fighter, hit: Dictionary, amount: float) -> void:
 
 # Returns true when the damage reached the target. `cause` names what dealt it in the kill feed (a utility or melee);
 # empty means the attacker's gun in hand.
-func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, cause: String = "", power_scale: float = -1.0) -> bool:
+func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vector3 = Vector3.INF, cause: String = "", power_scale: float = -1.0, environmental: bool = false) -> bool:
 	if target.hp <= 0 or not authoritative:
 		return false
 	# Sheltered depot interiors prevent spawn farming; leaving the depot ends protection.
-	if absf(target.global_position.x) > CivicDividend.depot_limit and attacker >= 0 and attacker != target.fighter_id:
+	if not environmental and CivicDividend.spawn_protected(target.global_position) and attacker >= 0 and attacker != target.fighter_id:
 		return false
-	if target.power == Items.POWER_INVULNERABLE and (attacker >= 0 or amount < 1000.0):
+	if not environmental and target.power == Items.POWER_INVULNERABLE and (attacker >= 0 or amount < 1000.0):
 		return false  # invincible; only the out-of-bounds kill (attacker -1, 10000) goes through
 	var source: Fighter = fighters.get(attacker)
 	if power_scale >= 0.0:
 		amount *= power_scale
 	elif source != null and source != target and source.power == Items.POWER_QUAD:
 		amount *= Items.QUAD_MULTIPLIER
-	if cheat_invulnerable and target.fighter_id == local_id:
+	if not environmental and cheat_invulnerable and target.fighter_id == local_id:
 		return false
-	var soaked := minf(target.armor, amount)
+	var soaked := 0.0 if environmental else minf(target.armor, amount)
 	target.armor -= soaked
 	target.hp = maxf(0, target.hp - (amount - soaked))
 	target.reveal = 0.65
@@ -1010,7 +1018,19 @@ func damage_fighter(target: Fighter, amount: float, attacker: int, origin: Vecto
 			elif not source.bot:
 				character_quip.rpc_id(attacker, line)
 		target.damagers.clear()
+		target.knockback_attacker = -1
+		target.knockback_age = 0.0
+		if source == null:
+			kill_feed(cause if cause != "" else "Environment", -1, target.callsign(), target.team)
+			if multiplayer.get_peers().size() > 0:
+				kill_feed.rpc(cause if cause != "" else "Environment", -1, target.callsign(), target.team)
 	return true
+
+func record_knockback(target: Fighter, attacker: int) -> void:
+	var source: Fighter = fighters.get(attacker)
+	if authoritative and source != null and source != target and source.team != target.team and target.hp > 0:
+		target.knockback_attacker = attacker
+		target.knockback_age = 0.0
 
 # Melee and close blasts: every visible enemy within `reach` whose direction is inside the `dot_limit` arc ahead.
 # `backstab` multiplies damage on a target facing away (Loadout.BACKSTAB_DOT). Returns the number of fighters hit.
@@ -1027,6 +1047,8 @@ func cone_attack(p: Fighter, reach: float, amount: float, dot_limit: float, push
 		var behind: bool = flat.length() > 0.05 and target.horizontal_direction().dot(flat.normalized()) > Loadout.BACKSTAB_DOT
 		hit_fighter(p, target, amount * (backstab if behind else 1.0), behind and backstab > 1.0, cause)
 		target.velocity += diff.normalized() * push
+		if push > 0.0:
+			record_knockback(target, p.fighter_id)
 		hits += 1
 	return hits
 
@@ -1111,6 +1133,7 @@ func breach_charge(p: Fighter) -> void:
 			continue
 		hit_fighter(p, target, 20.0, false, "Breach Charge")
 		target.velocity += diff.normalized() * 14.0 + Vector3.UP * 4.0
+		record_knockback(target, p.fighter_id)
 	for e in entities.values():
 		var diff: Vector3 = e.global_position - p.global_position
 		if e.team != p.team and e.kind in ["cover", "turret", "pad"] and diff.length() <= 5.0 and forward.dot(diff.normalized()) >= 0.5:

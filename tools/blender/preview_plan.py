@@ -83,7 +83,7 @@ def main(json_path, prefix):
         ax.plot(p[0], p[2], "o", ms=3, color="#2a5bd7")
     points = [w for w in doc.get("waypoints", []) if w.get("point")]
     for w in points:
-        for x in ([w["pos"][0], -w["pos"][0]] if w["pos"][0] else [0]):
+        for x in ([w["pos"][0], -w["pos"][0]] if w.get("mirror") and w["pos"][0] else [w["pos"][0]]):
             ax.add_patch(plt.Circle((x, w["pos"][2]), 4.5, fill=False, ec="#ff6a2b", lw=2))
             ax.text(x, w["pos"][2], w["name"].replace("e_", ""), ha="center", va="center", fontsize=11, weight="bold")
     b = s.get("bounds")

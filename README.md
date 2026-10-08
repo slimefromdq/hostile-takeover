@@ -10,6 +10,11 @@ Open `project.godot` in **Godot 4.7.x** and press **F6** on the main scene or **
 
 For multiplayer, one player chooses **Host LAN**. Others enter the host's IP and choose **Join server**. Use `127.0.0.1` for a second instance on the same computer. The host uses UDP **27847**; remote connections require that port to be reachable. Joining players replace bots, keeping a full ten-fighter (5v5) roster. Disconnected players are replaced by bots.
 
+Choose **Yacht Club** under **Map** for the Z-shaped marina: A/E are beside the yachts, B/D are inside the lighthouse
+ground floors, and C is inside the central shack. The ocean kills below y = -8, including in Explore and while
+invulnerable; a recent enemy knockback earns the elimination. Yacht cabins protect spawns and permit loadout changes.
+Both LAN instances must select the same map. See [coordinates, routes and previews](docs/YACHT_CLUB.md).
+
 | Input | Action |
 |---|---|
 | WASD / mouse | Move / aim |

@@ -141,7 +141,8 @@ class Blockout:
     def configure(self, **settings):
         """bounds=(x, z, width, height), spawn_x, spawn_z, spawn_step, depot_limit, test_lane=(x, y, z)."""
         for key, value in settings.items():
-            if key not in ("bounds", "spawn_x", "spawn_z", "spawn_step", "depot_limit", "test_lane", "ceiling"):
+            if key not in ("bounds", "spawn_x", "spawn_z", "spawn_step", "depot_limit", "test_lane", "ceiling",
+                           "goal_order", "team_spawns", "spawn_zones", "kill_floor"):
                 raise ValueError("unknown setting %r" % key)
             self.settings[key] = list(value) if isinstance(value, (tuple, list)) else value
 

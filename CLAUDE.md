@@ -27,6 +27,7 @@ godot --headless --path . --script res://tests/verbs_test.gd             # map v
 godot --headless --path . --script res://tests/movement_course.gd        # real Fighters on every Movement Course station (docs/MOVEMENT_COURSE.md)
 godot --headless --fixed-fps 60 --script res://tests/match_smoke.gd
 godot --headless --fixed-fps 60 --script res://tests/bot_tower.gd         # a bot climbs the Canopy gatehouse over C to the power-up (ladder links)
+godot --headless --fixed-fps 60 --script res://tests/yacht_club.gd -- --map=res://maps/yacht_club.blockout.json # water, capture interiors, ordered bots and real shortcuts
 godot --headless --fixed-fps 60 --script res://tests/soak.gd -- minutes=10   # node/orphan leak check
 # network: start the server first, then the client (separate terminals)
 godot --headless --path . --script res://tests/network_test.gd -- --server --latency-ms=80 --drop-every=5

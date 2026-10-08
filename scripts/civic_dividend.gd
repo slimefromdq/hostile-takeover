@@ -24,6 +24,9 @@ static var spawn_step: float = 2.8
 static var depot_limit: float = MapLayout.DEPOT_LIMIT
 # Height above which fighters are killed (grapples and launch pads can never carry anyone out of the arena).
 static var ceiling: float = 40.0
+static var kill_floor: float = -INF
+static var team_spawns: Array = []
+static var spawn_zones: Array[AABB] = []
 static var test_lane: Vector3 = MapLayout.TEST_LANE
 static var graph_data: Dictionary = {}
 # Optional audit profile from the blockout (sightline lanes, route families, spawn sight); {} means the built-in map's.
@@ -33,11 +36,24 @@ static var replaced := false
 # Depot position for a team slot (0..TEAM_SIZE-1): rows of SPAWN_ROW across z, centered where the old single row of six
 # was, later rows stepping back from the gate so a full team fits the depot (the audit checks every slot is clear).
 static func spawn_slot_position(side: int, slot: int) -> Vector3:
+	if not team_spawns.is_empty():
+		return team_spawns[side][slot % TEAM_SIZE]
 	var row := slot / SPAWN_ROW
 	var column := slot % SPAWN_ROW
 	var x := spawn_x + row * SPAWN_ROW_GAP
 	var z := spawn_z + spawn_step * 0.5 + column * spawn_step
 	return Vector3(-x if side == 0 else x, 0.2, z)
+
+static func spawn_protected(pos: Vector3) -> bool:
+	if spawn_zones.is_empty():
+		return absf(pos.x) > depot_limit
+	for zone in spawn_zones:
+		if zone.has_point(pos):
+			return true
+	return false
+
+static func at_spawn(pos: Vector3) -> bool:
+	return absf(pos.x) >= 80.0 if spawn_zones.is_empty() else spawn_protected(pos)
 
 static func reset_settings() -> void:
 	bounds = MapLayout.BOUNDS
@@ -49,6 +65,9 @@ static func reset_settings() -> void:
 	spawn_step = 2.8
 	depot_limit = MapLayout.DEPOT_LIMIT
 	ceiling = 40.0
+	kill_floor = -INF
+	team_spawns.clear()
+	spawn_zones.clear()
 	test_lane = MapLayout.TEST_LANE
 	graph_data = MapLayout.graph()
 	audit_profile = {}
@@ -64,6 +83,9 @@ static func apply_settings(r: Dictionary) -> void:
 	spawn_step = r.spawn_step
 	depot_limit = r.depot_limit
 	ceiling = r.ceiling
+	kill_floor = r.kill_floor
+	team_spawns = r.team_spawns.duplicate(true)
+	spawn_zones.assign(r.spawn_zones)
 	test_lane = r.test_lane
 	graph_data = r.graph
 	audit_profile = r.audit
@@ -114,6 +136,8 @@ static func build(root: Node3D) -> Array[Vector3]:
 	for message in BlockoutImporter.build(builder, blockout):
 		push_warning("Blockout: " + message)
 	builder.finalize(root)
+	if is_finite(kill_floor):
+		Visuals.build_ocean(root, bounds, kill_floor)
 	MapVerbs.clear()
 	pickups.clear()
 	if not blockout.is_empty():
@@ -128,7 +152,12 @@ static func build(root: Node3D) -> Array[Vector3]:
 		_signage(root)
 	var points := capture_points.duplicate()
 	for i in range(points.size()):
-		sign_text(root, points[i] + Vector3(0, 9, 0), String.chr(65 + i), Color.WHITE, 1.0)
+		var label_y: float = points[i].y + 9.0
+		for solid in builder.solids:
+			var box: AABB = solid.aabb
+			if Rect2(box.position.x, box.position.z, box.size.x, box.size.z).has_point(Vector2(points[i].x, points[i].z)):
+				label_y = maxf(label_y, box.end.y + 2.0)
+		sign_text(root, Vector3(points[i].x, label_y, points[i].z), String.chr(65 + i), Color.WHITE, 1.0)
 	return points
 
 static func _signage(root: Node3D) -> void:

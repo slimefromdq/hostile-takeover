@@ -26,7 +26,7 @@ numbers), `docs/LOADOUTS.md`, `MAP.md`, `docs/JUNGLE_GYM.md`, `docs/BLENDER.md` 
   platforms and timed events.
 - **Pickups:** hidden health packs; timed bubbles and armor (Canopy map); kill-drop armor; and a power-up (invincibility
   or triple damage, 12 s). On Concrete Canopy the power-up sits on the booth over point C.
-- **Maps:** the built-in Civic Dividend, plus blockout maps in `maps/*.blockout.json` (Concrete Canopy, Overpass, Yard,
+- **Maps:** the built-in Civic Dividend, plus blockout maps in `maps/*.blockout.json` (Concrete Canopy, Overpass, Yacht Club, Yard,
   Movement Course), picked in the start menu.
 - **Everything is procedural.** Art, map, sound and UI are generated in code. No plugins or external assets are required;
   optional `.glb` and texture overrides go in `assets/` (`assets/README.md`).

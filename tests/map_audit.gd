@@ -91,13 +91,16 @@ func audit_registry() -> void:
 	for s in solids:
 		keys[_key(s.aabb)] = true
 	var asym := 0
+	var rotational: bool = CivicDividend.audit_profile.get("symmetry", "mirror_x") == "rotate180"
 	for s in solids:
 		var box: AABB = s.aabb
 		var mirrored := AABB(Vector3(-(box.position.x + box.size.x), box.position.y, box.position.z), box.size)
+		if rotational:
+			mirrored.position.z = -box.end.z
 		if not keys.has(_key(mirrored)):
 			asym += 1
 			note("mirror", "no mirror: %s %s" % [s.tag, box])
-	check(asym == 0, "east half mirrors the west half (%d unmatched)" % asym)
+	check(asym == 0, "%s symmetry (%d unmatched)" % ["180 degree" if rotational else "east-west mirror", asym])
 	var off_grid := 0
 	for s in solids:
 		var box: AABB = s.aabb
@@ -208,8 +211,9 @@ func audit_clearance() -> void:
 	for side in [0, 1]:
 		for id in range(CivicDividend.TEAM_SIZE):
 			var sp := CivicDividend.spawn_slot_position(side, id)
-			sp.y = 0.0
-			if capsule_blocked(sp):
+			sp.y -= 0.2
+			var ground := ground_at(sp.x, sp.y, sp.z)
+			if ground.is_empty() or absf(ground.position.y - sp.y) > 0.3 or capsule_blocked(sp):
 				bad += 1
 				printerr("  spawn blocked: ", sp)
 	check(bad == 0, "all spawn slots are clear")
@@ -231,7 +235,7 @@ func audit_clearance() -> void:
 	var in_disc := 0
 	for s in builder.solids:
 		var box: AABB = s.aabb
-		if s.role == "walk" or box.position.y < -0.01 or box.size.y < 0.5:
+		if s.role == "walk" or box.position.y < -0.01 or box.position.y >= CAPSULE_HEIGHT + 0.12 or box.size.y < 0.5:
 			continue
 		for p in CivicDividend.capture_points:
 			var nearest := Vector2(clampf(p.x, box.position.x, box.end.x), clampf(p.z, box.position.z, box.end.z))
@@ -418,6 +422,19 @@ func audit_spawn_and_points() -> void:
 	# Spawn dogleg: nothing standing in the depot can see the open street.
 	var seen := 0
 	var sight: Variant = CivicDividend.audit_profile.get("spawn_sight", true)
+	if sight is Dictionary and sight.has("targets"):
+		for side in range(2):
+			for slot in range(CivicDividend.TEAM_SIZE):
+				var from := CivicDividend.spawn_slot_position(side, slot) + Vector3.UP * (HEAD - 0.2)
+				for target in sight.targets:
+					var to := Vector3(float(target[0]), float(target[1]) + HEAD, float(target[2]))
+					if side == 1:
+						to.x = -to.x
+						to.z = -to.z
+					if space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, 1)).is_empty():
+						seen += 1
+		check(seen == 0, "both yacht cabins hide combat lanes (%d clear rays)" % seen)
+		return
 	var sight_xs: Array = range(-70, 60, 10)
 	var sight_zs: Array = [-8, 0, 8]
 	if sight is Dictionary:

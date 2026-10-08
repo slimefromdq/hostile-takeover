@@ -11,6 +11,18 @@ import generate  # noqa: E402
 
 
 class KitTests(unittest.TestCase):
+    def test_yacht_club_navigation_and_symmetry(self):
+        b = self._generated("yacht_club.py")
+        doc = b.to_document()
+        self.assertEqual(b.validate(), [])
+        self.assertEqual(blockout_check.check(doc), [])
+        self.assertEqual(doc["settings"]["goal_order"], ["A", "B", "C", "D", "E"])
+        self.assertEqual(doc["settings"]["kill_floor"], -8)
+        keys = {(o["kind"], tuple(o["min"]), tuple(o["max"])) for o in b.objects}
+        for o in b.objects:
+            lo, hi = o["min"], o["max"]
+            self.assertIn((o["kind"], (-hi[0], lo[1], -hi[2]), (-lo[0], hi[1], -lo[2])), keys)
+
     def test_snapping_and_order(self):
         b = Blockout()
         r = b.block(10.1, 5, 0, -3.9, 0, 3.13, "wall", "w")

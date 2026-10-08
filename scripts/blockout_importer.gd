@@ -18,6 +18,11 @@ const MAPS_DIR := "res://maps"
 static func active_path() -> String:
 	if FileAccess.file_exists(ACTIVE_PATH):
 		return ACTIVE_PATH
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--map=res://maps/"):
+			var path := argument.trim_prefix("--map=")
+			if path.ends_with(".blockout.json") and FileAccess.file_exists(path):
+				return path
 	return selected_path()
 
 static func selected_path() -> String:
@@ -118,11 +123,89 @@ static func resolve(data: Dictionary) -> Dictionary:
 		errors.append("replace mode needs exactly 5 capture points (waypoints with point=true, mirrored ones count twice); found %d" % points.size())
 	if spawn_nodes.size() != 2:
 		errors.append("replace mode needs exactly 2 spawn nodes (spawn=true, mirrored); found %d" % spawn_nodes.size())
+	if settings.has("goal_order"):
+		var order: Variant = settings.goal_order
+		if not order is Array or order.size() != 5:
+			errors.append("goal_order must name all five capture waypoints once")
+		else:
+			var ordered: Array[String] = []
+			for name in order:
+				if not name is String or not goal_names.has(name) or ordered.has(name):
+					errors.append("goal_order contains a missing, duplicate or non-capture waypoint")
+					break
+				ordered.append(name)
+			if ordered.size() == 5:
+				goal_names = ordered
+				points.clear()
+				for name in ordered:
+					points.append(nodes[name])
 	var spawn_x: float = float(settings.get("spawn_x", absf(nodes[spawn_nodes[0]].x) if spawn_nodes.size() == 2 else 0.0))
 	var bounds := _auto_bounds(data)
 	if settings.has("bounds"):
 		var r: Array = settings.bounds
 		bounds = Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+	var team_spawns: Array = []
+	if settings.has("team_spawns"):
+		var teams: Variant = settings.team_spawns
+		if not teams is Array or teams.size() != 2:
+			errors.append("team_spawns must contain two teams")
+		else:
+			for slots in teams:
+				if not slots is Array or slots.size() != CivicDividend.TEAM_SIZE:
+					errors.append("team_spawns needs five positions per team")
+					continue
+				var positions: Array[Vector3] = []
+				for at in slots:
+					if not _valid_position(at):
+						errors.append("team_spawns contains an invalid position")
+						continue
+					var p := _vec(at)
+					if not bounds.has_point(Vector2(p.x, p.z)) or positions.has(p):
+						errors.append("team_spawns contains an outside or duplicate position")
+					positions.append(p)
+				team_spawns.append(positions)
+	var spawn_zones: Array[AABB] = []
+	if settings.has("spawn_zones"):
+		var zones: Variant = settings.spawn_zones
+		if not zones is Array or zones.size() != 2:
+			errors.append("spawn_zones must contain two min/max volumes")
+		else:
+			for zone in zones:
+				if not zone is Dictionary or not _valid_position(zone.get("min")) or not _valid_position(zone.get("max")):
+					errors.append("spawn_zones contains an invalid volume")
+					continue
+				var lo := _vec(zone.min)
+				var hi := _vec(zone.max)
+				if hi.x <= lo.x or hi.y <= lo.y or hi.z <= lo.z or not bounds.encloses(Rect2(lo.x, lo.z, hi.x - lo.x, hi.z - lo.z)):
+					errors.append("spawn_zones contains an empty or outside volume")
+				spawn_zones.append(AABB(lo, hi - lo))
+	var kill_floor := -INF
+	if settings.has("kill_floor"):
+		if not _finite_number(settings.kill_floor):
+			errors.append("kill_floor must be a finite number")
+		else:
+			kill_floor = float(settings.kill_floor)
+			for slots in team_spawns:
+				for at in slots:
+					if at.y <= kill_floor:
+						errors.append("kill_floor must be below every spawn")
+			for at in points:
+				if at.y <= kill_floor:
+					errors.append("kill_floor must be below every capture point")
+			if team_spawns.is_empty():
+				for name in spawn_nodes:
+					if nodes[name].y <= kill_floor:
+						errors.append("kill_floor must be below every spawn")
+	if not team_spawns.is_empty() and spawn_zones.size() == 2:
+		for side in range(team_spawns.size()):
+			for at in team_spawns[side]:
+				if not spawn_zones[side].has_point(at):
+					errors.append("team spawn must be inside its protection volume")
+	for zone in spawn_zones:
+		for at in points:
+			var expanded := AABB(zone.position - Vector3(4.5, 0, 4.5), zone.size + Vector3(9, 0, 9))
+			if expanded.has_point(at + Vector3.UP * 0.2):
+				errors.append("spawn protection must not overlap a capture disc")
 	var test_lane := Vector3.ZERO
 	if settings.has("test_lane"):
 		test_lane = _vec(settings.test_lane)
@@ -139,6 +222,9 @@ static func resolve(data: Dictionary) -> Dictionary:
 		"spawn_step": float(settings.get("spawn_step", 2.8)),
 		"depot_limit": float(settings.get("depot_limit", spawn_x - 3.0)),
 		"ceiling": float(settings.get("ceiling", 40.0)),
+		"team_spawns": team_spawns,
+		"spawn_zones": spawn_zones,
+		"kill_floor": kill_floor,
 		"test_lane": test_lane,
 		"audit": settings.get("audit", {}),
 		"errors": errors,
@@ -201,6 +287,12 @@ static func _waypoint_list(data: Dictionary) -> Array:
 
 static func _vec(a: Array) -> Vector3:
 	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+static func _finite_number(value: Variant) -> bool:
+	return (value is float or value is int) and is_finite(float(value))
+
+static func _valid_position(value: Variant) -> bool:
+	return value is Array and value.size() == 3 and _finite_number(value[0]) and _finite_number(value[1]) and _finite_number(value[2])
 
 # Ground rectangle of all geometry (mirrored copies included), used when settings.bounds is missing.
 static func _auto_bounds(data: Dictionary) -> Rect2:

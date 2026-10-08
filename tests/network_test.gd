@@ -109,13 +109,13 @@ func run() -> void:
 			Input.action_release("back")
 			verify(p.global_position.distance_to(before) > 0.5, "predicted movement survives latency and dropped motion packets")
 			for i in range(50):
-				if absf(p.global_position.x) > 80:
+				if CivicDividend.at_spawn(p.global_position):
 					break
 				await create_timer(0.1).timeout
 			game.selected_loadout = Loadout.encode(4, 4, Loadout.Utility.LAUNCH_PAD, Loadout.Melee.KNIFE)
 			game.request_loadout(game.selected_loadout, game.selected_look)
 			for i in range(40):
-				if p.primary.title == "Grenade Launcher" and absf(p.global_position.x) < 80:
+				if p.primary.title == "Grenade Launcher" and not CivicDividend.at_spawn(p.global_position):
 					break
 				await create_timer(0.1).timeout
 			verify(p.primary.title == "Grenade Launcher" and p.sidearm.title == "Disc Launcher", "new loadout indices replicate through the existing RPC")
@@ -138,13 +138,13 @@ func run() -> void:
 			await create_timer(0.3).timeout
 			verify(game.projectiles.values().any(func(shot): return shot.owner_id == p.fighter_id and shot.spec.title == "Disc Launcher"), "disc sidearm projectile appears on the client")
 			for i in range(40):
-				if absf(p.global_position.x) > 80:
+				if CivicDividend.at_spawn(p.global_position):
 					break
 				await create_timer(0.1).timeout
 			game.selected_loadout = Loadout.encode(8, 4, Loadout.Utility.LAUNCH_PAD, Loadout.Melee.KNIFE)
 			game.request_loadout(game.selected_loadout, game.selected_look)
 			for i in range(40):
-				if p.primary.title == "Double-Barrel Shotgun" and absf(p.global_position.x) < 80:
+				if p.primary.title == "Double-Barrel Shotgun" and not CivicDividend.at_spawn(p.global_position):
 					break
 				await create_timer(0.1).timeout
 			p.pitch = -1.2

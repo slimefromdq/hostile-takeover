@@ -41,6 +41,7 @@ func capture(state: Acquisition, index: int, team: int) -> void:
 
 func run() -> void:
 	test_objectives()
+	test_yacht_settings()
 	test_specs()
 	test_weapon_specs()
 	test_armor_rules()
@@ -75,6 +76,33 @@ func run() -> void:
 	game.queue_free()
 	await process_frame
 	quit(0 if failures == 0 else 1)
+
+func test_yacht_settings() -> void:
+	var data := BlockoutImporter.read("res://maps/yacht_club.blockout.json")
+	var resolved := BlockoutImporter.resolve(data)
+	check(resolved.errors.is_empty(), "Yacht Club resolves without errors: %s" % [resolved.errors])
+	check(BlockoutImporter.catalog().any(func(entry): return entry.path == "res://maps/yacht_club.blockout.json" and entry.title == "Yacht Club"), "Yacht Club is selectable in the map catalog")
+	check(resolved.goal_names == ["A", "B", "C", "D", "E"], "Z objective order overrides x sorting")
+	check(resolved.points[1] == Vector3(55, 0, -32) and resolved.points[3] == Vector3(-55, 0, 32), "B and D are centered in lighthouse rooms")
+	check(resolved.points[0] == Vector3(-46, 0, -32) and resolved.points[4] == Vector3(46, 0, 32), "final points sit beside the yachts")
+	CivicDividend.apply_settings(resolved)
+	for side in range(2):
+		for slot in range(CivicDividend.TEAM_SIZE):
+			check(CivicDividend.spawn_protected(CivicDividend.spawn_slot_position(side, slot)), "yacht spawn is protected")
+	for point in resolved.points:
+		check(not CivicDividend.spawn_protected(point + Vector3.UP * 0.2), "capture point is outside cabin protection")
+	check(CivicDividend.kill_floor == -8, "ocean floor is map-specific")
+	CivicDividend.reset_settings()
+	check(CivicDividend.team_spawns.is_empty() and CivicDividend.spawn_zones.is_empty() and CivicDividend.kill_floor == -INF, "switching to built-in clears yacht settings")
+	for patch in [{"goal_order": ["A", "B", "C", "D", "D"]}, {"goal_order": "ABCDE"},
+		{"team_spawns": [[Vector3.ZERO], []]}, {"team_spawns": [[[0, "bad", 0]], []]},
+		{"spawn_zones": [{"min": [0, 0, 0], "max": [0, 1, 1]}, {}]},
+		{"kill_floor": "water"}, {"kill_floor": 1}, {"spawn_zones": null}]:
+		var malformed: Dictionary = data.duplicate(true)
+		malformed.settings.merge(patch, true)
+		check(not BlockoutImporter.resolve(malformed).errors.is_empty(), "malformed yacht settings are refused: %s" % [patch])
+	var legacy := BlockoutImporter.resolve(BlockoutImporter.read("res://maps/yard.blockout.json"))
+	check(legacy.team_spawns.is_empty() and legacy.spawn_zones.is_empty() and legacy.kill_floor == -INF, "legacy map retains old spawn and bounds behavior")
 
 func test_objectives() -> void:
 	var state := Acquisition.new()

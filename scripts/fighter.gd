@@ -144,6 +144,8 @@ var power: int = 0  # active power-up (Items.POWER_*), 0 = none; lost on death
 var power_time: float = 0.0
 var power_kills: int = 0  # kills scored during the current power-up (server only, drives the streak announcement)
 var damagers: Dictionary = {}  # attacker id -> seconds since last hit (server only, for assists)
+var knockback_attacker: int = -1  # server-only environmental elimination credit
+var knockback_age: float = 0.0
 enum BotRole { ATTACK, ROAM, DEFEND }
 var spawn_slot: int = 0
 var bot_role: int = BotRole.ATTACK
@@ -820,6 +822,8 @@ func apply_loadout(loadout_code: int) -> void:
 	grapple_time = 0
 	hot_lap = 0
 	damagers.clear()
+	knockback_attacker = -1
+	knockback_age = 0.0
 	pending_weapon_impulse = Vector3.ZERO
 	weapon_launch_time = 0.0
 	weapon_boost_time = 0.0

@@ -171,11 +171,13 @@ def check(doc):
             problems.append("%s cannot reach: %s" % (s, ", ".join(sorted(set(nodes) - seen))))
     # Spawns and capture discs.
     s = doc.get("settings", {})
-    for side in (-1, 1):
-        for i in range(6):
-            x, z = side * s.get("spawn_x", 0), s.get("spawn_z", 0) + i * s.get("spawn_step", 2.8)
-            g = world.ground(x, z, 0.5)
-            if g is None or world.blocked(x, g, z):
+    teams = s.get("team_spawns", [[[side * s.get("spawn_x", 0), 0.2,
+                                   s.get("spawn_z", -7) + s.get("spawn_step", 2.8) * (i + 0.5)]
+                                  for i in range(5)] for side in (-1, 1)])
+    for side, slots in enumerate(teams):
+        for i, (x, y, z) in enumerate(slots):
+            g = world.ground(x, z, y)
+            if g is None or abs(g - (y - 0.2)) > 0.3 or world.blocked(x, g, z):
                 problems.append("spawn %d,%d blocked at %.1f,%.1f" % (side, i, x, z))
     points = [p for n, p in nodes.items() if any(w["name"] == n.replace("e_", "", 1) and w.get("point") for w in doc["waypoints"])]
     for p in points:
@@ -188,7 +190,7 @@ def check(doc):
                 break
         for r in world.solids:
             lo, hi = r["min"], r["max"]
-            if r.get("role") == "walk" or lo[1] < -0.01 or hi[1] - lo[1] < 0.5:
+            if r.get("role") == "walk" or lo[1] < -0.01 or lo[1] >= HEIGHT + 0.12 or hi[1] - lo[1] < 0.5:
                 continue      # same rule as tests/map_audit.gd: overhead walkways may cross a disc
             nx, nz = min(max(p[0], lo[0]), hi[0]), min(max(p[2], lo[2]), hi[2])
             if math.hypot(p[0] - nx, p[2] - nz) < 4.5:

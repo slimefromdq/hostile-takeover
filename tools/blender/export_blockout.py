@@ -165,6 +165,9 @@ def scene_settings(scene):
             out[name] = _plain(scene[key])
     if "ht_audit" in scene.keys():
         out["audit"] = json.loads(scene["ht_audit"])
+    for key in ("goal_order", "team_spawns", "spawn_zones", "kill_floor"):
+        if "ht_" + key in scene.keys():
+            out[key] = json.loads(scene["ht_" + key])
     return out
 
 

@@ -133,6 +133,11 @@ def build_scene(doc, clear=True):
         if key in doc.get("settings", {}):
             scene[prop] = doc["settings"][key]
     scene["ht_features"] = json.dumps(doc.get("features", []))
+    for key in ("goal_order", "team_spawns", "spawn_zones", "kill_floor"):
+        if key in doc.get("settings", {}):
+            scene["ht_" + key] = json.dumps(doc["settings"][key])
+        elif "ht_" + key in scene:
+            del scene["ht_" + key]
     if doc.get("settings", {}).get("audit"):
         scene["ht_audit"] = json.dumps(doc["settings"]["audit"])
     for rec in doc.get("objects", []):

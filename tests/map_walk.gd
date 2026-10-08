@@ -24,7 +24,7 @@ func run() -> void:
 	var me: Fighter = game.local_player()
 	for primary_id in [0, 2]:  # Shotgun (slowest primary) and SMG (fastest)
 		me.apply_loadout(Loadout.encode(primary_id, 0, 0, 0))
-		for family in ["blv", "roof", "trn", "aln"]:
+		for family in CivicDividend.audit_profile.get("route_families", ["blv", "roof", "trn", "aln"]):
 			for start in CivicDividend.spawn_nodes:
 				for goal in CivicDividend.goal_names:
 					# A depot's own point is next door; walk to the other four.

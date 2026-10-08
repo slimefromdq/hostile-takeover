@@ -114,6 +114,21 @@ const MONARCH_CB := Color("e69f00")
 const SETTINGS_PATH := "user://settings.cfg"
 static var colorblind := false
 
+# Water is a visible death threshold, never a floor or a grapple surface.
+static func build_ocean(root: Node3D, bounds: Rect2, height: float) -> void:
+	var ocean := MeshInstance3D.new()
+	ocean.name = "Ocean"
+	var plane := PlaneMesh.new()
+	plane.size = bounds.size * 64.0
+	ocean.mesh = plane
+	ocean.position = Vector3(bounds.get_center().x, height, bounds.get_center().y)
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("218caa")
+	material.roughness = 0.28
+	material.metallic = 0.15
+	ocean.material_override = material
+	root.add_child(ocean)
+
 static func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS_PATH) == OK:

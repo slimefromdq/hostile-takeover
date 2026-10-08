@@ -69,7 +69,7 @@ def roundtrip(map_name):
 
 def main():
     failures = []
-    for name in ("yard", "canopy"):
+    for name in ("yard", "canopy", "yacht_club"):
         f, objects, waypoints, features = roundtrip(name)
         failures.extend(f)
         print("%s: %d objects, %d waypoints, %d features" % (name, objects, waypoints, features))

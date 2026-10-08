@@ -56,6 +56,7 @@ Waypoints are empties in a collection named `waypoints`; the empty's name is the
 
 Map settings are **scene** custom properties: `ht_mode` (`add` or `replace`), `ht_bounds` (x, z, width, height),
 `ht_spawn_x`, `ht_spawn_z`, `ht_spawn_step`, `ht_depot_limit`, `ht_test_lane`.
+Optional `ht_goal_order`, `ht_team_spawns`, `ht_spawn_zones` and `ht_kill_floor` store JSON strings and survive import/export.
 
 ### C. Start from the built-in map
 
@@ -75,10 +76,16 @@ back to the built-in map).
 
 - `"mode": "add"` layers the blockout on top of the built-in map. Use it to prototype a new area.
 - `"mode": "replace"` skips `MapLayout.build` and takes everything else from the file:
-  - **Bounds**, `spawn_x/z/step` (ten spawn slots per team (two rows of five) at x = -spawn_x and +spawn_x), `depot_limit` (spawn protection
+  - **Bounds**, `spawn_x/z/step` (five spawn slots per team at x = -spawn_x and +spawn_x), `depot_limit` (spawn protection
     ends beyond it), `test_lane` (defaults to the middle capture point).
   - **Capture points**: waypoints with `point`; mirrored ones count twice. Exactly five are required and they are ordered
     west to east (Helix owns the west end), so the usual shape is A and B mirrored plus C on x = 0.
+    Optional `goal_order` supplies five unique point waypoint names in A–E order for layouts such as Yacht Club.
+  - Optional `team_spawns` contains two arrays of five `[x, y, z]` positions; `spawn_zones` contains two
+    `{min: [x,y,z], max: [x,y,z]}` cabin volumes. Spawns must be finite and inside bounds; supplied volumes must contain
+    their team's slots and stay clear of capture discs. Damage protection and loadout changes use these volumes.
+  - Optional `kill_floor` sets a lethal lower height, below all spawns and points. It draws a non-colliding ocean;
+    open water has no supporting floor. Fields reset when another map loads; omitted values retain existing behavior.
   - **Spawn nodes**: exactly two (a mirrored `spawn` waypoint), where bots start planning routes.
   - **Bot graph**: every waypoint and link; bots walk from the depot to the points along it. Bots only use walk and
     ramp edges, so every waypoint must sit on ground.
@@ -93,10 +100,14 @@ back to the built-in map).
 | `tools/blender/maps/yard.py` | Small test map (replace mode) used by the round-trip test |
 | `tools/blender/maps/canopy.py` | **Concrete Canopy**: the jungle gym (`docs/JUNGLE_GYM.md`), 192 x 128 m, four tiers, five districts, climb/bounce/cable/mover verbs and three timed events |
 | `tools/blender/maps/overpass.py` | **Overpass District**: a full 164 x 96 m replace-mode map built from the reference set. Highway deck with gas stations over a service lane, terraced park with plazas and a bridge, offset barrier chicanes on the boulevard |
+| `tools/blender/maps/yacht_club.py` | **Yacht Club**: 160 × 110 m marina, explicit Z objective order, rotational symmetry, protected yachts and lethal water. See `docs/YACHT_CLUB.md` |
 | `maps/*.blockout.json` | Generated output. Maps with a `title` appear in the start menu (**Map: ... click to switch**); copying one to `maps/blockout.json` overrides the menu |
 
 `python3 tools/blender/blockout_check.py maps/overpass.blockout.json` checks navigation (waypoint ground and clearance,
 walkable edges, depot reachability, spawns, capture discs) in seconds without Godot. `tests/map_audit.gd` stays the authority.
+For a named map, append `-- --map=res://maps/yacht_club.blockout.json` to Godot audit/walk commands; the developer
+override `maps/blockout.json` still takes precedence. Set `audit.symmetry="rotate180"` for rotational geometry;
+omitting it preserves the x-mirror audit. Explicit graph copies carry rotational links and waypoint flags.
 
 ## Map features, titles and the audit profile
 

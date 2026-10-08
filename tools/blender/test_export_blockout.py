@@ -19,6 +19,14 @@ def box_corners(lo, hi):
 
 
 class ConvertTests(unittest.TestCase):
+    def test_yacht_settings(self):
+        settings = {"goal_order": ["A", "B", "C", "D", "E"],
+                    "team_spawns": [[[0, 0.2, 0]] * 5, [[10, 0.2, 0]] * 5],
+                    "spawn_zones": [{"min": [0, 0, 0], "max": [4, 4, 4]}] * 2,
+                    "kill_floor": -8}
+        scene = {"ht_" + key: json.dumps(value) for key, value in settings.items()}
+        self.assertEqual(ex.scene_settings(scene), settings)
+
     def test_axis_conversion(self):
         self.assertEqual(ex.to_godot((1.0, 2.0, 3.0)), (1.0, 3.0, -2.0))
 

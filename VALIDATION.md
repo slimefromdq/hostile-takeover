@@ -1,5 +1,30 @@
 # Validation
 
+## Yacht Club — 2026-10-08
+
+Verified on Windows with Godot **4.7.2 stable**, Forward+ renders on an NVIDIA RTX 3080. Console binary located at
+`C:/Users/lukep/Downloads/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe`.
+
+| Check | Result |
+|---|---|
+| Strict generation / Python navigation | PASS: 573 solids, 98 waypoints, no validation warnings |
+| Python kit / export conversion | **13 / 8 tests**, all pass; includes rotational geometry, navigation and settings serialization |
+| Behavioral suite on built-in map | **562 checks, 0 failures**, including explicit objective order, map catalog, settings validation and reset/defaults |
+| Blockout importer | **137 checks, 0 failures** |
+| Yacht Club map audit | **25 checks, 0 failures**: grid, overlaps, clearance, rotational symmetry, spawn slots and cabin sightlines, capture discs, graph and sightline budgets |
+| Walking objective routes | **48 routes, 0 failures**, both yachts to all opposing/intermediate objectives; three route families, Shotgun and SMG, no jumps |
+| Yacht Club scenarios | **79 checks, 0 failures**: ground and vertical capture exclusion, lethal ocean through protection, server-only elimination, credit/expiry/feed, Explore, yacht loadout changes, both teams' ordered bot paths and final wins, 12 vertical/diagonal walking trials and paired advanced shortcuts |
+| Bot match smoke | PASS: ten fighters, seven advancing, center owned, finite motion |
+| Two-minute simulated soak | PASS: nodes 1232 / 1259 / 1258 / 1272, zero orphan nodes |
+| Host/client, same Yacht Club map | Both PASS: local UDP with 80 ms latency and every fifth motion/snapshot packet dropped; ten-player roster, 972-byte sampled compressed snapshot, loadouts, utilities, projectiles, prediction and recoil |
+| Editor import and previews | PASS: top-down, isometric, yacht, lighthouse, interior, shack and underdock rendered and visually inspected |
+| Blender scene round trip | **Unavailable**: neither `bpy` nor a Blender executable is installed; pure import/export metadata code is covered where possible, full Blender round trip is not verified here |
+
+Local UDP initially failed inside the sandbox and passed with broader process/network permissions. LAN validation uses
+two processes on this machine, not two physical computers. Human playtesting, route fairness under combat and sustained
+performance measurements remain unverified. Timings, reproducible commands and reference differences are in
+[Yacht Club](docs/YACHT_CLUB.md). The older Linux results below are retained as historical checks.
+
 Godot **4.7.2 stable**, Linux. Headless runs for logic, xvfb with software OpenGL for renders and probes. Everything
 below is automated; nothing here replaces human playtesting or measurement on real hardware.
 
